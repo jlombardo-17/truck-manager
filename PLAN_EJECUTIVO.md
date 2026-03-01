@@ -4,7 +4,7 @@
 
 **Nombre**: Truck Manager  
 **Descripción**: Sistema web de gestión de flota de camiones (~10 vehículos)  
-**Stack**: React + Node.js/NestJS + PostgreSQL  
+**Stack**: React + Node.js/NestJS + MySQL  
 **Modelo de Trabajo**: Monorepo (backend + frontend en mismo repo)  
 **Usuario GitHub**: jlombardo-17  
 
@@ -92,18 +92,17 @@ cd ..
 
 ### 5️⃣ Configurar Base de Datos (15 minutos)
 
-**Opción A: pgAdmin (GUI)**
-- Abre pgAdmin (incluido en PostgreSQL)
-- Haz clic derecho en "Databases"
-- "Create" → "Database"
-- Nombre: `truck_manager`
+**Opción A: MySQL Workbench (GUI)**
+- Abre MySQL Workbench (incluido en MySQL)
+- Conecta a tu servidor local
+- Ejecuta: `CREATE DATABASE truck_manager;`
 
 **Opción B: Línea de comando**
 ```bash
-psql -U postgres
+mysql -u root -p
 CREATE DATABASE truck_manager;
-\l
-\q
+SHOW DATABASES;
+EXIT;
 ```
 
 ### 6️⃣ Configurar Variables de Entorno
@@ -111,9 +110,9 @@ CREATE DATABASE truck_manager;
 **backend/.env**
 ```
 DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=
 DB_DATABASE=truck_manager
 JWT_SECRET=mi_clave_secreta_super_segura_123456789
 JWT_EXPIRES_IN=24h
@@ -228,7 +227,7 @@ npm run dev
 |-----------|-----------|--------|
 | **Frontend** | React + Vite | Rápido, popular, fácil de aprender |
 | **Backend** | NestJS + Express | Scalable, TypeScript, estructura clara |
-| **BD Principal** | PostgreSQL | Robusto, relaciones complejas, JSONB |
+| **BD Principal** | MySQL | Robusto, relaciones complejas, JSON support |
 | **Autenticación** | JWT | Seguro, sin estado, ideal para APIs |
 | **Mapas** | Leaflet | Opensource, sin API key, rápido |
 | **Gráficas** | Chart.js / ECharts | Fácil integración con React, muchos tipos |
@@ -264,7 +263,7 @@ Fichas que ya tienes en el proyecto:
 - [ ] Ejecutar inicialización de Git
 - [ ] Crear repositorio en GitHub
 - [ ] Hacer push del proyecto
-- [ ] Instalar PostgreSQL (si no lo tienes)
+- [ ] Instalar MySQL (si no lo tienes)
 - [ ] Instalar Node.js 18+ (si no lo tienes)
 - [ ] Ejecutar `npm install` en backend y frontend
 - [ ] Crear `.env` en ambas carpetas
@@ -298,7 +297,7 @@ No usamos GPS en tiempo real. En su lugar:
 Con ~10 camiones:
 - No necesitas Redis (cache)
 - Una sola instancia tiene más que suficiente
-- PostgreSQL local es perfecta
+- MySQL local es perfecta
 
 Si crece > 100 camiones:
 - Considerar microservicios

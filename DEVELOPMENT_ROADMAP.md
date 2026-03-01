@@ -334,4 +334,4 @@ npm run test:cov
 - [React Vite Template](https://vitejs.dev/guide/#trying-vite-online)
 - [Leaflet Documentation](https://leafletjs.com/reference.html)
 - [Material-UI Components](https://mui.com/components)
-- [PostgreSQL Best Practices](https://wiki.postgresql.org/wiki/Performance_Optimization)
+- [MySQL Best Practices](https://dev.mysql.com/doc/refman/8.0/en/optimization.html)

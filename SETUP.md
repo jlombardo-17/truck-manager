@@ -5,13 +5,13 @@
 Asegurate de tener instalado:
 - **Node.js** (v18+) - [Descargar](https://nodejs.org)
 - **Git** - [Descargar](https://git-scm.com)
-- **PostgreSQL** (v14+) - [Descargar](https://www.postgresql.org/download)
+- **MySQL** (v8.0+) - [Descargar](https://dev.mysql.com/downloads/installer/)
 
 Verifica las instalaciones:
 ```bash
 node --version
 git --version
-psql --version
+mysql --version
 ```
 
 ## 2️⃣ Configurar Repositorio Git Localmente
@@ -71,9 +71,9 @@ git push -u origin main
 
 ## 5️⃣ Configurar Base de Datos
 
-### Windows con PostgreSQL
+### Windows con MySQL
 
-1. Abre **pgAdmin** (incluido en PostgreSQL)
+1. Abre **MySQL Workbench** (incluido en MySQL)
 2. Crea una base de datos llamada `truck_manager`:
    ```sql
    CREATE DATABASE truck_manager;
@@ -82,12 +82,12 @@ git push -u origin main
 
 ### O usa línea de comandos:
 ```bash
-psql -U postgres
+mysql -u root -p
 
-# En el prompt psql:
+# En el prompt mysql:
 CREATE DATABASE truck_manager;
-\l  # Listar bases de datos para verificar
-\q  # Salir
+SHOW DATABASES;  # Listar bases de datos para verificar
+EXIT;
 ```
 
 ## 6️⃣ Instalar Dependencias
@@ -117,9 +117,9 @@ cd ..
 ### Backend - `backend/.env`
 ```
 DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=
 DB_DATABASE=truck_manager
 JWT_SECRET=tu_clave_secreta_super_larga_aqui_123456
 JWT_EXPIRES_IN=24h
@@ -194,10 +194,10 @@ cd backend && npm install
 - Cambia el puerto en `backend/.env`: `API_PORT=3001`
 - O mata el proceso: `lsof -ti :3000 | xargs kill -9` (Mac/Linux)
 
-### Error al conectar a PostgreSQL
-- Verifica que PostgreSQL esté corriendo
+### Error al conectar a MySQL
+- Verifica que MySQL esté corriendo
 - Comprueba credenciales en `.env`
-- Reinicia el servicio PostgreSQL
+- Reinicia el servicio MySQL
 
 ### Git push rechazado
 - Verifica: `git remote -v`

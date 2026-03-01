@@ -58,10 +58,10 @@ cd ..
 ### Backend (backend/.env)
 ```env
 DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-DB_DATABASE=truck_manager
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=
+DB_DATABASE=truck-manager
 JWT_SECRET=TuClaveSecretaAquí123456789
 JWT_EXPIRES_IN=24h
 API_PORT=3000
@@ -78,17 +78,17 @@ VITE_APP_NAME=Truck Manager
 
 ## 🗄️ Crea la Base de Datos
 
-### Opción A: Desde PostgreSQL (psql)
+### Opción A: Desde MySQL Command Line
 ```bash
-psql -U postgres
-CREATE DATABASE truck_manager;
-\q
+mysql -u root -p
+CREATE DATABASE truck-manager;
+EXIT;
 ```
 
-### Opción B: Desde pgAdmin (GUI)
-1. Abre pgAdmin
-2. Right-click "Databases" → "Create" → "Database"
-3. Nombre: `truck_manager`
+### Opción B: Desde MySQL Workbench (GUI)
+1. Abre MySQL Workbench
+2. Conecta a tu servidor local
+3. Ejecuta: `CREATE DATABASE truck-manager;`
 
 ---
 
@@ -129,7 +129,7 @@ Espera a ver: `✔ Local: http://localhost:5173/`
 - [ ] Git inicializado (`git init`)
 - [ ] Repositorio creado en GitHub
 - [ ] Código pusheado a GitHub (`git push`)
-- [ ] PostgreSQL instalado y corriendo
+- [ ] MySQL instalado y corriendo
 - [ ] Base de datos `truck_manager` creada
 - [ ] `npm install` ejecutado en backend y frontend
 - [ ] `.env` configurado en ambas carpetas

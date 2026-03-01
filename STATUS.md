@@ -70,7 +70,7 @@ truck-manager/
 
 ## 🎓 Lo Que Incluye Tu Proyecto
 
-✅ **Backend** (NestJS + TypeORM + PostgreSQL)
+✅ **Backend** (NestJS + TypeORM + MySQL)
 - Estructura modular lista para crecer
 - Autenticación JWT preconfigurada
 - Validaciones con class-validator
@@ -103,7 +103,7 @@ truck-manager/
 | Monorepo | Sí | Más fácil de mantener todavía |
 | Frontend | React | Flexible, popular, fácil de aprender |
 | Backend | NestJS | Estructura clara, TypeScript, escalable |
-| BD | PostgreSQL | Robusto, relaciones complejas, JSONB |
+| BD | MySQL | Robusto, relaciones complejas, JSON support |
 | Mapas | Leaflet | Opensource, fácil, sin API key |
 | UI | Material-UI | Profesional, theming, componentes |
 | Server | Node.js | JavaScript/TypeScript en todo |
@@ -154,6 +154,6 @@ Templates están en `.env.example` en ambas carpetas.
 **Creado**: 1 de Marzo de 2026  
 **Usuario**: jlombardo-17  
 **Proyecto**: truck-manager  
-**Stack**: React + NestJS + PostgreSQL  
+**Stack**: React + NestJS + MySQL  
 
 🚀 ¡Buena suerte con tu proyecto!

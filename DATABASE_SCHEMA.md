@@ -2,7 +2,7 @@
 
 ## Visión General
 
-Base de datos relacional (PostgreSQL) diseñada para gestionar flota de camiones con ~10 unidades.
+Base de datos relacional (MySQL) diseñada para gestionar flota de camiones con ~10 unidades.
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -363,7 +363,7 @@ SELECT
   COALESCE(SUM(v.valor_viaje) - SUM(v.costo_combustible) - SUM(v.otros_gastos), 0) as ganancia,
   COUNT(v.id) as viajes_cantidad
 FROM camiones c
-LEFT JOIN viajes v ON c.id = v.camion_id AND v.fecha_inicio >= CURRENT_DATE - INTERVAL '30 days'
+LEFT JOIN viajes v ON c.id = v.camion_id AND v.fecha_inicio >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
 GROUP BY c.id, c.patente, c.marca;
 
 -- Desempeño de choferes
@@ -375,7 +375,7 @@ SELECT
   AVG(v.valor_viaje) as viaje_promedio,
   SUM(cs.comision_viajes) as comisiones_ganadas
 FROM choferes ch
-LEFT JOIN viajes v ON ch.id = v.chofer_id AND EXTRACT(MONTH FROM v.fecha_inicio) = EXTRACT(MONTH FROM CURRENT_DATE)
+LEFT JOIN viajes v ON ch.id = v.chofer_id AND MONTH(v.fecha_inicio) = MONTH(CURDATE())
 LEFT JOIN choferes_ingresos_viajes cs ON ch.id = cs.chofer_id
 GROUP BY ch.id, ch.nombre, ch.apellido;
 ```
@@ -386,7 +386,7 @@ GROUP BY ch.id, ch.nombre, ch.apellido;
 
 1. **Campos Timestamp**: Todos registran `created_at` y `updated_at` para auditoría
 2. **Estados**: Enumerados como VARCHAR para flexibilidad (se pueden cambiar sin migración)
-3. **JSON**: `roles.permisos` y similares usan JSONB para flexibilidad
+3. **JSON**: `roles.permisos` y similares usan JSON para flexibilidad
 4. **Camión Odómetro**: Se actualiza manualmente después de cada viaje
 5. **Moneda**: DECIMAL(12,2) para precisión financiera
 6. **Coordenadas**: DECIMAL(9,6) = precisión de ~10cm en GPS

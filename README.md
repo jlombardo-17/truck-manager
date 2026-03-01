@@ -16,7 +16,7 @@ Sistema integral de gestión y mantenimiento de flota de camiones, con control d
 
 - **Frontend**: React.js + Vite + TypeScript
 - **Backend**: Node.js + NestJS + TypeScript
-- **Base de Datos**: PostgreSQL
+- **Base de Datos**: MySQL
 - **UI Components**: Material-UI / TailwindCSS
 - **Mapas**: Leaflet / Mapbox
 - **Gráficas**: Chart.js / Apache ECharts
@@ -49,7 +49,7 @@ truck-manager/
 
 ### Requisitos
 - Node.js 18+
-- PostgreSQL 14+
+- MySQL 8.0+
 - Git
 
 ### Instalación Backend
@@ -68,7 +68,7 @@ npm run dev
 
 ## 📦 Próximos Pasos
 
-1. [ ] Configurar base de datos PostgreSQL
+1. [ ] Configurar base de datos MySQL
 2. [ ] Crear esquema de BD
 3. [ ] Implementar autenticación JWT
 4. [ ] Crear módulos backend (Camiones, Choferes, Viajes, etc.)
