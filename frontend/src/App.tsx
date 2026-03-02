@@ -1,9 +1,19 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, Divider, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useMemo, useState } from 'react'
 import './App.css'
+
+type Camion = {
+  id: number
+  patente: string
+  marca: string
+  modelo: string
+  anio: number
+  estado: string
+  odometroKm: number
+}
 
 const theme = createTheme({
   palette: {
@@ -26,6 +36,16 @@ function App() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [me, setMe] = useState<Record<string, unknown> | null>(null)
+  const [camiones, setCamiones] = useState<Camion[]>([])
+  const [patente, setPatente] = useState('')
+  const [marca, setMarca] = useState('')
+  const [modelo, setModelo] = useState('')
+  const [anio, setAnio] = useState('')
+
+  const canCreateCamion = useMemo(
+    () => patente.trim().length >= 3 && marca.trim().length >= 2 && modelo.trim().length >= 2 && Number(anio) >= 1950,
+    [patente, marca, modelo, anio],
+  )
 
   const canSubmit = useMemo(() => email.length > 4 && password.length >= 6, [email, password])
 
@@ -95,6 +115,64 @@ function App() {
 
       setMe(data)
       setMessage('Perfil obtenido correctamente')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error inesperado')
+    }
+  }
+
+  const onLoadCamiones = async () => {
+    setError('')
+    setMessage('')
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/camiones`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'No se pudo cargar camiones')
+      }
+
+      setCamiones(data)
+      setMessage(`Camiones cargados: ${data.length}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error inesperado')
+    }
+  }
+
+  const onCreateCamion = async () => {
+    setError('')
+    setMessage('')
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/camiones`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          patente,
+          marca,
+          modelo,
+          anio: Number(anio),
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(Array.isArray(data.message) ? data.message.join(', ') : data.message || 'No se pudo crear el camion')
+      }
+
+      setMessage(`Camion creado: ${data.patente}`)
+      setPatente('')
+      setMarca('')
+      setModelo('')
+      setAnio('')
+      await onLoadCamiones()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado')
     }
@@ -189,6 +267,46 @@ function App() {
                         <pre>{JSON.stringify(me, null, 2)}</pre>
                       </Paper>
                     )}
+
+                    <Divider />
+
+                    <Typography variant="h6">Modulo Camiones (MVP)</Typography>
+                    <Stack direction="row" spacing={1}>
+                      <TextField
+                        label="Patente"
+                        value={patente}
+                        onChange={(e) => setPatente(e.target.value.toUpperCase())}
+                        size="small"
+                      />
+                      <TextField label="Marca" value={marca} onChange={(e) => setMarca(e.target.value)} size="small" />
+                      <TextField label="Modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} size="small" />
+                      <TextField label="Año" type="number" value={anio} onChange={(e) => setAnio(e.target.value)} size="small" />
+                    </Stack>
+                    <Stack direction="row" spacing={1}>
+                      <Button variant="contained" onClick={onCreateCamion} disabled={!token || !canCreateCamion}>
+                        Crear Camion
+                      </Button>
+                      <Button variant="outlined" onClick={onLoadCamiones} disabled={!token}>
+                        Listar Camiones
+                      </Button>
+                    </Stack>
+
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Typography variant="subtitle1">Camiones</Typography>
+                      {camiones.length === 0 ? (
+                        <Typography variant="body2">Sin camiones cargados aun.</Typography>
+                      ) : (
+                        <Stack spacing={1}>
+                          {camiones.map((camion) => (
+                            <Box key={camion.id} sx={{ border: '1px solid #ddd', borderRadius: 1, p: 1 }}>
+                              <Typography variant="body2">
+                                #{camion.id} - {camion.patente} - {camion.marca} {camion.modelo} ({camion.anio})
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Stack>
+                      )}
+                    </Paper>
                   </Stack>
                 </Paper>
               </Box>
