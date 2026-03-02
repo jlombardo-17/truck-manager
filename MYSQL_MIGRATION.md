@@ -57,7 +57,7 @@ DB_DATABASE=truck_manager
 **Opción B: Línea de comandos**
 Si MySQL está en tu PATH:
 ```bash
-mysql -u root -p
+mysql -u root -p Rambla1205
 CREATE DATABASE truck_manager;
 SHOW DATABASES;
 EXIT;
