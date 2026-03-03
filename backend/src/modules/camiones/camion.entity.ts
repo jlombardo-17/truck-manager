@@ -1,4 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Servicio } from './servicio.entity';
+import { Documento } from './documento.entity';
 
 @Entity({ name: 'camiones' })
 export class Camion {
@@ -22,6 +24,12 @@ export class Camion {
 
   @Column({ name: 'odometro_km', type: 'decimal', precision: 10, scale: 2, default: 0 })
   odometroKm: number;
+
+  @OneToMany(() => Servicio, (servicio) => servicio.camionId, { cascade: true })
+  servicios: Servicio[];
+
+  @OneToMany(() => Documento, (documento) => documento.camionId, { cascade: true })
+  documentos: Documento[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

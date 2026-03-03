@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Camiones from './pages/Camiones';
 import CamionForm from './pages/CamionForm';
+import CamionDetalle from './pages/CamionDetalle';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -26,6 +27,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Camiones />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/camiones/:id"
+            element={
+              <ProtectedRoute>
+                <CamionDetalle />
               </ProtectedRoute>
             }
           />

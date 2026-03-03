@@ -62,6 +62,10 @@ const Camiones: React.FC = () => {
     navigate(`/camiones/edit/${id}`);
   };
 
+  const handleViewDetail = (id: number) => {
+    navigate(`/camiones/${id}`);
+  };
+
   const handleCreate = () => {
     navigate('/camiones/new');
   };
@@ -135,7 +139,13 @@ const Camiones: React.FC = () => {
                 <tr key={camion.id}>
                   <td>{camion.id}</td>
                   <td>
-                    <strong>{camion.patente}</strong>
+                    <button
+                      onClick={() => handleViewDetail(camion.id)}
+                      className="patente-link"
+                      title="Ver detalle"
+                    >
+                      <strong>{camion.patente}</strong>
+                    </button>
                   </td>
                   <td>{camion.marca}</td>
                   <td>{camion.modelo}</td>
