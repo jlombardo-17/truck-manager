@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Camiones from './pages/Camiones';
 import CamionForm from './pages/CamionForm';
 import CamionDetalle from './pages/CamionDetalle';
+import Choferes from './pages/Choferes';
+import ChoferForm from './pages/ChoferForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -51,6 +53,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <CamionForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/choferes"
+            element={
+              <ProtectedRoute>
+                <Choferes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/choferes/new"
+            element={
+              <ProtectedRoute>
+                <ChoferForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/choferes/edit/:id"
+            element={
+              <ProtectedRoute>
+                <ChoferForm />
               </ProtectedRoute>
             }
           />

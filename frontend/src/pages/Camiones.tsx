@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import camionesService from '../services/camionesService';
 import { Camion } from '../types/camion';
 import '../styles/Camiones.css';
 
 const Camiones: React.FC = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [camiones, setCamiones] = useState<Camion[]>([]);
   const [filteredCamiones, setFilteredCamiones] = useState<Camion[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     loadCamiones();
@@ -70,10 +77,6 @@ const Camiones: React.FC = () => {
     navigate('/camiones/new');
   };
 
-  const handleBack = () => {
-    navigate('/dashboard');
-  };
-
   if (isLoading) {
     return (
       <div className="camiones-container">
@@ -84,33 +87,44 @@ const Camiones: React.FC = () => {
 
   return (
     <div className="camiones-container">
-      <div className="camiones-header">
-        <div className="header-title">
-          <button onClick={handleBack} className="back-button">
-            ← Volver
-          </button>
-          <h1>🚚 Gestión de Camiones</h1>
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="navbar-content">
+          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
+          <div className="navbar-user">
+            <span className="user-name">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <button onClick={handleLogout} className="logout-button">
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
-        <button onClick={handleCreate} className="create-button">
-          + Nuevo Camión
-        </button>
-      </div>
+      </nav>
 
-      {error && <div className="error-message">{error}</div>}
+      <div className="camiones-content">
+        <div className="camiones-header">
+          <h1>Gestión de Camiones</h1>
+          <button onClick={handleCreate} className="create-button">
+            + Nuevo Camión
+          </button>
+        </div>
 
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Buscar por patente, marca o modelo..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
-      </div>
+        {error && <div className="error-message">{error}</div>}
 
-      <div className="camiones-stats">
-        <p>
-          Total: {filteredCamiones.length} {filteredCamiones.length === 1 ? 'camión' : 'camiones'}
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Buscar por patente, marca o modelo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
+        <div className="camiones-stats">
+          <p>
+            Total: {filteredCamiones.length} {filteredCamiones.length === 1 ? 'camión' : 'camiones'}
         </p>
       </div>
 
@@ -172,6 +186,7 @@ const Camiones: React.FC = () => {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 };

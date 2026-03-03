@@ -1,0 +1,268 @@
+.choferes-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* Navbar */
+.navbar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1rem 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.navbar-title {
+  font-size: 1.75rem;
+  margin: 0;
+  font-weight: 700;
+  transition: opacity 0.2s;
+}
+
+.navbar-title:hover {
+  opacity: 0.8;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.user-name {
+  font-weight: 600;
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.logout-button:hover {
+  background: white;
+  color: #667eea;
+}
+
+.choferes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.choferes-header h1 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+}
+
+.search-bar {
+  margin-bottom: 1.5rem;
+  padding: 0 2rem;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.1rem;
+  color: #7f8c8d;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  color: #7f8c8d;
+  margin: 0 2rem;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.table-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  margin: 0 2rem;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.choferes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.choferes-table thead {
+  background-color: #2c3e50;
+  color: white;
+}
+
+.choferes-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.choferes-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.choferes-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.choferes-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.badge-secondary {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.badge-warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.badge-default {
+  background-color: #f8f9fa;
+  color: #6c757d;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-edit,
+.btn-delete {
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.btn-edit {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.btn-edit:hover,
+.btn-delete:hover {
+  transform: scale(1.2);
+}
+
+.btn-delete {
+  color: #e74c3c;
+}
+
+.summary {
+  margin-top: 1rem;
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  padding: 0 2rem;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .choferes-container {
+    padding: 1rem;
+  }
+
+  .choferes-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .table-container {
+    overflow-x: scroll;
+  }
+
+  .choferes-table {
+    min-width: 800px;
+  }
+}

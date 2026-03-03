@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import camionesService from '../services/camionesService';
 import serviciosService from '../services/serviciosService';
 import documentosService from '../services/documentosService';
@@ -13,6 +14,7 @@ import '../styles/CamionDetalle.css';
 
 const CamionDetalle: React.FC = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { id } = useParams<{ id: string }>();
   const camionId = id ? parseInt(id) : 0;
 
@@ -94,6 +96,11 @@ const CamionDetalle: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   if (isLoading) {
     return (
       <div className="detalle-container">
@@ -114,14 +121,30 @@ const CamionDetalle: React.FC = () => {
 
   return (
     <div className="detalle-container">
-      <div className="detalle-header">
-        <button onClick={() => navigate('/camiones')} className="back-button">
-          ← Volver a Camiones
-        </button>
-        <h1>{camion.patente} - {camion.marca} {camion.modelo}</h1>
-      </div>
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="navbar-content">
+          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
+          <div className="navbar-user">
+            <span className="user-name">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <button onClick={handleLogout} className="logout-button">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </nav>
 
-      {error && <div className="error-message">{error}</div>}
+      <div className="detalle-content">
+        <div className="page-header">
+          <button onClick={() => navigate('/camiones')} className="btn-back">
+            ← Volver a Camiones
+          </button>
+          <h1>{camion.patente} - {camion.marca} {camion.modelo}</h1>
+        </div>
+
+        {error && <div className="error-message">{error}</div>}
 
       {/* Información General */}
       <section className="info-section">
@@ -395,6 +418,7 @@ const CamionDetalle: React.FC = () => {
           onSubmit={handleAddRepostada}
         />
       )}
+      </div>
     </div>
   );
 };

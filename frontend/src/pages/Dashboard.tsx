@@ -55,9 +55,10 @@ const Dashboard: React.FC = () => {
               <button className="feature-button">Ver Camiones →</button>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card clickable" onClick={() => navigate('/choferes')}>
               <h3>👥 Gestión de Choferes</h3>
-              <p>Próximamente: Maneja la información de tus conductores</p>
+              <p>Administra la información de tus conductores</p>
+              <button className="feature-button">Ver Choferes →</button>
             </div>
 
             <div className="feature-card">

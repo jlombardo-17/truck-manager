@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CamionesModule } from './modules/camiones/camiones.module';
+import { ChoferesModule } from './modules/choferes/choferes.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CamionesModule } from './modules/camiones/camiones.module';
     }),
     AuthModule,
     CamionesModule,
+    ChoferesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

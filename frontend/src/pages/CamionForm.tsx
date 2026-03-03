@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import camionesService from '../services/camionesService';
 import { CreateCamionDto } from '../types/camion';
 import '../styles/CamionForm.css';
 
 const CamionForm: React.FC = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
 
@@ -78,6 +80,11 @@ const CamionForm: React.FC = () => {
     navigate('/camiones');
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   if (isLoading && isEditing) {
     return (
       <div className="form-container">
@@ -88,10 +95,31 @@ const CamionForm: React.FC = () => {
 
   return (
     <div className="form-container">
-      <div className="form-card">
-        <h1>{isEditing ? '✏️ Editar Camión' : '➕ Nuevo Camión'}</h1>
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="navbar-content">
+          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
+          <div className="navbar-user">
+            <span className="user-name">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <button onClick={handleLogout} className="logout-button">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </nav>
 
-        {error && <div className="error-message">{error}</div>}
+      <div className="form-content">
+        <div className="page-header">
+          <button onClick={handleCancel} className="btn-back">
+            ← Volver a Camiones
+          </button>
+          <h1>{isEditing ? '✏️ Editar Camión' : '➕ Nuevo Camión'}</h1>
+        </div>
+
+        <div className="form-card">
+          {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-row">
@@ -199,6 +227,7 @@ const CamionForm: React.FC = () => {
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );
