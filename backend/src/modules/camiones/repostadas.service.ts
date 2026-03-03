@@ -56,12 +56,12 @@ export class RepostadasService {
 
     const totalKm = repostadas.reduce((sum, r) => sum + r.kmRecorridos, 0);
     const totalLitros = repostadas.reduce((sum, r) => sum + parseFloat(r.litros.toString()), 0);
-    const totalCosto = repostadas.reduce((sum, r) => sum + (r.costo || 0), 0);
+    const totalCosto = repostadas.reduce((sum, r) => sum + parseFloat((r.costo || 0).toString()), 0);
 
     return {
       totalRepostadas: repostadas.length,
       kmPromedio: totalKm / repostadas.length,
-      consumoPromedio: totalLitros / repostadas.length,
+      consumoPromedio: totalKm / totalLitros,
       costoPromedio: totalCosto / repostadas.length,
       totalCosto,
       totalLitros,
