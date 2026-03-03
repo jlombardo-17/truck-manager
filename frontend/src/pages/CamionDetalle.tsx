@@ -3,9 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import camionesService from '../services/camionesService';
 import serviciosService from '../services/serviciosService';
 import documentosService from '../services/documentosService';
+import { repostadasService } from '../services/repostadasService';
 import { Camion } from '../types/camion';
 import { Servicio, TipoServicio, TipoServicioLabels } from '../types/servicio';
 import { Documento, TipoDocumento, TipoDocumentoLabels } from '../types/servicio';
+import { Repostada, TipoCombustibleLabels, Estadisticas } from '../types/repostada';
+import { RepostadaModal } from '../components/RepostadaModal';
 import '../styles/CamionDetalle.css';
 
 const CamionDetalle: React.FC = () => {
@@ -16,10 +19,13 @@ const CamionDetalle: React.FC = () => {
   const [camion, setCamion] = useState<Camion | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [repostadas, setRepostadas] = useState<Repostada[]>([]);
+  const [estadisticas, setEstadisticas] = useState<Estadisticas | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showServicioModal, setShowServicioModal] = useState(false);
   const [showDocumentoModal, setShowDocumentoModal] = useState(false);
+  const [showRepostadaModal, setShowRepostadaModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -29,14 +35,18 @@ const CamionDetalle: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [camionData, serviciosData, documentosData] = await Promise.all([
+      const [camionData, serviciosData, documentosData, repostadasData, estadisticasData] = await Promise.all([
         camionesService.getById(camionId),
         serviciosService.getByCamion(camionId),
         documentosService.getByCamion(camionId),
+        repostadasService.getByCamion(camionId),
+        repostadasService.getEstadisticas(camionId),
       ]);
       setCamion(camionData);
       setServicios(serviciosData);
       setDocumentos(documentosData);
+      setRepostadas(repostadasData);
+      setEstadisticas(estadisticasData);
     } catch (err: any) {
       setError(err.message || 'Error al cargar datos');
     } finally {
@@ -61,6 +71,26 @@ const CamionDetalle: React.FC = () => {
       loadData();
     } catch (err: any) {
       alert(err.message || 'Error al eliminar');
+    }
+  };
+
+  const handleDeleteRepostada = async (repostadaId: number) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta repostada?')) return;
+    try {
+      await repostadasService.delete(camionId, repostadaId);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar');
+    }
+  };
+
+  const handleAddRepostada = async (data: any) => {
+    try {
+      await repostadasService.create(camionId, data);
+      setShowRepostadaModal(false);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Error al guardar repostada');
     }
   };
 
@@ -248,6 +278,93 @@ const CamionDetalle: React.FC = () => {
         )}
       </section>
 
+      {/* Historial de Repostadas */}
+      <section className="info-section">
+        <div className="section-header">
+          <h2>⛽ Historial de Repostadas</h2>
+          <button onClick={() => setShowRepostadaModal(true)} className="add-button">
+            + Agregar Repostada
+          </button>
+        </div>
+
+        {estadisticas && estadisticas.totalRepostadas > 0 && (
+          <div className="stats-grid">
+            <div className="stat-card">
+              <label>Total de Repostadas</label>
+              <span className="stat-value">{estadisticas.totalRepostadas}</span>
+            </div>
+            <div className="stat-card">
+              <label>Total KM Recorridos</label>
+              <span className="stat-value">{estadisticas.totalKm.toLocaleString('es-AR')} km</span>
+            </div>
+            <div className="stat-card">
+              <label>Total Litros</label>
+              <span className="stat-value">{estadisticas.totalLitros.toFixed(2)} L</span>
+            </div>
+            <div className="stat-card">
+              <label>Consumo Promedio</label>
+              <span className="stat-value">{estadisticas.consumoPromedio.toFixed(2)} km/L</span>
+            </div>
+            <div className="stat-card">
+              <label>Costo Total</label>
+              <span className="stat-value">${estadisticas.totalCosto.toLocaleString('es-AR')}</span>
+            </div>
+            <div className="stat-card">
+              <label>Costo Promedio</label>
+              <span className="stat-value">${estadisticas.costoPromedio.toLocaleString('es-AR')}</span>
+            </div>
+          </div>
+        )}
+
+        {repostadas.length === 0 ? (
+          <div className="empty-message">No hay repostadas registradas</div>
+        ) : (
+          <div className="repostadas-list">
+            {repostadas.map((repostada) => (
+              <div key={repostada.id} className="repostada-item">
+                <div className="repostada-header">
+                  <span className="fecha">{new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}</span>
+                  <span className="tipo-combustible">{TipoCombustibleLabels[repostada.tipoCombustible]}</span>
+                  <button
+                    onClick={() => handleDeleteRepostada(repostada.id)}
+                    className="delete-btn"
+                    title="Eliminar"
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <div className="repostada-grid">
+                  <div className="repostada-dato">
+                    <label>KM Recorridos</label>
+                    <span>{repostada.kmRecorridos.toLocaleString('es-AR')}</span>
+                  </div>
+                  <div className="repostada-dato">
+                    <label>Litros</label>
+                    <span>{Number(repostada.litros).toFixed(2)} L</span>
+                  </div>
+                  <div className="repostada-dato">
+                    <label>Consumo</label>
+                    <span>{Number(repostada.consumoPromedio).toFixed(2)} km/L</span>
+                  </div>
+                  {repostada.precioLitro && (
+                    <div className="repostada-dato">
+                      <label>Precio/L</label>
+                      <span>${Number(repostada.precioLitro).toLocaleString('es-AR')}</span>
+                    </div>
+                  )}
+                  {repostada.costo && (
+                    <div className="repostada-dato">
+                      <label>Costo</label>
+                      <span>${Number(repostada.costo).toLocaleString('es-AR')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Modales */}
       {showServicioModal && (
         <ServicioModal
@@ -268,6 +385,14 @@ const CamionDetalle: React.FC = () => {
             setShowDocumentoModal(false);
             loadData();
           }}
+        />
+      )}
+
+      {showRepostadaModal && (
+        <RepostadaModal
+          isOpen={showRepostadaModal}
+          onClose={() => setShowRepostadaModal(false)}
+          onSubmit={handleAddRepostada}
         />
       )}
     </div>

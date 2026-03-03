@@ -489,3 +489,99 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Estilos para Repostadas */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stat-card label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: white;
+}
+
+.repostadas-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.repostada-item {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  transition: box-shadow 0.3s;
+}
+
+.repostada-item:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.repostada-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.repostada-header .fecha {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.tipo-combustible {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.repostada-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.repostada-dato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.repostada-dato label {
+  font-weight: 600;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.repostada-dato span {
+  color: #333;
+  font-size: 1rem;
+  font-weight: 500;
+}
