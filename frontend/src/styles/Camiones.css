@@ -1,0 +1,236 @@
+.camiones-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.camiones-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-title h1 {
+  margin: 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.back-button {
+  background: #f5f5f5;
+  border: 2px solid #ddd;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.back-button:hover {
+  background: #e0e0e0;
+  transform: translateX(-3px);
+}
+
+.create-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.create-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.search-bar {
+  margin-bottom: 1.5rem;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 500px;
+  padding: 0.875rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.camiones-stats {
+  margin-bottom: 1rem;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #c33;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #999;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.camiones-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.camiones-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.camiones-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.camiones-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.camiones-table tbody tr:hover {
+  background-color: #f9f9ff;
+}
+
+.camiones-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.estado-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.estado-badge.activo {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.estado-badge.inactivo {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.estado-badge.mantenimiento {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.estado-badge.fuera_de_servicio {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.edit-button,
+.delete-button {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.edit-button:hover {
+  background-color: #e3f2fd;
+  transform: scale(1.1);
+}
+
+.delete-button:hover {
+  background-color: #ffebee;
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .camiones-container {
+    padding: 1rem;
+  }
+
+  .camiones-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .header-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .header-title h1 {
+    font-size: 1.5rem;
+  }
+
+  .table-container {
+    overflow-x: scroll;
+  }
+
+  .camiones-table {
+    font-size: 0.85rem;
+  }
+
+  .camiones-table th,
+  .camiones-table td {
+    padding: 0.5rem;
+  }
+}
