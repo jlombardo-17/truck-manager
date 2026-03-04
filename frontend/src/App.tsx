@@ -7,6 +7,8 @@ import CamionForm from './pages/CamionForm';
 import CamionDetalle from './pages/CamionDetalle';
 import Choferes from './pages/Choferes';
 import ChoferForm from './pages/ChoferForm';
+import Viajes from './pages/Viajes';
+import ViajeForm from './pages/ViajeForm';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -77,6 +79,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <ChoferForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/viajes"
+            element={
+              <ProtectedRoute>
+                <Viajes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/viajes/nuevo"
+            element={
+              <ProtectedRoute>
+                <ViajeForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/viajes/:id"
+            element={
+              <ProtectedRoute>
+                <ViajeForm />
               </ProtectedRoute>
             }
           />

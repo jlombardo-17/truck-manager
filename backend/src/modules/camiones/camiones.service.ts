@@ -44,4 +44,10 @@ export class CamionesService {
     await this.camionesRepository.remove(camion);
     return { message: 'Camion eliminado correctamente' };
   }
+
+  async updateOdometro(id: number, nuevoOdometro: number): Promise<Camion> {
+    const camion = await this.findOne(id);
+    camion.odometroKm = nuevoOdometro;
+    return this.camionesRepository.save(camion);
+  }
 }

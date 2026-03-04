@@ -1,0 +1,324 @@
+/* Page Layout */
+.viajes-page {
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+}
+
+/* Filters */
+.filters-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-group label {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.filter-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* Table */
+.table-responsive {
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.viajes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.viajes-table thead {
+  background: #f5f5f5;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.viajes-table th {
+  padding: 14px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.viajes-table td {
+  padding: 14px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #666;
+}
+
+.viaje-row:hover {
+  background: #f9f9f9;
+}
+
+.numero-viaje {
+  color: #2196f3;
+  font-weight: 600;
+}
+
+.valor-cell {
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.km-cell {
+  color: #f57c00;
+  font-weight: 600;
+}
+
+.estado-select {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.estado-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.estado-select.badge-warning {
+  background: #fff3e0;
+  color: #e65100;
+  border-color: #ff9800;
+}
+
+.estado-select.badge-success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #4caf50;
+}
+
+.estado-select.badge-danger {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #f44336;
+}
+
+/* Acciones */
+.acciones-cell {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-icon {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.btn-edit {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-edit:hover {
+  background: #1976d2;
+  transform: scale(1.05);
+}
+
+.btn-delete {
+  background: #ff5252;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #ff1744;
+  transform: scale(1.05);
+}
+
+/* Buttons */
+.btn-primary {
+  padding: 10px 20px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: #45a049;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  background: #757575;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #616161;
+}
+
+/* States */
+.loading {
+  padding: 40px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 8px;
+  color: #666;
+  font-size: 16px;
+}
+
+.no-data {
+  padding: 60px 40px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 2px dashed #e0e0e0;
+}
+
+.no-data p {
+  margin: 0 0 20px 0;
+  color: #999;
+  font-size: 16px;
+}
+
+.alert {
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  border-left: 4px solid;
+}
+
+.alert-error {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #f44336;
+}
+
+.alert-success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #4caf50;
+}
+
+.alert-warning {
+  background: #fff3e0;
+  color: #e65100;
+  border-color: #ff9800;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .filters-section {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .viajes-table {
+    font-size: 13px;
+  }
+
+  .viajes-table th,
+  .viajes-table td {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .viajes-page {
+    padding: 12px;
+  }
+
+  .page-header h1 {
+    font-size: 22px;
+  }
+
+  .filters-section {
+    grid-template-columns: 1fr;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .viajes-table {
+    min-width: 600px;
+    font-size: 12px;
+  }
+
+  .viajes-table th,
+  .viajes-table td {
+    padding: 8px;
+    word-break: break-word;
+  }
+
+  .acciones-cell {
+    gap: 4px;
+  }
+
+  .btn-icon {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}
