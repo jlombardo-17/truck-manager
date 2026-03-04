@@ -117,7 +117,12 @@ const Viajes: React.FC = () => {
   return (
     <div className="viajes-page">
       <div className="page-header">
-        <h1>🛣️ Viajes y Rutas</h1>
+        <div className="header-left">
+          <button className="btn-back" onClick={() => navigate('/')}>
+            ← Volver al Dashboard
+          </button>
+          <h1>🛣️ Viajes y Rutas</h1>
+        </div>
         <button className="btn-primary" onClick={handleNew}>
           + Nuevo Viaje
         </button>

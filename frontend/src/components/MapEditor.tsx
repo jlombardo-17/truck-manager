@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ViajRuta } from '../services/viajsService';
@@ -30,6 +30,22 @@ const MapEditor: React.FC<MapEditorProps> = ({
   const [selectedPoint, setSelectedPoint] = useState<string | number | null>(null);
   const [totalDistance, setTotalDistance] = useState<number>(0);
   const mapRef = useRef(null);
+
+  // Componente interno para capturar clics en el mapa
+  const MapClickHandler = () => {
+    useMapEvents({
+      click: (e) => {
+        const newPoint: ViajRuta = {
+          id: Date.now(),
+          orden: routes.length + 1,
+          latitud: e.latlng.lat,
+          longitud: e.latlng.lng,
+        };
+        setRoutes([...routes, newPoint]);
+      },
+    });
+    return null;
+  };
 
   // Calcular distancia entre dos puntos (Haversine formula)
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -65,19 +81,6 @@ const MapEditor: React.FC<MapEditorProps> = ({
     onRoutesChange(routes);
   }, [routes, onRoutesChange]);
 
-  // Agregar punto de ruta al hacer clic en el mapa
-  const handleMapClick = (e: any) => {
-    if (mapRef.current) {
-      const newPoint: ViajRuta = {
-        id: Date.now(),
-        orden: routes.length + 1,
-        latitud: e.latlng.lat,
-        longitud: e.latlng.lng,
-      };
-      setRoutes([...routes, newPoint]);
-    }
-  };
-
   // Eliminar un punto
   const deletePoint = (id: number | undefined) => {
     if (!id) return;
@@ -112,19 +115,14 @@ const MapEditor: React.FC<MapEditorProps> = ({
         </div>
       </div>
 
-      <div className="map-wrapper" onClick={(e: React.MouseEvent) => {
-        // Handle clicks on the map area that aren't on controls
-        const target = e.target as HTMLElement;
-        if (target.classList.contains('leaflet-container')) {
-          handleMapClick(e as any);
-        }
-      }}>
+      <div className="map-wrapper">
         <MapContainer
           ref={mapRef}
           center={initialCenter as L.LatLngExpression}
           zoom={12}
           style={{ height: '500px', width: '100%' }}
         >
+          <MapClickHandler />
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
@@ -138,7 +136,7 @@ const MapEditor: React.FC<MapEditorProps> = ({
           {/* Marcadores para cada punto */}
           {routes.map((route, idx) => (
             <Marker
-              key={route.id}
+              key={route.id || idx}
               position={[route.latitud, route.longitud]}
               icon={
                 selectedPoint === route.id
