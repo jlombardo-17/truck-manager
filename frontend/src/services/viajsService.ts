@@ -236,4 +236,43 @@ export const viajsService = {
       .padStart(4, '0');
     return `VIAJE-${yyyymmdd}-${random}`;
   },
+
+  /**
+   * Obtener las rutas de un viaje
+   */
+  getRoutes: async (viajeId: number): Promise<ViajRuta[]> => {
+    try {
+      const response = await axios.get<ViajRuta[]>(`${API_BASE_URL}/viajes/${viajeId}/rutas`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching rutas for viaje ${viajeId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Guardar/actualizar las rutas de un viaje
+   */
+  saveRoutes: async (viajeId: number, rutas: ViajRuta[]): Promise<ViajRuta[]> => {
+    try {
+      const response = await axios.post<ViajRuta[]>(
+        `${API_BASE_URL}/viajes/${viajeId}/rutas`,
+        { rutas },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error saving rutas for viaje ${viajeId}:`, error);
+      throw error;
+    }
+  },
 };

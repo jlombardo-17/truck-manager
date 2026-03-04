@@ -1,14 +1,14 @@
-import { IsString, IsNumber, IsDateString, IsDecimal, IsOptional, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { Type, Exclude } from 'class-transformer';
 
 class ViajRutaDTO {
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   orden: number;
 
-  @IsDecimal()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   latitud: number;
 
-  @IsDecimal()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   longitud: number;
 
   @IsString()
@@ -21,6 +21,9 @@ class ViajRutaDTO {
 }
 
 class ViajComisionDTO {
+  @Exclude()
+  id?: string;  // UI tracking field, not stored in DB
+
   @IsString()
   tipo: string; // 'contratista', 'flete', 'operario', etc
 
@@ -28,15 +31,15 @@ class ViajComisionDTO {
   @IsOptional()
   concepto?: string;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   montoBase?: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   porcentaje?: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   montoFijo?: number;
 
@@ -47,16 +50,22 @@ class ViajComisionDTO {
   @IsString()
   @IsOptional()
   notas?: string;
+
+  @Exclude()
+  montoTotal?: number;
+
+  @Exclude()
+  estado?: string;
 }
 
 export class CreateViajDTO {
   @IsString()
   numeroViaje: string;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   camionId: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   choferId: number;
 
   @IsDateString()
@@ -72,19 +81,19 @@ export class CreateViajDTO {
   @IsString()
   destino: string;
 
-  @IsDecimal()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   latitudOrigen?: number;
 
-  @IsDecimal()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   longitudOrigen?: number;
 
-  @IsDecimal()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   latitudDestino?: number;
 
-  @IsDecimal()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   longitudDestino?: number;
 
@@ -92,32 +101,35 @@ export class CreateViajDTO {
   @IsOptional()
   descripcionCarga?: string;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   pesoCargaKg?: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   valorViaje: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   kmRecorridos?: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   consumoCombustible?: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   costoCombustible?: number;
 
-  @IsNumber()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   otrosGastos?: number;
 
   @IsString()
   @IsOptional()
   notas?: string;
+
+  @Exclude()
+  estado?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

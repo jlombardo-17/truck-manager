@@ -8,6 +8,15 @@ import { CreateViajDTO } from './dto/create-viaje.dto';
 import { UpdateViajDTO } from './dto/update-viaje.dto';
 import { CamionesService } from '../camiones/camiones.service';
 
+type RoutePointInput = {
+  orden?: number;
+  latitud: number;
+  longitud: number;
+  direccion?: string;
+  odometroKm?: number | null;
+  notas?: string;
+};
+
 @Injectable()
 export class ViajsService {
   constructor(
@@ -271,5 +280,185 @@ export class ViajsService {
       totalComisiones,
       gananciaNeta: Number(viaje.valorViaje) - costosOperacionales - totalComisiones,
     };
+  }
+
+  /**
+   * Obtener las rutas de un viaje
+   */
+  async getRoutes(viajeId: number): Promise<ViajRuta[]> {
+    const viaje = await this.viajRepository.findOne({
+      where: { id: viajeId },
+      relations: ['rutas'],
+    });
+
+    if (!viaje) {
+      throw new NotFoundException(`Viaje con ID ${viajeId} no encontrado`);
+    }
+
+    return viaje.rutas || [];
+  }
+
+  /**
+   * Guardar/actualizar las rutas de un viaje
+   */
+  async saveRoutes(viajeId: number, rutasDTO: any[]): Promise<ViajRuta[]> {
+    // Verificar que el viaje existe
+    const viaje = await this.findOne(viajeId);
+    if (!viaje) {
+      throw new NotFoundException(`Viaje con ID ${viajeId} no encontrado`);
+    }
+
+    // Eliminar rutas existentes
+    await this.viajRutaRepository.delete({ viajeId });
+
+    // Mejor ruta por carretera (OSRM); si falla, usa Haversine como fallback
+    const optimizedRoute = await this.getBestRoadRoute(rutasDTO);
+
+    // Crear y guardar las nuevas rutas
+    const rutas = optimizedRoute.points.map((rutaDTO, index) =>
+      this.viajRutaRepository.create({
+        viajeId,
+        orden: index + 1,
+        latitud: rutaDTO.latitud,
+        longitud: rutaDTO.longitud,
+        direccion: rutaDTO.direccion,
+        odometroKm: rutaDTO.odometroKm || null,
+        notas: rutaDTO.notas,
+      }),
+    );
+
+    await this.viajRutaRepository.save(rutas);
+
+    // Actualizar km recorridos con distancia real por carretera
+    const distanciaTotal = optimizedRoute.distanceKm;
+    if (distanciaTotal > 0) {
+      await this.viajRepository.update(
+        { id: viajeId },
+        { kmRecorridos: Math.round(distanciaTotal * 100) / 100 },
+      );
+    }
+
+    return rutas.sort((a, b) => a.orden - b.orden);
+  }
+
+  /**
+   * Calcula mejor ruta por carretera entre puntos marcados.
+   * - 2 puntos: calcula la ruta en orden directo
+   * - 3+ puntos: optimiza los intermedios (mantiene origen/destino)
+   */
+  private async getBestRoadRoute(
+    inputPoints: RoutePointInput[],
+  ): Promise<{ points: RoutePointInput[]; distanceKm: number }> {
+    if (inputPoints.length < 2) {
+      return {
+        points: inputPoints,
+        distanceKm: 0,
+      };
+    }
+
+    const points = inputPoints.map((p) => ({
+      ...p,
+      latitud: Number(p.latitud),
+      longitud: Number(p.longitud),
+    }));
+
+    const coordinates = points.map((p) => `${p.longitud},${p.latitud}`).join(';');
+
+    try {
+      if (points.length === 2) {
+        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=false&steps=false&annotations=false`;
+        const response = await fetch(routeUrl);
+
+        if (!response.ok) {
+          throw new Error(`OSRM route request failed: ${response.status}`);
+        }
+
+        const data: any = await response.json();
+        const distanceKm = Number(data?.routes?.[0]?.distance || 0) / 1000;
+
+        return {
+          points,
+          distanceKm,
+        };
+      }
+
+      const tripUrl = `https://router.project-osrm.org/trip/v1/driving/${coordinates}?source=first&destination=last&roundtrip=false&overview=false&steps=false&annotations=false`;
+      const response = await fetch(tripUrl);
+
+      if (!response.ok) {
+        throw new Error(`OSRM trip request failed: ${response.status}`);
+      }
+
+      const data: any = await response.json();
+      const distanceKm = Number(data?.trips?.[0]?.distance || 0) / 1000;
+      const waypoints = Array.isArray(data?.waypoints) ? data.waypoints : [];
+
+      if (waypoints.length !== points.length) {
+        throw new Error('OSRM waypoints length mismatch');
+      }
+
+      const optimizedPoints = waypoints
+        .map((wp: any, originalIndex: number) => ({
+          originalIndex,
+          optimizedIndex: Number(wp?.waypoint_index),
+        }))
+        .sort((a, b) => a.optimizedIndex - b.optimizedIndex)
+        .map((item) => points[item.originalIndex]);
+
+      return {
+        points: optimizedPoints,
+        distanceKm,
+      };
+    } catch (error) {
+      // Fallback local si OSRM no está disponible
+      const fallbackDistanceKm = this.calculateTotalDistance(points);
+      return {
+        points,
+        distanceKm: fallbackDistanceKm,
+      };
+    }
+  }
+
+  /**
+   * Calcular distancia total usando Haversine formula
+   */
+  private calculateTotalDistance(rutas: any[]): number {
+    if (rutas.length < 2) {
+      return 0;
+    }
+
+    let total = 0;
+    for (let i = 0; i < rutas.length - 1; i++) {
+      total += this.haversineDistance(
+        rutas[i].latitud,
+        rutas[i].longitud,
+        rutas[i + 1].latitud,
+        rutas[i + 1].longitud,
+      );
+    }
+
+    return total;
+  }
+
+  /**
+   * Calcular distancia entre dos puntos usando Haversine formula
+   */
+  private haversineDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 }

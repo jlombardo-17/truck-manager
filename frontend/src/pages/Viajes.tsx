@@ -216,8 +216,8 @@ const Viajes: React.FC = () => {
                   </td>
                   <td>{viaje.origen}</td>
                   <td>{viaje.destino}</td>
-                  <td className="valor-cell">${viaje.valorViaje.toFixed(2)}</td>
-                  <td className="km-cell">{viaje.kmRecorridos?.toFixed(2) || '0'} km</td>
+                  <td className="valor-cell">${Number(viaje.valorViaje || 0).toFixed(2)}</td>
+                  <td className="km-cell">{Number(viaje.kmRecorridos || 0).toFixed(2)} km</td>
                   <td>
                     <select
                       value={viaje.estado || 'en_progreso'}

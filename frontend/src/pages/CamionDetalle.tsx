@@ -318,23 +318,23 @@ const CamionDetalle: React.FC = () => {
             </div>
             <div className="stat-card">
               <label>Total KM Recorridos</label>
-              <span className="stat-value">{estadisticas.totalKm.toLocaleString('es-AR')} km</span>
+              <span className="stat-value">{Number(estadisticas.totalKm || 0).toLocaleString('es-AR')} km</span>
             </div>
             <div className="stat-card">
               <label>Total Litros</label>
-              <span className="stat-value">{estadisticas.totalLitros.toFixed(2)} L</span>
+              <span className="stat-value">{Number(estadisticas.totalLitros || 0).toFixed(2)} L</span>
             </div>
             <div className="stat-card">
               <label>Consumo Promedio</label>
-              <span className="stat-value">{estadisticas.consumoPromedio.toFixed(2)} km/L</span>
+              <span className="stat-value">{Number(estadisticas.consumoPromedio || 0).toFixed(2)} km/L</span>
             </div>
             <div className="stat-card">
               <label>Costo Total</label>
-              <span className="stat-value">${estadisticas.totalCosto.toLocaleString('es-AR')}</span>
+              <span className="stat-value">${Number(estadisticas.totalCosto || 0).toLocaleString('es-AR')}</span>
             </div>
             <div className="stat-card">
               <label>Costo Promedio</label>
-              <span className="stat-value">${estadisticas.costoPromedio.toLocaleString('es-AR')}</span>
+              <span className="stat-value">${Number(estadisticas.costoPromedio || 0).toLocaleString('es-AR')}</span>
             </div>
           </div>
         )}
@@ -359,28 +359,24 @@ const CamionDetalle: React.FC = () => {
                 <div className="repostada-grid">
                   <div className="repostada-dato">
                     <label>KM Recorridos</label>
-                    <span>{repostada.kmRecorridos.toLocaleString('es-AR')}</span>
+                    <span>{Number(repostada.kmRecorridos || 0).toLocaleString('es-AR')}</span>
                   </div>
                   <div className="repostada-dato">
                     <label>Litros</label>
-                    <span>{Number(repostada.litros).toFixed(2)} L</span>
+                    <span>{(Number(repostada.litros) || 0).toFixed(2)} L</span>
                   </div>
                   <div className="repostada-dato">
                     <label>Consumo</label>
-                    <span>{Number(repostada.consumoPromedio).toFixed(2)} km/L</span>
+                    <span>{(Number(repostada.consumoPromedio) || 0).toFixed(2)} km/L</span>
                   </div>
-                  {repostada.precioLitro && (
-                    <div className="repostada-dato">
-                      <label>Precio/L</label>
-                      <span>${Number(repostada.precioLitro).toLocaleString('es-AR')}</span>
-                    </div>
-                  )}
-                  {repostada.costo && (
-                    <div className="repostada-dato">
-                      <label>Costo</label>
-                      <span>${Number(repostada.costo).toLocaleString('es-AR')}</span>
-                    </div>
-                  )}
+                  <div className="repostada-dato">
+                    <label>Precio/L</label>
+                    <span>${(Number(repostada.precioLitro) || 0).toLocaleString('es-AR')}</span>
+                  </div>
+                  <div className="repostada-dato">
+                    <label>Costo</label>
+                    <span>${(Number(repostada.costo) || 0).toLocaleString('es-AR')}</span>
+                  </div>
                 </div>
               </div>
             ))}

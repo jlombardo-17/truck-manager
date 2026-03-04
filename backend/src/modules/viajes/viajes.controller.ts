@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } f
 import { ViajsService } from './viajes.service';
 import { CreateViajDTO } from './dto/create-viaje.dto';
 import { UpdateViajDTO } from './dto/update-viaje.dto';
+import { SaveViajRutasDTO } from './dto/create-viaje-ruta.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('viajes')
@@ -61,6 +62,25 @@ export class ViajsController {
   @Get(':id/desglose')
   async getDesglose(@Param('id') id: string) {
     return this.viajsService.getDesglose(parseInt(id));
+  }
+
+  /**
+   * GET /api/viajes/:id/rutas - Obtener las rutas de un viaje
+   */
+  @Get(':id/rutas')
+  async getRoutes(@Param('id') id: string) {
+    return this.viajsService.getRoutes(parseInt(id));
+  }
+
+  /**
+   * POST /api/viajes/:id/rutas - Guardar/actualizar rutas de un viaje
+   */
+  @Post(':id/rutas')
+  async saveRoutes(
+    @Param('id') id: string,
+    @Body() saveViajRutasDTO: SaveViajRutasDTO,
+  ) {
+    return this.viajsService.saveRoutes(parseInt(id), saveViajRutasDTO.rutas);
   }
 
   /**

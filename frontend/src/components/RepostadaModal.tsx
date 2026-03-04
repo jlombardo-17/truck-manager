@@ -147,7 +147,7 @@ export function RepostadaModal({
             <input
               type="number"
               name="consumoPromedio"
-              value={formData.consumoPromedio.toFixed(2)}
+              value={Number(formData.consumoPromedio || 0).toFixed(2)}
               readOnly
               placeholder="Se calcula automáticamente"
             />

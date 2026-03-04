@@ -30,6 +30,9 @@ const ViajeForm: React.FC = () => {
   const [rutas, setRutas] = useState<ViajRuta[]>([]);
   const [comisiones, setComisiones] = useState<ViajComision[]>([]);
 
+  // Valores económicos calculados
+  const [gananciaNeta, setGananciaNeta] = useState<number>(0);
+
   // Datos complementarios
   const [camiones, setCamiones] = useState<Camion[]>([]);
   const [choferes, setChoferes] = useState<Chofer[]>([]);
@@ -44,6 +47,12 @@ const ViajeForm: React.FC = () => {
   useEffect(() => {
     loadDataAndForm();
   }, [id]);
+
+  // Calcular ganancia neta cuando cambien valores económicos
+  useEffect(() => {
+    const ganancia = (formData.valorViaje || 0) - (formData.costoCombustible || 0) - (formData.otrosGastos || 0);
+    setGananciaNeta(Math.max(0, ganancia)); // No permitir ganancias negativas en el display
+  }, [formData.valorViaje, formData.costoCombustible, formData.otrosGastos]);
 
   const loadDataAndForm = async () => {
     try {
@@ -75,11 +84,15 @@ const ViajeForm: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Convert numeric fields
+    const numericFields = ['camionId', 'choferId', 'valorViaje', 'kmRecorridos', 'pesoCargaKg', 
+                          'consumoCombustible', 'costoCombustible', 'otrosGastos', 
+                          'latitudOrigen', 'longitudOrigen', 'latitudDestino', 'longitudDestino'];
+    
     setFormData({
       ...formData,
-      [name]: name === 'valorViaje' || name === 'kmRecorridos' || name === 'costoCombustible' || name === 'otrosGastos' 
-        ? parseFloat(value) || 0 
-        : value,
+      [name]: numericFields.includes(name) ? (parseFloat(value) || 0) : value,
     });
   };
 
@@ -97,18 +110,41 @@ const ViajeForm: React.FC = () => {
     try {
       setLoading(true);
 
+      // Ensure all numeric fields are properly converted
       const dataToSend: Viaje = {
         ...formData,
-        rutas,
+        camionId: Number(formData.camionId),
+        choferId: Number(formData.choferId),
+        valorViaje: Number(formData.valorViaje) || 0,
+        kmRecorridos: Number(formData.kmRecorridos) || 0,
+        pesoCargaKg: formData.pesoCargaKg ? Number(formData.pesoCargaKg) : undefined,
+        consumoCombustible: formData.consumoCombustible ? Number(formData.consumoCombustible) : undefined,
+        costoCombustible: formData.costoCombustible ? Number(formData.costoCombustible) : undefined,
+        otrosGastos: formData.otrosGastos ? Number(formData.otrosGastos) : undefined,
         comisiones,
+        // No incluir rutas aqui, se guardarán después
       };
+
+      let viajeId: number;
 
       if (isEditing) {
         await viajsService.update(parseInt(id!), dataToSend);
+        viajeId = parseInt(id!);
         setSuccess('Viaje actualizado exitosamente');
       } else {
-        await viajsService.create(dataToSend);
+        const createdViaje = await viajsService.create(dataToSend);
+        viajeId = createdViaje.id!;
         setSuccess('Viaje creado exitosamente');
+      }
+
+      // Guardar las rutas si existen
+      if (rutas.length > 0) {
+        await viajsService.saveRoutes(viajeId, rutas);
+        setSuccess(
+          (prev) =>
+            prev +
+            ` y ${rutas.length} punto(s) de ruta guardado(s)`,
+        );
       }
 
       setTimeout(() => {
@@ -371,7 +407,7 @@ const ViajeForm: React.FC = () => {
                 type="number"
                 id="pesoCargaKg"
                 name="pesoCargaKg"
-                value={formData.pesoCargaKg || ''}
+                value={formData.pesoCargaKg === undefined || formData.pesoCargaKg === null ? '' : formData.pesoCargaKg}
                 onChange={handleInputChange}
                 step="0.01"
                 className="form-input"
@@ -405,7 +441,7 @@ const ViajeForm: React.FC = () => {
                 type="number"
                 id="kmRecorridos"
                 name="kmRecorridos"
-                value={formData.kmRecorridos || 0}
+                value={formData.kmRecorridos === undefined || formData.kmRecorridos === null ? '' : formData.kmRecorridos}
                 onChange={handleInputChange}
                 step="0.01"
                 className="form-input"
@@ -418,7 +454,7 @@ const ViajeForm: React.FC = () => {
                 type="number"
                 id="consumoCombustible"
                 name="consumoCombustible"
-                value={formData.consumoCombustible || ''}
+                value={formData.consumoCombustible === undefined || formData.consumoCombustible === null ? '' : formData.consumoCombustible}
                 onChange={handleInputChange}
                 step="0.01"
                 className="form-input"
@@ -431,7 +467,7 @@ const ViajeForm: React.FC = () => {
                 type="number"
                 id="costoCombustible"
                 name="costoCombustible"
-                value={formData.costoCombustible || 0}
+                value={formData.costoCombustible === undefined || formData.costoCombustible === null ? '' : formData.costoCombustible}
                 onChange={handleInputChange}
                 step="0.01"
                 className="form-input"
@@ -444,9 +480,29 @@ const ViajeForm: React.FC = () => {
                 type="number"
                 id="otrosGastos"
                 name="otrosGastos"
-                value={formData.otrosGastos || 0}
+                value={formData.otrosGastos === undefined || formData.otrosGastos === null ? '' : formData.otrosGastos}
                 onChange={handleInputChange}
                 step="0.01"
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="gananciaNeta" style={{ color: gananciaNeta > 0 ? '#27AE60' : '#E74C3C' }}>
+                💵 Ganancia Neta (después de gastos)
+              </label>
+              <input
+                type="text"
+                id="gananciaNeta"
+                value={Number(gananciaNeta || 0).toFixed(2)}
+                disabled
+                style={{
+                  backgroundColor: gananciaNeta > 0 ? '#D5F4E6' : '#FADBD8',
+                  color: gananciaNeta > 0 ? '#27AE60' : '#E74C3C',
+                  fontWeight: 'bold',
+                  fontSize: '1.1em',
+                  textAlign: 'center',
+                }}
                 className="form-input"
               />
             </div>

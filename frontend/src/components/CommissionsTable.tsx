@@ -99,13 +99,13 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
         <h3>💰 Comisiones y Gastos</h3>
         <div className="commission-summary">
           <span className="summary-item">
-            <strong>Valor Viaje:</strong> ${valorViaje.toFixed(2)}
+            <strong>Valor Viaje:</strong> ${Number(valorViaje || 0).toFixed(2)}
           </span>
           <span className="summary-item highlight">
-            <strong>Total Comisiones:</strong> ${totalComisiones.toFixed(2)}
+            <strong>Total Comisiones:</strong> ${Number(totalComisiones || 0).toFixed(2)}
           </span>
           <span className="summary-item">
-            <strong>Ganancia Neta:</strong> ${(valorViaje - totalComisiones).toFixed(2)}
+            <strong>Ganancia Neta:</strong> ${(Number(valorViaje || 0) - Number(totalComisiones || 0)).toFixed(2)}
           </span>
         </div>
       </div>

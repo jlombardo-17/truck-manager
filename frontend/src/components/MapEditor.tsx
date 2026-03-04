@@ -29,6 +29,9 @@ const MapEditor: React.FC<MapEditorProps> = ({
   const [routes, setRoutes] = useState<ViajRuta[]>(initialRoutes);
   const [selectedPoint, setSelectedPoint] = useState<string | number | null>(null);
   const [totalDistance, setTotalDistance] = useState<number>(0);
+  const [roadDistance, setRoadDistance] = useState<number | null>(null);
+  const [loadingDistance, setLoadingDistance] = useState(false);
+  const [roadGeometry, setRoadGeometry] = useState<[number, number][]>([]);
   const mapRef = useRef(null);
 
   // Componente interno para capturar clics en el mapa
@@ -74,7 +77,107 @@ const MapEditor: React.FC<MapEditorProps> = ({
       );
     }
     setTotalDistance(total);
+
+    // Calcular distancia real por carretera con OSRM si hay 2+ puntos
+    if (routes.length >= 2) {
+      calculateRoadDistance(routes);
+    } else {
+      setRoadDistance(null);
+    }
   }, [routes]);
+
+  /**
+   * Decodifica geometría polyline6 de OSRM
+   */
+  const decodePolyline = (encoded: string): [number, number][] => {
+    const points: [number, number][] = [];
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < encoded.length) {
+      let result = 0;
+      let shift = 0;
+      let byte;
+
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+
+      const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      result = 0;
+      shift = 0;
+
+      do {
+        byte = encoded.charCodeAt(index++) - 63;
+        result |= (byte & 0x1f) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+
+      const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      points.push([lat / 1e6, lng / 1e6]);
+    }
+
+    return points;
+  };
+
+  /**
+   * Calcula distancia real por carretera usando OSRM
+   */
+  const calculateRoadDistance = async (routePoints: ViajRuta[]) => {
+    if (routePoints.length < 2) {
+      setRoadDistance(null);
+      setRoadGeometry([]);
+      return;
+    }
+
+    setLoadingDistance(true);
+
+    try {
+      const coordinates = routePoints
+        .map((p) => `${p.longitud},${p.latitud}`)
+        .join(';');
+
+      // Solicitar overview=full para obtener la geometría completa
+      const url =
+        routePoints.length === 2
+          ? `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&steps=false&annotations=false&geometries=polyline6`
+          : `https://router.project-osrm.org/trip/v1/driving/${coordinates}?source=first&destination=last&roundtrip=false&overview=full&steps=false&annotations=false&geometries=polyline6`;
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error('OSRM request failed');
+      }
+
+      const data = await response.json();
+
+      if (routePoints.length === 2) {
+        const distanceKm = (data?.routes?.[0]?.distance || 0) / 1000;
+        const geometry = data?.routes?.[0]?.geometry || '';
+        setRoadDistance(distanceKm);
+        setRoadGeometry(geometry ? decodePolyline(geometry) : []);
+      } else {
+        const distanceKm = (data?.trips?.[0]?.distance || 0) / 1000;
+        const geometry = data?.trips?.[0]?.geometry || '';
+        setRoadDistance(distanceKm);
+        setRoadGeometry(geometry ? decodePolyline(geometry) : []);
+      }
+    } catch (error) {
+      console.warn('Error calculating road distance with OSRM:', error);
+      // Si OSRM falla, mostrar NULL pero no romper la UI
+      setRoadDistance(null);
+      setRoadGeometry([]);
+    } finally {
+      setLoadingDistance(false);
+    }
+  };
 
   // Notificar al componente padre cuando cambien las rutas
   useEffect(() => {
@@ -110,8 +213,20 @@ const MapEditor: React.FC<MapEditorProps> = ({
             <strong>Puntos:</strong> {routes.length}
           </span>
           <span className="stat-item">
-            <strong>Distancia Total:</strong> {totalDistance.toFixed(2)} km
+            <strong>Distancia Recta:</strong> {Number(totalDistance || 0).toFixed(2)} km
           </span>
+          {routes.length >= 2 && (
+            <span className="stat-item">
+              <strong>Distancia por Carretera:</strong>{' '}
+              {loadingDistance ? (
+                <span style={{ fontSize: '0.9em', color: '#666' }}>Calculando...</span>
+              ) : roadDistance !== null ? (
+                `${Number(roadDistance).toFixed(2)} km`
+              ) : (
+                '--'
+              )}
+            </span>
+          )}
         </div>
       </div>
 
@@ -128,9 +243,17 @@ const MapEditor: React.FC<MapEditorProps> = ({
             attribution="&copy; OpenStreetMap contributors"
           />
 
-          {/* Polyline conectando todos los puntos */}
+          {/* Polyline recta conectando puntos (línea referencia) */}
           {polylineCoordinates.length > 1 && (
-            <Polyline positions={polylineCoordinates} pathOptions={{color: 'blue', weight: 3, opacity: 0.7}} />
+            <Polyline
+              positions={polylineCoordinates}
+              pathOptions={{ color: 'lightblue', weight: 2, opacity: 0.5, dashArray: '5, 5' }}
+            />
+          )}
+
+          {/* Polyline ruta real OSRM (línea principal) */}
+          {roadGeometry.length > 1 && (
+            <Polyline positions={roadGeometry} pathOptions={{ color: '#E74C3C', weight: 4, opacity: 0.8 }} />
           )}
 
           {/* Marcadores para cada punto */}

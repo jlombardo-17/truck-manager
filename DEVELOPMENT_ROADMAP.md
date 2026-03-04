@@ -86,26 +86,34 @@ POST /api/viajes → {camion_id, chofer_id, origen, destino, valor_viaje}
 
 ## Fase 2: Rutas en Mapa (Semanas 7-9)
 
-### 🗺️ Sprint 6: Integración Leaflet/Mapbox
+### 🗺️ Sprint 6: Integración Leaflet/Mapbox ✅ COMPLETADO
 
-**Frontend**:
-- [ ] Instalar `leaflet` y `react-leaflet`
-- [ ] Crear componente `<MapRouteEditor>`
-- [ ] Permitir hacer clic en mapa para agregar puntos de ruta
-- [ ] Mostrar línea entre puntos
-- [ ] Calcular distancia total automáticamente (Haversine formula)
+**Frontend**: ✅ COMPLETADO
+- ✅ Instalar `leaflet` y `react-leaflet` (ya estaban)
+- ✅ Crear componente `<MapRouteEditor>` (MapEditor.tsx)
+- ✅ Permitir hacer clic en mapa para agregar puntos de ruta
+- ✅ Mostrar línea entre puntos
+- ✅ Calcular distancia total automáticamente (Haversine formula)
 
-**Backend**:
-- [ ] Crear entidad: `VijesRutas` (puntos GPS)
-- [ ] Endpoint para guardar ruta:
-  ```
-  POST /api/viajes/:id/ruta → [{lat, lng, orden, distancia}]
-  ```
+**Backend**: ✅ COMPLETADO
+- ✅ Crear entidad: `ViajRutas` (viaje-ruta.entity.ts)
+- ✅ Endpoint para obtener rutas: `GET /api/viajes/:id/rutas`
+- ✅ Endpoint para guardar rutas: `POST /api/viajes/:id/rutas`
+- ✅ Cálculo automático de distancia total (Haversine)
+- ✅ Actualización automática de `kmRecorridos` en viaje
 
-**UI/UX**:
-- [ ] Interfaz intuitiva para marcar ruta
-- [ ] Mostrar KM totales en tiempo real
-- [ ] Poder editar puntos (arrastrar, eliminar)
+**UI/UX**: ✅ COMPLETADO
+- ✅ Interfaz intuitiva para marcar ruta (MapEditor)
+- ✅ Mostrar KM totales en tiempo real
+- ✅ Poder editar puntos (eliminar, reordenar)
+- ✅ Panel lateral con lista de puntos
+
+**Métodos implementados:**
+- `ViajsService.getRoutes(viajeId)` - Obtener rutas
+- `ViajsService.saveRoutes(viajeId, rutas)` - Guardar/actualizar
+- `ViajsService.calculateTotalDistance(rutas)` - Distancia
+- `ViajsService.haversineDistance()` - Fórmula Haversine
+- Frontend: `viajsService.getRoutes()` y `viajsService.saveRoutes()`
 
 ---
 
