@@ -55,7 +55,7 @@ const ChoferDetalle: React.FC = () => {
     }
 
     try {
-      await choferDocumentosService.delete(choferId, documentoId);
+      await choferDocumentosService.delete(documentoId);
       await loadData();
     } catch (err) {
       setError('Error al eliminar el documento');
@@ -67,7 +67,7 @@ const ChoferDetalle: React.FC = () => {
     e.preventDefault();
 
     try {
-      await choferDocumentosService.create(choferId, {
+      await choferDocumentosService.create({
         ...nuevoDocumento,
         choferId,
       } as ChoferDocumento);

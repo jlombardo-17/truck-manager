@@ -10,6 +10,7 @@ import { Servicio, TipoServicio, TipoServicioLabels } from '../types/servicio';
 import { Documento, TipoDocumento, TipoDocumentoLabels } from '../types/servicio';
 import { Repostada, TipoCombustibleLabels, Estadisticas } from '../types/repostada';
 import { RepostadaModal } from '../components/RepostadaModal';
+import { MantenimientoTab } from '../components/MantenimientoTab';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import '../styles/CamionDetalle.css';
 
@@ -386,6 +387,12 @@ const CamionDetalle: React.FC = () => {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Mantenimiento */}
+      <section className="info-section">
+        <h2>🔧 Gestión de Mantenimiento</h2>
+        <MantenimientoTab camionId={camionId} />
       </section>
 
       {/* Modales */}
