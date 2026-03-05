@@ -10,6 +10,7 @@ import { Servicio, TipoServicio, TipoServicioLabels } from '../types/servicio';
 import { Documento, TipoDocumento, TipoDocumentoLabels } from '../types/servicio';
 import { Repostada, TipoCombustibleLabels, Estadisticas } from '../types/repostada';
 import { RepostadaModal } from '../components/RepostadaModal';
+import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import '../styles/CamionDetalle.css';
 
 const CamionDetalle: React.FC = () => {
@@ -283,11 +284,14 @@ const CamionDetalle: React.FC = () => {
                 )}
                 {doc.nombre && <h4>{doc.nombre}</h4>}
                 {doc.descripcion && <p className="descripcion">{doc.descripcion}</p>}
-                {doc.fechaVencimiento && (
-                  <p className="vencimiento">
-                    Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
-                  </p>
-                )}
+                <div className="documento-info">
+                  {doc.fechaVencimiento && (
+                    <p className="vencimiento">
+                      Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
+                    </p>
+                  )}
+                  <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />
+                </div>
                 <button
                   onClick={() => handleDeleteDocumento(doc.id)}
                   className="delete-btn"

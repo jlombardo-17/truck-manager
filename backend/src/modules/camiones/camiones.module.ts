@@ -8,14 +8,20 @@ import { CamionesController } from './camiones.controller';
 import { CamionesService } from './camiones.service';
 import { ServiciosController } from './servicios.controller';
 import { ServiciosService } from './servicios.service';
-import { DocumentosController } from './documentos.controller';
+import { DocumentosController, DocumentosCamionesAlertasController } from './documentos.controller';
 import { DocumentosService } from './documentos.service';
 import { RepostadasController } from './repostadas.controller';
 import { RepostadasService } from './repostadas.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Camion, Servicio, Documento, Repostada])],
-  controllers: [CamionesController, ServiciosController, DocumentosController, RepostadasController],
+  controllers: [
+    CamionesController, 
+    ServiciosController, 
+    DocumentosController, 
+    DocumentosCamionesAlertasController,
+    RepostadasController
+  ],
   providers: [CamionesService, ServiciosService, DocumentosService, RepostadasService],
   exports: [CamionesService, ServiciosService, DocumentosService, RepostadasService],
 })

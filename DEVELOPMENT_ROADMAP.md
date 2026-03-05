@@ -1,135 +1,132 @@
 # 🗺️ Roadmap de Desarrollo - Truck Manager
 
-## Fase 1: MVP Básico (Semanas 1-6)
+## ✅ Fase 1: MVP Básico (Semanas 1-6) - COMPLETADO
 
-### ✅ Sprint 1-2: Setup y Autenticación (Semanas 1-2)
-- [ ] Configurar entorno de desarrollo completo
-- [ ] Crear BD con tabla de USUARIOS y ROLES
-- [ ] Implementar autenticación JWT (Backend)
-- [ ] Login básico (Frontend)
-- [ ] Página Dashboard vacía (solo protección de ruta)
-
-**Entregas**:
-- Backend escuchando en `localhost:3000`
-- Frontend corriendo en `localhost:5173`
-- Autenticación funcionando (login/logout)
-
----
-
-### ✅ Sprint 3: Gestión de Camiones (Semanas 3-4)
-
-**Backend**:
-- [ ] Crear entidad TypeORM: `Camiones`
-- [ ] Crear módulo `camiones` (NestJS)
-- [ ] Endpoints CRUD:
-  - `GET /api/camiones` (listar)
-  - `GET /api/camiones/:id` (detalle)
-  - `POST /api/camiones` (crear)
-  - `PUT /api/camiones/:id` (editar)
-  - `DELETE /api/camiones/:id` (eliminar)
-- [ ] Validaciones con class-validator
-
-**Frontend**:
-- [ ] Página de Listado de Camiones
-- [ ] Formulario para crear/editar camión
-- [ ] Tabla con búsqueda y filtros básicos
-- [ ] Botones de editar/eliminar
+### ✅ Sprint 1-2: Setup y Autenticación (Semanas 1-2) - COMPLETADO
+- ✅ Configurar entorno de desarrollo completo
+- ✅ Crear BD con tabla de USUARIOS y ROLES
+- ✅ Implementar autenticación JWT (Backend)
+- ✅ Login básico (Frontend)
+- ✅ Página Dashboard funcional
 
 **Entregas**:
-```
-GET /api/camiones → [{id: 1, patente: "ABC123", marca: "Volvo", ...}]
-```
+- ✅ Backend escuchando en `localhost:3000`
+- ✅ Frontend corriendo en `localhost:5173`
+- ✅ Autenticación funcionando (login/logout)
 
 ---
 
-### ✅ Sprint 4: Gestión de Choferes (Semanas 4-5)
+### ✅ Sprint 3: Gestión de Camiones (Semanas 3-4) - COMPLETADO
 
 **Backend**:
-- [ ] Crear entidad: `Choferes`
-- [ ] Crear módulo `choferes`
-- [ ] Endpoints CRUD (igual a camiones)
-- [ ] Relación con USUARIOS (un chofer = un usuario)
+- ✅ Crear entidad TypeORM: `Camiones`
+- ✅ Crear módulo `camiones` (NestJS)
+- ✅ Endpoints CRUD completos
+- ✅ Validaciones con class-validator
+- ✅ Gestión de documentos, servicios y repostadas
 
 **Frontend**:
-- [ ] Página de Listado de Choferes
-- [ ] Formulario crear/editar chofer
-- [ ] Vista de datos personales, licencia, documentación
-
-**Entregas**:
-```
-GET /api/choferes → [{id: 1, nombre: "Juan", dni: "12345678", ...}]
-```
+- ✅ Página de Listado de Camiones
+- ✅ Formulario para crear/editar camión
+- ✅ Vista detalle con tabs (Info, Documentos, Servicios, Repostadas)
+- ✅ Tabla con búsqueda y filtros
+- ✅ Estadísticas de consumo
 
 ---
 
-### ✅ Sprint 5: Gestión de Viajes (Semana 5-6)
+### ✅ Sprint 4: Gestión de Choferes (Semanas 4-5) - COMPLETADO
 
 **Backend**:
-- [ ] Crear entidad: `Viajes`
-- [ ] Endpoints CRUD
-- [ ] Relaciones: Viajes → Camión + Chofer
-- [ ] Cálculo automático:
-  - `kms_recorridos` = distancia de ruta
-  - `valor_viaje` × `porcentaje_comision_chofer` = comisión
-  - Actualizar odómetro del camión
+- ✅ Crear entidad: `Choferes`
+- ✅ Crear módulo `choferes`
+- ✅ Endpoints CRUD completos
+- ✅ Relación con USUARIOS
 
 **Frontend**:
-- [ ] Página Crear Viaje (form con selector de camión/chofer)
-- [ ] Listado de Viajes con filtros
-
-**Entregas**:
-```
-POST /api/viajes → {camion_id, chofer_id, origen, destino, valor_viaje}
-```
+- ✅ Página de Listado de Choferes
+- ✅ Formulario crear/editar chofer
+- ✅ Vista de datos personales, licencia, documentación
 
 ---
 
-## Fase 2: Rutas en Mapa (Semanas 7-9)
-
-### 🗺️ Sprint 6: Integración Leaflet/Mapbox ✅ COMPLETADO
-
-**Frontend**: ✅ COMPLETADO
-- ✅ Instalar `leaflet` y `react-leaflet` (ya estaban)
-- ✅ Crear componente `<MapRouteEditor>` (MapEditor.tsx)
-- ✅ Permitir hacer clic en mapa para agregar puntos de ruta
-- ✅ Mostrar línea entre puntos
-- ✅ Calcular distancia total automáticamente (Haversine formula)
-
-**Backend**: ✅ COMPLETADO
-- ✅ Crear entidad: `ViajRutas` (viaje-ruta.entity.ts)
-- ✅ Endpoint para obtener rutas: `GET /api/viajes/:id/rutas`
-- ✅ Endpoint para guardar rutas: `POST /api/viajes/:id/rutas`
-- ✅ Cálculo automático de distancia total (Haversine)
-- ✅ Actualización automática de `kmRecorridos` en viaje
-
-**UI/UX**: ✅ COMPLETADO
-- ✅ Interfaz intuitiva para marcar ruta (MapEditor)
-- ✅ Mostrar KM totales en tiempo real
-- ✅ Poder editar puntos (eliminar, reordenar)
-- ✅ Panel lateral con lista de puntos
-
-**Métodos implementados:**
-- `ViajsService.getRoutes(viajeId)` - Obtener rutas
-- `ViajsService.saveRoutes(viajeId, rutas)` - Guardar/actualizar
-- `ViajsService.calculateTotalDistance(rutas)` - Distancia
-- `ViajsService.haversineDistance()` - Fórmula Haversine
-- Frontend: `viajsService.getRoutes()` y `viajsService.saveRoutes()`
-
----
-
-## Fase 3: Documentación y Mantenimiento (Semanas 10-12)
-
-### 📎 Sprint 7: Documentos
+### ✅ Sprint 5: Gestión de Viajes (Semana 5-6) - COMPLETADO
 
 **Backend**:
-- [ ] Crear tablas: `camiones_documentos` y `choferes_documentos`
-- [ ] Endpoints para subir archivos (integrar AWS S3 o almacenamiento local)
-- [ ] Validar vencimiento automático
+- ✅ Crear entidad: `Viajes` con `ViajRutas` y `ViajComisiones`
+- ✅ Endpoints CRUD completos
+- ✅ Relaciones: Viajes → Camión + Chofer
+- ✅ Cálculo de comisiones automático
+- ✅ Sistema de estados (en_progreso, completado, cancelado)
 
 **Frontend**:
-- [ ] Sección "Documentos" en detalle de Camión y Chofer
-- [ ] Upload de archivos
-- [ ] Mostrar estado de vencimiento (vigente/próximo a vencer/vencido)
+- ✅ Página Crear/Editar Viaje con formulario completo
+- ✅ Listado de Viajes con filtros por estado, camión, chofer
+- ✅ Gestión de comisiones con cálculo automático
+- ✅ Cálculo de ganancia neta en tiempo real
+
+---
+
+## ✅ Fase 2: Rutas en Mapa (Semanas 7-9) - COMPLETADO
+
+### ✅ Sprint 6: Integración Leaflet/OSRM - COMPLETADO
+
+**Frontend**: 
+- ✅ Componente `MapEditor` con Leaflet
+- ✅ Click en mapa para agregar puntos de ruta
+- ✅ Visualización de línea entre puntos (polyline)
+- ✅ Integración con OSRM para cálculo de distancia real por carretera
+- ✅ Visualización de geometría de ruta óptima
+- ✅ Cálculo automático de distancia (Haversine como fallback)
+- ✅ Panel lateral con lista de puntos editable
+
+**Backend**: 
+- ✅ Entidad `ViajRutas` implementada
+- ✅ Endpoint `GET /api/viajes/:id/rutas`
+- ✅ Endpoint `POST /api/viajes/:id/rutas`
+- ✅ Integración con OSRM (router.project-osrm.org)
+- ✅ Cálculo de ruta óptima (2 puntos: routing, 3+: trip optimization)
+- ✅ Actualización automática de `kmRecorridos` con distancia real
+- ✅ Fallback a Haversine si OSRM no disponible
+
+**Características implementadas:**
+- ✅ Distancia en línea recta vs distancia por carretera
+- ✅ Optimización de waypoints (mantiene origen/destino fijos)
+- ✅ Loading states durante cálculos
+- ✅ Conversión automática de valores numéricos en DTOs
+- ✅ Manejo robusto de errores (toFixed, valores null/undefined)
+
+---
+
+## ✅ Fase 3: Documentación Mejorada (Semanas 10-12) - COMPLETADO
+
+### ✅ Sprint 7: Gestión Mejorada de Documentos - COMPLETADO
+
+**Backend**:
+- ✅ Crear entidad `ChoferDocumento` con TypeORM
+- ✅ 8 tipos de documentos (DNI, Licencia, Carnet Salud, etc.)
+- ✅ Sistema de alertas de vencimiento:
+  - `GET /documentos/proximos-vencer?dias=30` - Documentos próximos a vencer
+  - `GET /documentos/vencidos` - Documentos vencidos
+- ✅ Lógica de estados: vigente (>30 días), proximo_vencer (0-30 días), vencido (<0 días)
+- ✅ CRUD completo para documentos de choferes
+- ✅ Sistema de alertas agregado también a documentos de camiones
+
+**Frontend**:
+- ✅ Componente reutilizable `DocumentoEstadoBadge`:
+  - 4 estados con colores: vigente (verde), proximo_vencer (amarillo), vencido (rojo), sin_vencimiento (gris)
+  - Muestra días restantes/vencidos
+  - Integrado en CamionDetalle y ChoferDetalle
+- ✅ Página completa `ChoferDetalle`:
+  - Vista con tabs: Información Personal, Documentos
+  - CRUD de documentos inline
+  - Visualización de estado de cada documento
+  - Navegación desde lista de choferes (botón "Ver Detalle" 👁️)
+- ✅ Servicios frontend: `choferDocumentosService` con métodos de alertas
+- ✅ Tipos TypeScript completos para documentos de chofer
+
+**Notas**:
+- ⚠️ Upload de archivos físicos aún no implementado (por ahora solo rutaArchivo como string)
+- ⚠️ Integración con AWS S3 o almacenamiento local pendiente para futuras iteraciones
 
 ---
 

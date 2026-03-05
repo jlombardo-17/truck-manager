@@ -166,6 +166,13 @@ const Choferes: React.FC = () => {
                   </td>
                   <td className="actions">
                     <Link
+                      to={`/choferes/${chofer.id}`}
+                      className="btn-view"
+                      title="Ver Detalle"
+                    >
+                      👁️
+                    </Link>
+                    <Link
                       to={`/choferes/edit/${chofer.id}`}
                       className="btn-edit"
                       title="Editar"

@@ -7,6 +7,7 @@ import CamionForm from './pages/CamionForm';
 import CamionDetalle from './pages/CamionDetalle';
 import Choferes from './pages/Choferes';
 import ChoferForm from './pages/ChoferForm';
+import ChoferDetalle from './pages/ChoferDetalle';
 import Viajes from './pages/Viajes';
 import ViajeForm from './pages/ViajeForm';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -63,6 +64,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Choferes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/choferes/:id"
+            element={
+              <ProtectedRoute>
+                <ChoferDetalle />
               </ProtectedRoute>
             }
           />

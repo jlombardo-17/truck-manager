@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { DocumentosService } from './documentos.service';
 import { CreateDocumentoDto, UpdateDocumentoDto } from './dto/documento.dto';
@@ -31,5 +31,22 @@ export class DocumentosController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.documentosService.remove(id);
+  }
+}
+
+@UseGuards(JwtAuthGuard)
+@Controller('documentos-camiones')
+export class DocumentosCamionesAlertasController {
+  constructor(private readonly documentosService: DocumentosService) {}
+
+  @Get('proximos-vencer')
+  async findProximosAVencer(@Query('dias') dias?: string) {
+    const diasNum = dias ? parseInt(dias) : 30;
+    return await this.documentosService.findProximosAVencer(diasNum);
+  }
+
+  @Get('vencidos')
+  async findVencidos() {
+    return await this.documentosService.findVencidos();
   }
 }
