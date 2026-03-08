@@ -181,3 +181,169 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* KPI Cards */
+.kpi-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-card {
+  padding: 1.5rem;
+  border-radius: 8px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+}
+
+.kpi-card h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.kpi-card.success {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.kpi-card.danger {
+  background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+}
+
+.kpi-card.warning {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.kpi-card.info {
+  background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+}
+
+.kpi-card.primary {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.kpi-value {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+/* Alerts Section */
+.alerts-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border-left: 4px solid #ff6a00;
+}
+
+.alerts-section h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.alerts-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.alert-item {
+  background: #fff3cd;
+  padding: 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #ffc107;
+}
+
+.alert-text {
+  color: #856404;
+  font-weight: 500;
+}
+
+/* Performance Section */
+.performance-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.performance-section h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.performance-table {
+  overflow-x: auto;
+}
+
+.performance-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.performance-table th {
+  background: #f5f5f5;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+  font-size: 0.95rem;
+}
+
+.performance-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+
+.performance-table tr:hover {
+  background: #fafafa;
+}
+
+.performance-table .bold {
+  font-weight: 600;
+  color: #333;
+}
+
+.efficiency-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.efficiency-badge.high {
+  background: #d4edda;
+  color: #155724;
+}
+
+.efficiency-badge.medium {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.efficiency-badge.low {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.puntuality-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: #d4edda;
+  color: #155724;
+}
+

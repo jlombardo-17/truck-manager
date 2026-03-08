@@ -70,6 +70,68 @@ export interface OperacionCamionResponse {
   }>;
 }
 
+export interface DesempenoChoferesResponse {
+  filtrosAplicados: {
+    desde: string;
+    hasta: string;
+    choferIds?: number[];
+  };
+  desempenio: Array<{
+    id: number;
+    nombre: string;
+    viajesCompletos: number;
+    ingresos: number;
+    comisiones: number;
+    comisionPromedio: number;
+  }>;
+}
+
+export interface GastosMantenimientoResponse {
+  filtrosAplicados: {
+    desde: string;
+    hasta: string;
+    camionIds?: number[];
+  };
+  resumenTotal: number;
+  gastos: Array<{
+    camionId: number;
+    patente: string;
+    registros: Array<{
+      camionId: number;
+      patente: string;
+      tipoMantenimiento: string;
+      fecha: string;
+      costo: number;
+      estado: string;
+    }>;
+    totalGastos: number;
+    cantidadRegistros: number;
+  }>;
+}
+
+export interface IngresosMensualesResponse {
+  filtrosAplicados: {
+    desde: string;
+    hasta: string;
+    camionIds?: number[];
+    choferIds?: number[];
+  };
+  resumen: {
+    totalViajesCompletos: number;
+    totalIngresos: number;
+    totalGastos: number;
+    totalGananciaNeta: number;
+  };
+  ingresos: Array<{
+    mes: string;
+    viajesCompletos: number;
+    ingresos: number;
+    gastos: number;
+    gananciaNeta: number;
+    rentabilidad: number;
+  }>;
+}
+
 class ReportesService {
   private api: AxiosInstance;
 
@@ -146,6 +208,57 @@ class ReportesService {
 
     return response.data;
   }
+
+  // Reportes adicionales
+  async getDesempenoChoferes(filters: {
+    desde?: string;
+    hasta?: string;
+    choferIds?: number[];
+  }): Promise<DesempenoChoferesResponse> {
+    const response = await this.api.get<DesempenoChoferesResponse>('/reportes/desempenio-choferes', {
+      params: {
+        ...(filters.desde ? { desde: filters.desde } : {}),
+        ...(filters.hasta ? { hasta: filters.hasta } : {}),
+        ...(filters.choferIds?.length ? { choferIds: filters.choferIds.join(',') } : {}),
+      },
+    });
+    return response.data;
+  }
+
+  async getGastosMantenimiento(filters: {
+    desde?: string;
+    hasta?: string;
+    camionIds?: number[];
+  }): Promise<GastosMantenimientoResponse> {
+    const response = await this.api.get<GastosMantenimientoResponse>('/reportes/gastos-mantenimiento', {
+      params: {
+        ...(filters.desde ? { desde: filters.desde } : {}),
+        ...(filters.hasta ? { hasta: filters.hasta } : {}),
+        ...(filters.camionIds?.length ? { camionIds: filters.camionIds.join(',') } : {}),
+      },
+    });
+    return response.data;
+  }
+
+  async getIngresosmensuales(filters: {
+    desde?: string;
+    hasta?: string;
+    camionIds?: number[];
+    choferIds?: number[];
+  }): Promise<IngresosMensualesResponse> {
+    const response = await this.api.get<IngresosMensualesResponse>('/reportes/ingresos-mensuales', {
+      params: {
+        ...(filters.desde ? { desde: filters.desde } : {}),
+        ...(filters.hasta ? { hasta: filters.hasta } : {}),
+        ...(filters.camionIds?.length ? { camionIds: filters.camionIds.join(',') } : {}),
+        ...(filters.choferIds?.length ? { choferIds: filters.choferIds.join(',') } : {}),
+      },
+    });
+    return response.data;
+  }
 }
 
-export default new ReportesService();
+const reportesService = new ReportesService();
+
+export { reportesService };
+export default reportesService;

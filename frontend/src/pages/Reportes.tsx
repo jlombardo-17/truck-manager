@@ -15,10 +15,14 @@ import {
 import { Bar, Line } from 'react-chartjs-2';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
-import reportesService, {
+import {
+  DesempenoChoferesResponse,
+  GastosMantenimientoResponse,
+  IngresosMensualesResponse,
   OperacionCamionResponse,
   RentabilidadComparativaResponse,
   RentabilidadResponse,
+  reportesService,
 } from '../services/reportesService';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
@@ -77,11 +81,15 @@ const Reportes: React.FC = () => {
   const [loadingRentabilidad, setLoadingRentabilidad] = useState(false);
   const [loadingComparativa, setLoadingComparativa] = useState(false);
   const [loadingOperacion, setLoadingOperacion] = useState(false);
+  const [loadingAdicionales, setLoadingAdicionales] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [reporte, setReporte] = useState<RentabilidadResponse | null>(null);
   const [comparativa, setComparativa] = useState<RentabilidadComparativaResponse | null>(null);
   const [operacionCamion, setOperacionCamion] = useState<OperacionCamionResponse | null>(null);
+  const [desempenoChoferes, setDesempenoChoferes] = useState<DesempenoChoferesResponse | null>(null);
+  const [gastosMantenimiento, setGastosMantenimiento] = useState<GastosMantenimientoResponse | null>(null);
+  const [ingresosMensuales, setIngresosMensuales] = useState<IngresosMensualesResponse | null>(null);
 
   const [granularidad, setGranularidad] = useState<'diaria' | 'mensual'>('diaria');
   const [camionIds, setCamionIds] = useState<string[]>([]);
@@ -128,6 +136,10 @@ const Reportes: React.FC = () => {
   useEffect(() => {
     fetchOperacionCamion();
   }, [camionOperacionId, granularidadOperacion, desde, hasta]);
+
+  useEffect(() => {
+    fetchReportesAdicionales();
+  }, [camionIds, choferIds, desde, hasta]);
 
   const fetchRentabilidad = async () => {
     try {
@@ -185,6 +197,38 @@ const Reportes: React.FC = () => {
       setError(err?.response?.data?.message || 'No se pudo cargar la operación del camión');
     } finally {
       setLoadingOperacion(false);
+    }
+  };
+
+  const fetchReportesAdicionales = async () => {
+    try {
+      setLoadingAdicionales(true);
+      const [desempenoData, gastosData, ingresosData] = await Promise.all([
+        reportesService.getDesempenoChoferes({
+          desde,
+          hasta,
+          choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
+        }),
+        reportesService.getGastosMantenimiento({
+          desde,
+          hasta,
+          camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
+        }),
+        reportesService.getIngresosmensuales({
+          desde,
+          hasta,
+          camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
+          choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
+        }),
+      ]);
+
+      setDesempenoChoferes(desempenoData);
+      setGastosMantenimiento(gastosData);
+      setIngresosMensuales(ingresosData);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudieron cargar los reportes adicionales');
+    } finally {
+      setLoadingAdicionales(false);
     }
   };
 
@@ -291,6 +335,53 @@ const Reportes: React.FC = () => {
     downloadCsv(
       `operacion_camion_${camionOperacionId || 'na'}_${desde}_${hasta}.csv`,
       ['Periodo', 'Kms', 'Toneladas'],
+      rows,
+    );
+  };
+
+  const exportDesempenoChoferesCsv = () => {
+    const rows = (desempenoChoferes?.desempenio || []).map((item) => [
+      item.nombre || 'Sin nombre',
+      item.viajesCompletos,
+      item.ingresos.toFixed(2),
+      item.comisiones.toFixed(2),
+      item.comisionPromedio.toFixed(2),
+    ]);
+
+    downloadCsv(
+      `desempeno_choferes_${desde}_${hasta}.csv`,
+      ['Chofer', 'Viajes', 'Ingresos', 'Comisiones', 'ComisionPromedio'],
+      rows,
+    );
+  };
+
+  const exportGastosMantenimientoCsv = () => {
+    const rows = (gastosMantenimiento?.gastos || []).map((item) => [
+      item.patente || `Camion ${item.camionId}`,
+      item.cantidadRegistros,
+      item.totalGastos.toFixed(2),
+    ]);
+
+    downloadCsv(
+      `gastos_mantenimiento_${desde}_${hasta}.csv`,
+      ['Patente', 'Registros', 'TotalGastos'],
+      rows,
+    );
+  };
+
+  const exportIngresosMensualesCsv = () => {
+    const rows = (ingresosMensuales?.ingresos || []).map((item) => [
+      item.mes,
+      item.viajesCompletos,
+      item.ingresos.toFixed(2),
+      item.gastos.toFixed(2),
+      item.gananciaNeta.toFixed(2),
+      item.rentabilidad.toFixed(2),
+    ]);
+
+    downloadCsv(
+      `ingresos_mensuales_${desde}_${hasta}.csv`,
+      ['Mes', 'Viajes', 'Ingresos', 'Gastos', 'GananciaNeta', 'RentabilidadPct'],
       rows,
     );
   };
@@ -652,6 +743,149 @@ const Reportes: React.FC = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="tabla-container">
+        <div className="section-header-inline">
+          <h3>Desempeño de Choferes</h3>
+          <button
+            className="btn-rapido"
+            onClick={exportDesempenoChoferesCsv}
+            disabled={loadingAdicionales || !(desempenoChoferes?.desempenio || []).length}
+          >
+            Exportar CSV
+          </button>
+        </div>
+        {loadingAdicionales ? (
+          <p>Cargando desempeño de choferes...</p>
+        ) : (
+          <table className="reportes-table">
+            <thead>
+              <tr>
+                <th>Chofer</th>
+                <th>Viajes</th>
+                <th>Ingresos</th>
+                <th>Comisiones</th>
+                <th>Comisión Promedio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(desempenoChoferes?.desempenio || []).map((item) => (
+                <tr key={item.id}>
+                  <td>{item.nombre || 'Sin nombre'}</td>
+                  <td>{item.viajesCompletos}</td>
+                  <td>${item.ingresos.toFixed(2)}</td>
+                  <td>${item.comisiones.toFixed(2)}</td>
+                  <td>${item.comisionPromedio.toFixed(2)}</td>
+                </tr>
+              ))}
+              {(desempenoChoferes?.desempenio || []).length === 0 && (
+                <tr>
+                  <td colSpan={5}>No hay datos para el filtro seleccionado.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="tabla-container">
+        <div className="section-header-inline">
+          <h3>Gastos de Mantenimiento</h3>
+          <button
+            className="btn-rapido"
+            onClick={exportGastosMantenimientoCsv}
+            disabled={loadingAdicionales || !(gastosMantenimiento?.gastos || []).length}
+          >
+            Exportar CSV
+          </button>
+        </div>
+        {loadingAdicionales ? (
+          <p>Cargando gastos de mantenimiento...</p>
+        ) : (
+          <>
+            <div className="operacion-resumen">
+              <span>Total Gastos: ${Number(gastosMantenimiento?.resumenTotal || 0).toFixed(2)}</span>
+            </div>
+            <table className="reportes-table">
+              <thead>
+                <tr>
+                  <th>Patente</th>
+                  <th>Registros</th>
+                  <th>Total Gastos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(gastosMantenimiento?.gastos || []).map((item) => (
+                  <tr key={item.camionId}>
+                    <td>{item.patente || `Camión ${item.camionId}`}</td>
+                    <td>{item.cantidadRegistros}</td>
+                    <td>${item.totalGastos.toFixed(2)}</td>
+                  </tr>
+                ))}
+                {(gastosMantenimiento?.gastos || []).length === 0 && (
+                  <tr>
+                    <td colSpan={3}>No hay gastos de mantenimiento para el filtro seleccionado.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
+      <div className="tabla-container">
+        <div className="section-header-inline">
+          <h3>Ingresos Mensuales</h3>
+          <button
+            className="btn-rapido"
+            onClick={exportIngresosMensualesCsv}
+            disabled={loadingAdicionales || !(ingresosMensuales?.ingresos || []).length}
+          >
+            Exportar CSV
+          </button>
+        </div>
+        {loadingAdicionales ? (
+          <p>Cargando ingresos mensuales...</p>
+        ) : (
+          <>
+            <div className="operacion-resumen">
+              <span>Viajes: {Number(ingresosMensuales?.resumen.totalViajesCompletos || 0)}</span>
+              <span>Ingresos: ${Number(ingresosMensuales?.resumen.totalIngresos || 0).toFixed(2)}</span>
+              <span>Gastos: ${Number(ingresosMensuales?.resumen.totalGastos || 0).toFixed(2)}</span>
+              <span>Ganancia: ${Number(ingresosMensuales?.resumen.totalGananciaNeta || 0).toFixed(2)}</span>
+            </div>
+            <table className="reportes-table">
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Viajes</th>
+                  <th>Ingresos</th>
+                  <th>Gastos</th>
+                  <th>Ganancia Neta</th>
+                  <th>Rentabilidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(ingresosMensuales?.ingresos || []).map((item) => (
+                  <tr key={item.mes}>
+                    <td>{item.mes}</td>
+                    <td>{item.viajesCompletos}</td>
+                    <td>${item.ingresos.toFixed(2)}</td>
+                    <td>${item.gastos.toFixed(2)}</td>
+                    <td>${item.gananciaNeta.toFixed(2)}</td>
+                    <td>{item.rentabilidad.toFixed(2)}%</td>
+                  </tr>
+                ))}
+                {(ingresosMensuales?.ingresos || []).length === 0 && (
+                  <tr>
+                    <td colSpan={6}>No hay ingresos mensuales para el filtro seleccionado.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
     </div>
   );

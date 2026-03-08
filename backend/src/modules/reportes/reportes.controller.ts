@@ -77,4 +77,46 @@ export class ReportesController {
       hasta: hasta ? new Date(hasta) : undefined,
     });
   }
+
+  // Reportes adicionales
+  @Get('desempenio-choferes')
+  async getDesempenoChoferes(
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('choferIds') choferIds?: string,
+  ) {
+    return this.reportesService.getDesempenoChoferes({
+      desde: desde ? new Date(desde) : undefined,
+      hasta: hasta ? new Date(hasta) : undefined,
+      choferIds: parseIds(choferIds),
+    });
+  }
+
+  @Get('gastos-mantenimiento')
+  async getGastosMantenimiento(
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('camionIds') camionIds?: string,
+  ) {
+    return this.reportesService.getGastosMantenimiento({
+      desde: desde ? new Date(desde) : undefined,
+      hasta: hasta ? new Date(hasta) : undefined,
+      camionIds: parseIds(camionIds),
+    });
+  }
+
+  @Get('ingresos-mensuales')
+  async getIngresosMS(
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('camionIds') camionIds?: string,
+    @Query('choferIds') choferIds?: string,
+  ) {
+    return this.reportesService.getIngresosMS({
+      desde: desde ? new Date(desde) : undefined,
+      hasta: hasta ? new Date(hasta) : undefined,
+      camionIds: parseIds(camionIds),
+      choferIds: parseIds(choferIds),
+    });
+  }
 }

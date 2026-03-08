@@ -503,4 +503,222 @@ export class ReportesService {
   private round2(value: number): number {
     return Math.round(value * 100) / 100;
   }
+
+  // Reportes adicionales
+  async getDesempenoChoferes(filters: {
+    desde?: Date;
+    hasta?: Date;
+    choferIds?: number[];
+  }) {
+    const hasta = filters.hasta || new Date();
+    const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const viajes = await this.viajeRepository.find({
+      relations: ['chofer'],
+      where: {
+        fechaInicio: Between(desde, hasta),
+        choferId: filters.choferIds && filters.choferIds.length > 0 ? In(filters.choferIds) : undefined,
+      },
+      order: { fechaInicio: 'ASC' },
+    });
+
+    const choferesMap = new Map<number, {
+      id: number;
+      nombre: string;
+      viajesCompletos: number;
+      ingresos: number;
+      comisiones: number;
+    }>();
+
+    for (const viaje of viajes) {
+      const choferId = viaje.choferId;
+      if (!choferesMap.has(choferId)) {
+        choferesMap.set(choferId, {
+          id: choferId,
+          nombre: `${viaje.chofer?.nombre || ''} ${viaje.chofer?.apellido || ''}`.trim(),
+          viajesCompletos: 0,
+          ingresos: 0,
+          comisiones: 0,
+        });
+      }
+
+      const chofer = choferesMap.get(choferId)!;
+      chofer.viajesCompletos += 1;
+      chofer.ingresos += this.toNumber(viaje.valorViaje);
+      const porcentajeComision = this.toNumber(viaje.chofer?.porcentajeComision || 0);
+      chofer.comisiones += (this.toNumber(viaje.valorViaje) * porcentajeComision) / 100;
+    }
+
+    const desempenio = Array.from(choferesMap.values())
+      .map((chofer) => ({
+        ...chofer,
+        ingresos: this.round2(chofer.ingresos),
+        comisiones: this.round2(chofer.comisiones),
+        comisionPromedio: chofer.viajesCompletos > 0 ? this.round2(chofer.comisiones / chofer.viajesCompletos) : 0,
+      }))
+      .sort((a, b) => b.viajesCompletos - a.viajesCompletos);
+
+    return {
+      filtrosAplicados: {
+        desde: desde.toISOString().split('T')[0],
+        hasta: hasta.toISOString().split('T')[0],
+        choferIds: filters.choferIds,
+      },
+      desempenio,
+    };
+  }
+
+  async getGastosMantenimiento(filters: {
+    desde?: Date;
+    hasta?: Date;
+    camionIds?: number[];
+  }) {
+    const hasta = filters.hasta || new Date();
+    const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const mantenimientos = await this.mantenimientoRepository.find({
+      relations: ['camion', 'tipo'],
+      where: {
+        costoReal: filters.camionIds && filters.camionIds.length > 0 ? In(filters.camionIds) : undefined,
+      },
+    });
+
+    const gastosPorCamion = new Map<number, {
+      camionId: number;
+      patente: string;
+      tipoMantenimiento: string;
+      fecha: Date;
+      costo: number;
+      estado: string;
+    }[]>();
+
+    for (const mantenimiento of mantenimientos) {
+      const fecha = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
+      if (!fecha || fecha < desde || fecha > hasta) {
+        continue;
+      }
+
+      const costo = this.toNumber(mantenimiento.costoReal);
+      if (costo <= 0) {
+        continue;
+      }
+
+      const camionId = mantenimiento.camionId;
+      if (!gastosPorCamion.has(camionId)) {
+        gastosPorCamion.set(camionId, []);
+      }
+
+      gastosPorCamion.get(camionId)!.push({
+        camionId,
+        patente: mantenimiento.camion?.patente || '',
+        tipoMantenimiento: mantenimiento.tipo?.nombre || 'Sin especificar',
+        fecha,
+        costo: this.round2(costo),
+        estado: mantenimiento.estado,
+      });
+    }
+
+    const gastos = Array.from(gastosPorCamion.entries())
+      .map(([camionId, registros]) => ({
+        camionId,
+        patente: registros[0]?.patente || '',
+        registros,
+        totalGastos: this.round2(registros.reduce((sum, r) => sum + r.costo, 0)),
+        cantidadRegistros: registros.length,
+      }))
+      .sort((a, b) => b.totalGastos - a.totalGastos);
+
+    const resumenTotal = this.round2(gastos.reduce((sum, g) => sum + g.totalGastos, 0));
+
+    return {
+      filtrosAplicados: {
+        desde: desde.toISOString().split('T')[0],
+        hasta: hasta.toISOString().split('T')[0],
+        camionIds: filters.camionIds,
+      },
+      resumenTotal,
+      gastos,
+    };
+  }
+
+  async getIngresosMS(filters: {
+    desde?: Date;
+    hasta?: Date;
+    camionIds?: number[];
+    choferIds?: number[];
+  }) {
+    const hasta = filters.hasta || new Date();
+    const desde = filters.desde || new Date(hasta.getFullYear(), hasta.getMonth(), 1);
+
+    const viajes = await this.getViajes({
+      granularidad: 'mensual',
+      desde,
+      hasta,
+      camionIds: filters.camionIds,
+      choferIds: filters.choferIds,
+    });
+
+    const ingresosPorMes = new Map<string, {
+      mes: string;
+      viajesCompletos: number;
+      ingresos: number;
+      gastos: number;
+      gananciaNeta: number;
+    }>();
+
+    for (const viaje of viajes) {
+      const mesKey = this.toBucketKey(viaje.fechaInicio, 'mensual');
+      if (!ingresosPorMes.has(mesKey)) {
+        ingresosPorMes.set(mesKey, {
+          mes: this.formatLabel(mesKey, 'mensual'),
+          viajesCompletos: 0,
+          ingresos: 0,
+          gastos: 0,
+          gananciaNeta: 0,
+        });
+      }
+
+      const mes = ingresosPorMes.get(mesKey)!;
+      mes.viajesCompletos += 1;
+      const ingreso = this.toNumber(viaje.valorViaje);
+      mes.ingresos += ingreso;
+
+      // Gastos
+      const gastoCombustible = this.toNumber(viaje.costoCombustible);
+      const otrosGastos = this.toNumber(viaje.otrosGastos);
+      const porcentajeComision = this.toNumber(viaje.chofer?.porcentajeComision);
+      const gastoComision = (ingreso * porcentajeComision) / 100;
+
+      mes.gastos += gastoCombustible + otrosGastos + gastoComision;
+      mes.gananciaNeta = mes.ingresos - mes.gastos;
+    }
+
+    const ingresos = Array.from(ingresosPorMes.values())
+      .map((mes) => ({
+        ...mes,
+        ingresos: this.round2(mes.ingresos),
+        gastos: this.round2(mes.gastos),
+        gananciaNeta: this.round2(mes.gananciaNeta),
+        rentabilidad: mes.ingresos > 0 ? this.round2((mes.gananciaNeta / mes.ingresos) * 100) : 0,
+      }))
+      .sort((a, b) => a.mes.localeCompare(b.mes));
+
+    const resumen = {
+      totalViajesCompletos: ingresos.reduce((sum, m) => sum + m.viajesCompletos, 0),
+      totalIngresos: this.round2(ingresos.reduce((sum, m) => sum + m.ingresos, 0)),
+      totalGastos: this.round2(ingresos.reduce((sum, m) => sum + m.gastos, 0)),
+      totalGananciaNeta: this.round2(ingresos.reduce((sum, m) => sum + m.gananciaNeta, 0)),
+    };
+
+    return {
+      filtrosAplicados: {
+        desde: desde.toISOString().split('T')[0],
+        hasta: hasta.toISOString().split('T')[0],
+        camionIds: filters.camionIds,
+        choferIds: filters.choferIds,
+      },
+      resumen,
+      ingresos,
+    };
+  }
 }
