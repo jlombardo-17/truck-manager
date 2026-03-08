@@ -17,7 +17,7 @@ export const salariosService = {
   getAll: async (): Promise<ChoferSalario[]> => {
     const response = await axios.get(API_BASE_URL, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
       },
     });
     return response.data;
@@ -29,7 +29,7 @@ export const salariosService = {
   getByChofer: async (choferId: number): Promise<ChoferSalario[]> => {
     const response = await axios.get(`${API_BASE_URL}/chofer/${choferId}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
       },
     });
     return response.data;
@@ -41,7 +41,7 @@ export const salariosService = {
   getByPeriodo: async (anio: number, mes: number): Promise<ChoferSalario[]> => {
     const response = await axios.get(`${API_BASE_URL}/periodo/${anio}/${mes}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
       },
     });
     return response.data;
@@ -59,7 +59,7 @@ export const salariosService = {
       `${API_BASE_URL}/chofer/${choferId}/${anio}/${mes}`,
       {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       },
     );
@@ -78,7 +78,7 @@ export const salariosService = {
       `${API_BASE_URL}/chofer/${choferId}/${anio}/${mes}/detalle`,
       {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       },
     );
@@ -91,7 +91,7 @@ export const salariosService = {
   create: async (dto: CreateSalarioDto): Promise<ChoferSalario> => {
     const response = await axios.post(API_BASE_URL, dto, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
       },
     });
     return response.data;
@@ -105,7 +105,7 @@ export const salariosService = {
   ): Promise<GenerarSalariosResponse> => {
     const response = await axios.post(`${API_BASE_URL}/generar`, dto, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
       },
     });
     return response.data;
@@ -117,7 +117,7 @@ export const salariosService = {
   update: async (id: number, dto: UpdateSalarioDto): Promise<ChoferSalario> => {
     const response = await axios.put(`${API_BASE_URL}/${id}`, dto, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
       },
     });
     return response.data;
@@ -141,7 +141,7 @@ export const salariosService = {
       },
       {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       },
     );
@@ -154,7 +154,7 @@ export const salariosService = {
   delete: async (id: number): Promise<void> => {
     await axios.delete(`${API_BASE_URL}/${id}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
       },
     });
   },

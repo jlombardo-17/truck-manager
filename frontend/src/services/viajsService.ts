@@ -149,7 +149,7 @@ export const viajsService = {
 
       const response = await axios.get<Viaje[]>(url, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
       return response.data;
@@ -166,7 +166,7 @@ export const viajsService = {
     try {
       const response = await axios.get<Viaje>(`${API_BASE_URL}/viajes/${id}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
       return response.data;
@@ -184,7 +184,7 @@ export const viajsService = {
       const payload = sanitizeViajePayload(viaje, { includeEstado: false });
       const response = await axios.post<Viaje>(`${API_BASE_URL}/viajes`, payload, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json',
         },
       });
@@ -203,7 +203,7 @@ export const viajsService = {
       const payload = sanitizeViajePayload(viaje, { includeEstado: true });
       const response = await axios.patch<Viaje>(`${API_BASE_URL}/viajes/${id}`, payload, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json',
         },
       });
@@ -224,7 +224,7 @@ export const viajsService = {
         { estado },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json',
           },
         },
@@ -245,7 +245,7 @@ export const viajsService = {
         `${API_BASE_URL}/viajes/${id}/comisiones`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
           },
         },
       );
@@ -269,7 +269,7 @@ export const viajsService = {
         gananciaNeta: number;
       }>(`${API_BASE_URL}/viajes/${id}/desglose`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
       return response.data;
@@ -286,7 +286,7 @@ export const viajsService = {
     try {
       await axios.delete(`${API_BASE_URL}/viajes/${id}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
     } catch (error) {
@@ -314,7 +314,7 @@ export const viajsService = {
     try {
       const response = await axios.get<ViajRuta[]>(`${API_BASE_URL}/viajes/${viajeId}/rutas`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
       return response.data;
@@ -343,7 +343,7 @@ export const viajsService = {
         { rutas: sanitizedRutas },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'application/json',
           },
         },
