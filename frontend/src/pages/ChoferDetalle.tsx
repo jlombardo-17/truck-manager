@@ -105,6 +105,12 @@ const ChoferDetalle: React.FC = () => {
         </button>
         <h1>📋 Detalle del Chofer</h1>
         <button 
+                    className="btn-salarios"
+                    onClick={() => navigate(`/choferes/${choferId}/salarios`)}
+                  >
+                    💰 Ver Salarios
+                  </button>
+                  <button 
           className="btn-edit"
           onClick={() => navigate(`/choferes/${choferId}/editar`)}
         >

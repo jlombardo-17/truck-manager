@@ -8,6 +8,8 @@ import CamionDetalle from './pages/CamionDetalle';
 import Choferes from './pages/Choferes';
 import ChoferForm from './pages/ChoferForm';
 import ChoferDetalle from './pages/ChoferDetalle';
+import ChoferSalarios from './pages/ChoferSalarios';
+import SalarioDetalle from './pages/SalarioDetalle';
 import Viajes from './pages/Viajes';
 import ViajeForm from './pages/ViajeForm';
 import Reportes from './pages/Reportes';
@@ -30,6 +32,22 @@ function App() {
               </ProtectedRoute>
             }
           />
+                    <Route
+                      path="/choferes/:id/salarios"
+                      element={
+                        <ProtectedRoute>
+                          <ChoferSalarios />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/choferes/:choferId/salarios/:salarioId"
+                      element={
+                        <ProtectedRoute>
+                          <SalarioDetalle />
+                        </ProtectedRoute>
+                      }
+                    />
           <Route
             path="/camiones"
             element={

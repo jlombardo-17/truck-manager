@@ -281,28 +281,53 @@
 
 ---
 
-## Fase 4: Contabilidad de Choferes (Semanas 16-18)
+## ✅ Fase 4: Contabilidad de Choferes (Semanas 16-18) - COMPLETADO
 
-### 💰 Sprint 11: Sistema de Salarios
+### ✅ Sprint 11: Sistema de Salarios - COMPLETADO (Marzo 8, 2026)
 
 **Backend**:
-- [ ] Crear tablas: `choferes_salarios_mensuales`, `choferes_ingresos_viajes`
-- [ ] Lógica de cálculo:
+- ✅ Entidad `ChoferSalario` con 16 columnas (salarioBase, totalComisiones, bonos, deducciones, salarioNeto)
+- ✅ Enum `EstadoSalario` (PENDIENTE, PAGADO, CANCELADO)
+- ✅ DTOs completos: CreateSalarioDto, UpdateSalarioDto, GenerarSalariosDto
+- ✅ Service con lógica de cálculo:
   ```
-  salario_neto = (salario_base + SUMA(comisiones_viajes)) - deducciones
-  comision = valor_viaje × porcentaje_comision / 100
+  salarioNeto = salarioBase + totalComisiones + bonos - deducciones
+  totalComisiones = SUMA(viajes_comisiones WHERE beneficiario = chofer AND mes/año)
   ```
-- [ ] Endpoints:
-  - `GET /api/choferes/:id/salarios` (historial)
-  - `GET /api/choferes/:id/salario/:mes/:año` (detalle)
-  - `POST /api/salarios/generar/:mes/:año` (calcular salarios automáticos)
+- ✅ Controller con endpoints REST:
+  - `GET /api/salarios/chofer/:choferId` (historial completo)
+  - `GET /api/salarios/chofer/:choferId/:anio/:mes` (salario específico)
+  - `GET /api/salarios/chofer/:choferId/:anio/:mes/detalle` (viajes con comisiones)
+  - `POST /api/salarios` (crear manualmente)
+  - `POST /api/salarios/generar` (generación masiva automática)
+  - `PUT /api/salarios/:id/pagar` (marcar como pagado)
+  - `DELETE /api/salarios/:id` (eliminar)
+- ✅ Integración con módulo de viajes (query de comisiones por período)
 
 **Frontend**:
-- [ ] Página: Salarios de Chofer
-- [ ] Vista de desglose: Base + Comisiones + Deducciones = Neto
-- [ ] Tabla de viajes facturados en el mes (mostrando comisión de cada uno)
-- [ ] Botón: Generar recibo PDF
-- [ ] Histórico de salarios pagos
+- ✅ Tipos TypeScript completos (`salario.ts`) con interfaces y utilidades
+- ✅ Servicio HTTP (`salariosService.ts`) con todos los endpoints
+- ✅ Página `ChoferSalarios.tsx`:
+  - Listado de salarios por chofer con filtros (año, estado)
+  - Tabla con columnas: Período, Base, Comisiones, Bonos, Deducciones, Neto, Estado, Fecha Pago
+  - Fila de totales al final
+  - Botones Ver Detalle y Generar PDF
+- ✅ Página `SalarioDetalle.tsx`:
+  - Resumen visual con cards de colores (verde, azul, rojo)
+  - Badge de estado con colores WCAG AA
+  - Sección de viajes del período con detalle de comisiones
+  - Generación de PDF de liquidación con jsPDF
+- ✅ PDF de Liquidación con:
+  - Encabezado profesional con título y período
+  - Información del chofer (nombre, RUT, teléfono)
+  - Tabla de resumen (Base, Comisiones, Bonos, Deducciones, Neto)
+  - Tabla de viajes (N° Viaje, Fecha, Ruta, Valor, Comisión)
+  - Estado de pago y método
+  - Líneas para firmas (Empleador y Trabajador)
+- ✅ Navegación integrada:
+  - Rutas `/choferes/:id/salarios` y `/choferes/:choferId/salarios/:salarioId`
+  - Botón "Ver Salarios" en página de detalle de chofer
+- ✅ Estilos responsive completos (desktop, tablet, mobile)
 
 ---
 
