@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Chofer } from '../types/chofer';
 import { ChoferDocumento, TipoDocumentoChofer, TipoDocumentoChoferLabels } from '../types/chofer-documento';
@@ -11,6 +11,7 @@ const ChoferDetalle: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const choferId = parseInt(id || '0');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [chofer, setChofer] = useState<Chofer | null>(null);
   const [documentos, setDocumentos] = useState<ChoferDocumento[]>([]);
@@ -20,10 +21,109 @@ const ChoferDetalle: React.FC = () => {
 
   // Formulario de nuevo documento
   const [showDocumentoForm, setShowDocumentoForm] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState('');
   const [nuevoDocumento, setNuevoDocumento] = useState<Partial<ChoferDocumento>>({
     tipo: TipoDocumentoChofer.LICENCIA_CONDUCIR,
     rutaArchivo: '',
   });
+
+  const MAX_FILE_SIZE_MB = 50;
+
+  // Tipos de archivo permitidos
+  const ALLOWED_MIME_TYPES = [
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/webp',
+    'image/gif',
+    'image/bmp',
+    'image/svg+xml',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+  ];
+
+  const BLOCKED_EXTENSIONS = [
+    '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.vbs', '.js',
+    '.jar', '.app', '.deb', '.rpm', '.sh', '.ps1', '.dll', '.so',
+  ];
+
+  const getFileTypeLabel = (mimeType: string): string => {
+    const labels: Record<string, string> = {
+      'image/png': 'imagen PNG',
+      'image/jpeg': 'imagen JPEG',
+      'image/jpg': 'imagen JPG',
+      'image/webp': 'imagen WebP',
+      'image/gif': 'imagen GIF',
+      'application/pdf': 'documento PDF',
+      'application/msword': 'documento Word (.doc)',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'documento Word (.docx)',
+      'text/plain': 'archivo de texto',
+    };
+    return labels[mimeType] || mimeType;
+  };
+
+  const isImageDocument = (rutaArchivo?: string) => {
+    if (!rutaArchivo) return false;
+    if (rutaArchivo.startsWith('data:image/')) return true;
+    return /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(rutaArchivo);
+  };
+
+  const isPdfDocument = (rutaArchivo?: string) => {
+    if (!rutaArchivo) return false;
+    if (rutaArchivo.startsWith('data:application/pdf')) return true;
+    return /\.pdf(\?|$)/i.test(rutaArchivo);
+  };
+
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleFileSelection = async (file: File | null) => {
+    if (!file) return;
+
+    // Validar extensión bloqueada
+    const fileName = file.name.toLowerCase();
+    const hasBlockedExtension = BLOCKED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+    if (hasBlockedExtension) {
+      setError(`⚠️ Archivo bloqueado por seguridad: No se permiten archivos ejecutables (.exe, .bat, .sh, etc.)`);
+      return;
+    }
+
+    // Validar tipo MIME
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      const allowedLabels = ALLOWED_MIME_TYPES.map(getFileTypeLabel).join(', ');
+      setError(`❌ Tipo de archivo no permitido: "${file.type || 'desconocido'}". Solo se permiten: ${allowedLabels}`);
+      return;
+    }
+
+    // Validar tamaño
+    const sizeMb = file.size / (1024 * 1024);
+    if (sizeMb > MAX_FILE_SIZE_MB) {
+      setError(`📁 El archivo "${file.name}" supera el límite de ${MAX_FILE_SIZE_MB}MB (tamaño: ${sizeMb.toFixed(2)}MB)`);
+      return;
+    }
+
+    try {
+      setError(null);
+      const dataUrl = await fileToDataUrl(file);
+      setNuevoDocumento((prev) => ({
+        ...prev,
+        rutaArchivo: dataUrl,
+        nombre: prev.nombre || file.name,
+      }));
+      setSelectedFileName(file.name);
+    } catch (err) {
+      console.error(err);
+      setError('❌ No se pudo procesar el archivo seleccionado. Intenta con otro archivo.');
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -73,6 +173,7 @@ const ChoferDetalle: React.FC = () => {
       } as ChoferDocumento);
       
       setShowDocumentoForm(false);
+      setSelectedFileName('');
       setNuevoDocumento({
         tipo: TipoDocumentoChofer.LICENCIA_CONDUCIR,
         rutaArchivo: '',
@@ -82,6 +183,13 @@ const ChoferDetalle: React.FC = () => {
       setError('Error al crear el documento');
       console.error(err);
     }
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0] || null;
+    await handleFileSelection(file);
   };
 
   if (loading) {
@@ -278,16 +386,61 @@ const ChoferDetalle: React.FC = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>URL/Ruta del Archivo *</label>
-                    <input
-                      type="text"
-                      value={nuevoDocumento.rutaArchivo}
-                      onChange={(e) =>
-                        setNuevoDocumento({ ...nuevoDocumento, rutaArchivo: e.target.value })
-                      }
-                      placeholder="data:image/png;base64,..."
-                      required
-                    />
+                    <label>Archivo del Documento *</label>
+                    <div
+                      className={`file-dropzone ${isDragOver ? 'drag-over' : ''}`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragOver(true);
+                      }}
+                      onDragLeave={() => setIsDragOver(false)}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                    >
+                      <p className="dropzone-title">Arrastra y suelta un archivo aqui</p>
+                      <p className="dropzone-subtitle">o haz click para seleccionar (PDF, JPG, PNG, etc.)</p>
+                      {selectedFileName && (
+                        <p className="dropzone-file">Seleccionado: {selectedFileName}</p>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="file-input-hidden"
+                        accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.svg,.doc,.docx,.txt"
+                        onChange={async (e) => {
+                          await handleFileSelection(e.target.files?.[0] || null);
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
+                    <small className="form-help">
+                      ℹ️ Tipos permitidos: PDF, imágenes (PNG, JPG, WebP, GIF, SVG), Word (.doc, .docx), texto. Máximo {MAX_FILE_SIZE_MB}MB.
+                    </small>
+                    <details className="form-details">
+                      <summary>¿Ya tienes el archivo en la nube?</summary>
+                      <input
+                        type="text"
+                        value={nuevoDocumento.rutaArchivo}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setNuevoDocumento({ ...nuevoDocumento, rutaArchivo: value });
+                          if (value && !value.startsWith('data:')) {
+                            setSelectedFileName('');
+                          }
+                        }}
+                        placeholder="https://... o data:image/png;base64,..."
+                        className="url-input-alternative"
+                      />
+                      <small className="form-help">Pega aquí la URL directa del archivo</small>
+                    </details>
                   </div>
 
                   <div className="form-group">
@@ -332,7 +485,10 @@ const ChoferDetalle: React.FC = () => {
                   <button
                     type="button"
                     className="btn-secondary"
-                    onClick={() => setShowDocumentoForm(false)}
+                    onClick={() => {
+                      setShowDocumentoForm(false);
+                      setSelectedFileName('');
+                    }}
                   >
                     Cancelar
                   </button>
@@ -349,7 +505,16 @@ const ChoferDetalle: React.FC = () => {
                     <div className="documento-tipo">{TipoDocumentoChoferLabels[doc.tipo]}</div>
                     {doc.rutaArchivo && (
                       <div className="documento-preview">
-                        <img src={doc.rutaArchivo} alt={doc.nombre || 'Documento'} />
+                        {isImageDocument(doc.rutaArchivo) ? (
+                          <img src={doc.rutaArchivo} alt={doc.nombre || 'Documento'} />
+                        ) : (
+                          <div className="documento-file-fallback">
+                            <span className="file-icon">{isPdfDocument(doc.rutaArchivo) ? 'PDF' : 'FILE'}</span>
+                            <a href={doc.rutaArchivo} target="_blank" rel="noreferrer">
+                              Abrir documento
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
                     {doc.nombre && <h4>{doc.nombre}</h4>}
