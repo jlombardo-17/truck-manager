@@ -1,0 +1,222 @@
+.reportes-page {
+  padding: 1rem 1.2rem 2rem;
+}
+
+.reportes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.btn-back {
+  background: #ecf0f1;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+}
+
+.reportes-filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.filtro-rapido {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-rapido {
+  background: #f0f2f5;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  transition: all 200ms;
+}
+
+.btn-rapido:hover {
+  background: #e6eaef;
+  border-color: #9B59B6;
+}
+
+.btn-rapido:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.columnas-exportacion {
+  background: #f8fafc;
+  border: 1px solid #dbe2ea;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.columnas-exportacion > span {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.45rem;
+}
+
+.columnas-exportacion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.35rem 0.75rem;
+}
+
+.columna-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  color: #1f2937;
+}
+
+.filtro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.filtro-item select,
+.filtro-item input {
+  height: 38px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 0 0.6rem;
+}
+
+.filtro-item .multi-select {
+  min-height: 94px;
+  height: auto;
+  padding: 0.35rem 0.5rem;
+}
+
+.reportes-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.resumen-card {
+  border-radius: 10px;
+  padding: 0.8rem;
+  color: #fff;
+}
+
+.resumen-card h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+.resumen-card strong {
+  display: block;
+  font-size: 1.3rem;
+  margin-top: 0.2rem;
+}
+
+.resumen-card.ingresos {
+  background: #2e8b57;
+}
+
+.resumen-card.gastos {
+  background: #c0392b;
+}
+
+.resumen-card.ganancia {
+  background: #9b59b6;
+}
+
+.chart-container,
+.tabla-container {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.chart-container {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.chart-container canvas {
+  max-height: 320px;
+}
+
+.section-header-inline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 0.8rem;
+}
+
+.section-header-inline h3 {
+  margin: 0;
+}
+
+.inline-controls {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.small-inline {
+  min-width: 150px;
+}
+
+.operacion-resumen {
+  margin-top: 0.8rem;
+  display: flex;
+  gap: 1.2rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.reportes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reportes-table th,
+.reportes-table td {
+  border-bottom: 1px solid #eceff3;
+  padding: 0.55rem;
+  text-align: left;
+}
+
+.reportes-table th {
+  background: #f8fafc;
+}
+
+@media (max-width: 900px) {
+  .section-header-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inline-controls {
+    width: 100%;
+  }
+
+  .small-inline {
+    min-width: 0;
+    width: 100%;
+  }
+}

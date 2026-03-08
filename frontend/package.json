@@ -18,6 +18,8 @@
     "axios": "^1.6.2",
     "chart.js": "^4.4.1",
     "date-fns": "^2.30.0",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",
     "leaflet-geosearch": "^4.2.2",
     "leaflet-routing-machine": "^3.2.12",

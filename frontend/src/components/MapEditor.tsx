@@ -9,6 +9,7 @@ interface MapEditorProps {
   onRoutesChange: (routes: ViajRuta[]) => void;
   initialRoutes?: ViajRuta[];
   initialCenter?: [number, number];
+  initialZoom?: number;
   title?: string;
 }
 
@@ -23,7 +24,8 @@ L.Icon.Default.mergeOptions({
 const MapEditor: React.FC<MapEditorProps> = ({
   onRoutesChange,
   initialRoutes = [],
-  initialCenter = [-25.2637, -57.5759], // Centro de Paraguay por defecto
+  initialCenter = [-32.5228, -55.7658], // Centro geográfico aproximado de Uruguay
+  initialZoom = 6, // Permite visualizar el territorio uruguayo completo en la mayoría de pantallas
   title = 'Editor de Ruta',
 }) => {
   const [routes, setRoutes] = useState<ViajRuta[]>(initialRoutes);
@@ -33,6 +35,11 @@ const MapEditor: React.FC<MapEditorProps> = ({
   const [loadingDistance, setLoadingDistance] = useState(false);
   const [roadGeometry, setRoadGeometry] = useState<[number, number][]>([]);
   const mapRef = useRef(null);
+
+  // Sincronizar rutas iniciales cuando llegan de forma asíncrona (modo edición)
+  useEffect(() => {
+    setRoutes(initialRoutes || []);
+  }, [initialRoutes]);
 
   // Componente interno para capturar clics en el mapa
   const MapClickHandler = () => {
@@ -234,7 +241,7 @@ const MapEditor: React.FC<MapEditorProps> = ({
         <MapContainer
           ref={mapRef}
           center={initialCenter as L.LatLngExpression}
-          zoom={12}
+          zoom={initialZoom}
           style={{ height: '500px', width: '100%' }}
         >
           <MapClickHandler />
@@ -253,7 +260,7 @@ const MapEditor: React.FC<MapEditorProps> = ({
 
           {/* Polyline ruta real OSRM (línea principal) */}
           {roadGeometry.length > 1 && (
-            <Polyline positions={roadGeometry} pathOptions={{ color: '#E74C3C', weight: 4, opacity: 0.8 }} />
+            <Polyline positions={roadGeometry} pathOptions={{ color: '#9B59B6', weight: 4, opacity: 0.85 }} />
           )}
 
           {/* Marcadores para cada punto */}
@@ -355,4 +362,5 @@ const MapEditor: React.FC<MapEditorProps> = ({
   );
 };
 
+export { MapEditor };
 export default MapEditor;

@@ -5,13 +5,33 @@ import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
-import MapEditor from '../components/MapEditor';
+import { MapEditor } from '../components/MapEditor';
 import CommissionsTable from '../components/CommissionsTable';
 import '../styles/ViajeForm.css';
 
 const ViajeForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+
+  const toDateInputValue = (value?: string) => {
+    if (!value) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toISOString().split('T')[0];
+  };
+
+  const toNumberOrUndefined = (value: unknown): number | undefined => {
+    if (value === null || value === undefined || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const toNumberOrZero = (value: unknown): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
 
   // Estado del formulario
   const [formData, setFormData] = useState<Viaje>({
@@ -69,10 +89,76 @@ const ViajeForm: React.FC = () => {
 
       // Si es edición, cargar datos del viaje
       if (id) {
-        const viaje = await viajsService.getById(parseInt(id));
-        setFormData(viaje);
-        setRutas(viaje.rutas || []);
-        setComisiones(viaje.comisiones || []);
+        const viajeId = parseInt(id);
+        const [viaje, rutasFromEndpoint] = await Promise.all([
+          viajsService.getById(viajeId),
+          viajsService.getRoutes(viajeId).catch(() => [] as ViajRuta[]),
+        ]);
+
+        const rawRutas = rutasFromEndpoint.length > 0 ? rutasFromEndpoint : (viaje.rutas || []);
+
+        const normalizedRutas = rawRutas.map((ruta) => ({
+          ...ruta,
+          orden: toNumberOrZero(ruta.orden),
+          latitud: toNumberOrZero(ruta.latitud),
+          longitud: toNumberOrZero(ruta.longitud),
+        }));
+
+        const reconstructedRutas =
+          normalizedRutas.length > 0
+            ? normalizedRutas
+            : (() => {
+                const latO = toNumberOrUndefined(viaje.latitudOrigen);
+                const lonO = toNumberOrUndefined(viaje.longitudOrigen);
+                const latD = toNumberOrUndefined(viaje.latitudDestino);
+                const lonD = toNumberOrUndefined(viaje.longitudDestino);
+
+                if (
+                  latO === undefined ||
+                  lonO === undefined ||
+                  latD === undefined ||
+                  lonD === undefined
+                ) {
+                  return [] as ViajRuta[];
+                }
+
+                return [
+                  { orden: 1, latitud: latO, longitud: lonO },
+                  { orden: 2, latitud: latD, longitud: lonD },
+                ];
+              })();
+
+        const rutasToUse = reconstructedRutas;
+        const firstRoute = rutasToUse.length > 0 ? rutasToUse[0] : undefined;
+        const lastRoute = rutasToUse.length > 0 ? rutasToUse[rutasToUse.length - 1] : undefined;
+
+        const normalizedViaje: Viaje = {
+          ...viaje,
+          fechaInicio: toDateInputValue(viaje.fechaInicio),
+          fechaFin: toDateInputValue(viaje.fechaFin),
+          valorViaje: toNumberOrZero(viaje.valorViaje),
+          kmRecorridos: toNumberOrZero(viaje.kmRecorridos),
+          consumoCombustible: toNumberOrUndefined(viaje.consumoCombustible),
+          costoCombustible: toNumberOrUndefined(viaje.costoCombustible),
+          otrosGastos: toNumberOrUndefined(viaje.otrosGastos),
+          pesoCargaKg: toNumberOrUndefined(viaje.pesoCargaKg),
+          latitudOrigen: toNumberOrUndefined(viaje.latitudOrigen) ?? toNumberOrUndefined(firstRoute?.latitud),
+          longitudOrigen: toNumberOrUndefined(viaje.longitudOrigen) ?? toNumberOrUndefined(firstRoute?.longitud),
+          latitudDestino: toNumberOrUndefined(viaje.latitudDestino) ?? toNumberOrUndefined(lastRoute?.latitud),
+          longitudDestino: toNumberOrUndefined(viaje.longitudDestino) ?? toNumberOrUndefined(lastRoute?.longitud),
+        };
+
+        setFormData(normalizedViaje);
+        setRutas(rutasToUse);
+        setComisiones(
+          (viaje.comisiones || []).map((comision) => ({
+            ...comision,
+            montoBase: toNumberOrUndefined(comision.montoBase),
+            porcentaje: toNumberOrUndefined(comision.porcentaje),
+            montoFijo: toNumberOrUndefined(comision.montoFijo),
+            montoTotal: toNumberOrUndefined(comision.montoTotal),
+          })),
+        );
       }
     } catch (err) {
       setError('Error al cargar los datos');
@@ -85,14 +171,30 @@ const ViajeForm: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Convert numeric fields
-    const numericFields = ['camionId', 'choferId', 'valorViaje', 'kmRecorridos', 'pesoCargaKg', 
-                          'consumoCombustible', 'costoCombustible', 'otrosGastos', 
-                          'latitudOrigen', 'longitudOrigen', 'latitudDestino', 'longitudDestino'];
+    const requiredNumericFields = ['camionId', 'choferId', 'valorViaje'];
+    const optionalNumericFields = [
+      'kmRecorridos',
+      'pesoCargaKg',
+      'consumoCombustible',
+      'costoCombustible',
+      'otrosGastos',
+      'latitudOrigen',
+      'longitudOrigen',
+      'latitudDestino',
+      'longitudDestino',
+    ];
+
+    let nextValue: string | number | undefined = value;
+    if (requiredNumericFields.includes(name)) {
+      nextValue = toNumberOrZero(value);
+    }
+    if (optionalNumericFields.includes(name)) {
+      nextValue = toNumberOrUndefined(value);
+    }
     
     setFormData({
       ...formData,
-      [name]: numericFields.includes(name) ? (parseFloat(value) || 0) : value,
+      [name]: nextValue,
     });
   };
 
@@ -110,17 +212,26 @@ const ViajeForm: React.FC = () => {
     try {
       setLoading(true);
 
-      // Ensure all numeric fields are properly converted
+      const firstRoute = rutas.length > 0 ? rutas[0] : undefined;
+      const lastRoute = rutas.length > 0 ? rutas[rutas.length - 1] : undefined;
+
+      // Ensure all numeric/date fields are properly normalized
       const dataToSend: Viaje = {
         ...formData,
-        camionId: Number(formData.camionId),
-        choferId: Number(formData.choferId),
-        valorViaje: Number(formData.valorViaje) || 0,
-        kmRecorridos: Number(formData.kmRecorridos) || 0,
-        pesoCargaKg: formData.pesoCargaKg ? Number(formData.pesoCargaKg) : undefined,
-        consumoCombustible: formData.consumoCombustible ? Number(formData.consumoCombustible) : undefined,
-        costoCombustible: formData.costoCombustible ? Number(formData.costoCombustible) : undefined,
-        otrosGastos: formData.otrosGastos ? Number(formData.otrosGastos) : undefined,
+        fechaInicio: toDateInputValue(formData.fechaInicio),
+        fechaFin: toDateInputValue(formData.fechaFin),
+        camionId: toNumberOrZero(formData.camionId),
+        choferId: toNumberOrZero(formData.choferId),
+        valorViaje: toNumberOrZero(formData.valorViaje),
+        kmRecorridos: toNumberOrUndefined(formData.kmRecorridos),
+        pesoCargaKg: toNumberOrUndefined(formData.pesoCargaKg),
+        consumoCombustible: toNumberOrUndefined(formData.consumoCombustible),
+        costoCombustible: toNumberOrUndefined(formData.costoCombustible),
+        otrosGastos: toNumberOrUndefined(formData.otrosGastos),
+        latitudOrigen: toNumberOrUndefined(formData.latitudOrigen) ?? toNumberOrUndefined(firstRoute?.latitud),
+        longitudOrigen: toNumberOrUndefined(formData.longitudOrigen) ?? toNumberOrUndefined(firstRoute?.longitud),
+        latitudDestino: toNumberOrUndefined(formData.latitudDestino) ?? toNumberOrUndefined(lastRoute?.latitud),
+        longitudDestino: toNumberOrUndefined(formData.longitudDestino) ?? toNumberOrUndefined(lastRoute?.longitud),
         comisiones,
         // No incluir rutas aqui, se guardarán después
       };
@@ -151,7 +262,13 @@ const ViajeForm: React.FC = () => {
         navigate('/viajes');
       }, 1500);
     } catch (err) {
-      setError('Error al guardar el viaje');
+      const backendMessage =
+        (err as any)?.response?.data?.message;
+      const errorText = Array.isArray(backendMessage)
+        ? backendMessage.join(', ')
+        : backendMessage;
+
+      setError(errorText || 'Error al guardar el viaje');
       console.error(err);
     } finally {
       setLoading(false);
@@ -378,7 +495,8 @@ const ViajeForm: React.FC = () => {
           <MapEditor
             onRoutesChange={setRutas}
             initialRoutes={rutas}
-            initialCenter={[formData.latitudOrigen || -25.2637, formData.longitudOrigen || -57.5759]}
+            initialCenter={[formData.latitudOrigen || -32.5228, formData.longitudOrigen || -55.7658]}
+            initialZoom={formData.latitudOrigen && formData.longitudOrigen ? 10 : 6}
             title="📍 Editor de Ruta"
           />
         </section>

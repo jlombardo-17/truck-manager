@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CamionesModule } from './modules/camiones/camiones.module';
 import { ChoferesModule } from './modules/choferes/choferes.module';
 import { ViajsModule } from './modules/viajes/viajes.module';
+import { ReportesModule } from './modules/reportes/reportes.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ViajsModule } from './modules/viajes/viajes.module';
     CamionesModule,
     ChoferesModule,
     ViajsModule,
+    ReportesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

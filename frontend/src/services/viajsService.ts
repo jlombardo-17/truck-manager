@@ -2,6 +2,74 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
+const toNumberOrUndefined = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const toDateString = (value?: string): string | undefined => {
+  if (!value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return parsed.toISOString().split('T')[0];
+};
+
+const sanitizeComisiones = (
+  comisiones?: ViajComision[],
+  options?: { includeEstado?: boolean },
+): ViajComision[] | undefined => {
+  if (!comisiones || comisiones.length === 0) return undefined;
+
+  return comisiones.map((comision) => ({
+    tipo: comision.tipo,
+    concepto: comision.concepto,
+    montoBase: toNumberOrUndefined(comision.montoBase),
+    porcentaje: toNumberOrUndefined(comision.porcentaje),
+    montoFijo: toNumberOrUndefined(comision.montoFijo),
+    beneficiario: comision.beneficiario,
+    ...(options?.includeEstado ? { estado: comision.estado } : {}),
+    notas: comision.notas,
+  }));
+};
+
+const sanitizeViajePayload = (
+  viaje: Partial<Viaje>,
+  options?: { includeEstado?: boolean },
+): Partial<Viaje> => {
+  const payload: Partial<Viaje> = {
+    numeroViaje: viaje.numeroViaje,
+    origen: viaje.origen,
+    destino: viaje.destino,
+    descripcionCarga: viaje.descripcionCarga,
+    notas: viaje.notas,
+    fechaInicio: toDateString(viaje.fechaInicio),
+    fechaFin: toDateString(viaje.fechaFin),
+    camionId: toNumberOrUndefined(viaje.camionId),
+    choferId: toNumberOrUndefined(viaje.choferId),
+    valorViaje: toNumberOrUndefined(viaje.valorViaje),
+    kmRecorridos: toNumberOrUndefined(viaje.kmRecorridos),
+    consumoCombustible: toNumberOrUndefined(viaje.consumoCombustible),
+    costoCombustible: toNumberOrUndefined(viaje.costoCombustible),
+    otrosGastos: toNumberOrUndefined(viaje.otrosGastos),
+    pesoCargaKg: toNumberOrUndefined(viaje.pesoCargaKg),
+    latitudOrigen: toNumberOrUndefined(viaje.latitudOrigen),
+    longitudOrigen: toNumberOrUndefined(viaje.longitudOrigen),
+    latitudDestino: toNumberOrUndefined(viaje.latitudDestino),
+    longitudDestino: toNumberOrUndefined(viaje.longitudDestino),
+    comisiones: sanitizeComisiones(viaje.comisiones, {
+      includeEstado: Boolean(options?.includeEstado),
+    }),
+  };
+
+  if (options?.includeEstado) {
+    payload.estado = viaje.estado;
+  }
+
+  return payload;
+};
+
 export interface Viaje {
   id?: number;
   numeroViaje: string;
@@ -113,7 +181,8 @@ export const viajsService = {
    */
   create: async (viaje: Viaje) => {
     try {
-      const response = await axios.post<Viaje>(`${API_BASE_URL}/viajes`, viaje, {
+      const payload = sanitizeViajePayload(viaje, { includeEstado: false });
+      const response = await axios.post<Viaje>(`${API_BASE_URL}/viajes`, payload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -131,7 +200,8 @@ export const viajsService = {
    */
   update: async (id: number, viaje: Partial<Viaje>) => {
     try {
-      const response = await axios.patch<Viaje>(`${API_BASE_URL}/viajes/${id}`, viaje, {
+      const payload = sanitizeViajePayload(viaje, { includeEstado: true });
+      const response = await axios.patch<Viaje>(`${API_BASE_URL}/viajes/${id}`, payload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
@@ -259,9 +329,18 @@ export const viajsService = {
    */
   saveRoutes: async (viajeId: number, rutas: ViajRuta[]): Promise<ViajRuta[]> => {
     try {
+      const sanitizedRutas = rutas.map((ruta, index) => ({
+        orden: Number(ruta.orden) || index + 1,
+        latitud: Number(ruta.latitud),
+        longitud: Number(ruta.longitud),
+        direccion: ruta.direccion,
+        odometroKm: toNumberOrUndefined(ruta.odometroKm),
+        notas: ruta.notas,
+      }));
+
       const response = await axios.post<ViajRuta[]>(
         `${API_BASE_URL}/viajes/${viajeId}/rutas`,
-        { rutas },
+        { rutas: sanitizedRutas },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,

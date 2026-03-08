@@ -1,15 +1,18 @@
 import { MantenimientoTipo, MantenimientoRegistro } from '../types/mantenimiento';
+import authService from './authService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
+const getAuthHeaders = () => ({
+  Authorization: `Bearer ${authService.getToken()}`,
+});
 
 export const maintenanceService = {
   // ============ Tipos de Mantenimiento ============
   
   async getAllTipos(): Promise<MantenimientoTipo[]> {
     const response = await fetch(`${API_URL}/mantenimiento/tipos`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance types');
     return response.json();
@@ -17,9 +20,7 @@ export const maintenanceService = {
 
   async getTipoById(id: number): Promise<MantenimientoTipo> {
     const response = await fetch(`${API_URL}/mantenimiento/tipos/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance type');
     return response.json();
@@ -30,7 +31,7 @@ export const maintenanceService = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -43,7 +44,7 @@ export const maintenanceService = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -54,9 +55,7 @@ export const maintenanceService = {
   async deleteTipo(id: number): Promise<void> {
     const response = await fetch(`${API_URL}/mantenimiento/tipos/${id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error deleting maintenance type');
   },
@@ -65,9 +64,7 @@ export const maintenanceService = {
 
   async getRegistrosByCamion(camionId: number): Promise<MantenimientoRegistro[]> {
     const response = await fetch(`${API_URL}/mantenimiento/camion/${camionId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance records');
     return response.json();
@@ -75,9 +72,7 @@ export const maintenanceService = {
 
   async getRegistroById(id: number): Promise<MantenimientoRegistro> {
     const response = await fetch(`${API_URL}/mantenimiento/registro/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance record');
     return response.json();
@@ -88,7 +83,7 @@ export const maintenanceService = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -101,7 +96,7 @@ export const maintenanceService = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(data),
     });
@@ -112,9 +107,7 @@ export const maintenanceService = {
   async deleteRegistro(id: number): Promise<void> {
     const response = await fetch(`${API_URL}/mantenimiento/registro/${id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error deleting maintenance record');
   },
@@ -128,7 +121,7 @@ export const maintenanceService = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        ...getAuthHeaders(),
       },
       body: JSON.stringify({ costoReal, observaciones }),
     });
@@ -143,9 +136,7 @@ export const maintenanceService = {
     if (camionId) url += `&camionId=${camionId}`;
 
     const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching upcoming maintenance');
     return response.json();
@@ -156,9 +147,7 @@ export const maintenanceService = {
     if (camionId) url += `?camionId=${camionId}`;
 
     const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching overdue maintenance');
     return response.json();
@@ -175,9 +164,7 @@ export const maintenanceService = {
     costoTotal: number;
   }> {
     const response = await fetch(`${API_URL}/mantenimiento/estadisticas/camion/${camionId}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
+      headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance statistics');
     return response.json();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import '../styles/CommissionsTable.css';
 
 interface Commission {
@@ -33,16 +33,30 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
     porcentaje: 10,
   });
 
+  const toNumber = (value: unknown): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  useEffect(() => {
+    setLocalCommissions(commissions);
+  }, [commissions]);
+
   // Calcular monto total de una comisión
   const calculateTotal = (comm: Commission): number => {
-    if (comm.montoFijo) {
-      return comm.montoFijo;
+    const montoFijo = toNumber(comm.montoFijo);
+    const porcentaje = toNumber(comm.porcentaje);
+    const montoBase = toNumber(comm.montoBase);
+    const valorViajeNumber = toNumber(valorViaje);
+
+    if (montoFijo > 0) {
+      return montoFijo;
     }
-    if (comm.porcentaje && comm.montoBase) {
-      return (comm.montoBase * comm.porcentaje) / 100;
+    if (porcentaje > 0 && montoBase > 0) {
+      return (montoBase * porcentaje) / 100;
     }
-    if (comm.porcentaje) {
-      return (valorViaje * comm.porcentaje) / 100;
+    if (porcentaje > 0) {
+      return (valorViajeNumber * porcentaje) / 100;
     }
     return 0;
   };
@@ -91,7 +105,7 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
   };
 
   // Calcular total de comisiones
-  const totalComisiones = localCommissions.reduce((sum, c) => sum + (c.montoTotal || 0), 0);
+  const totalComisiones = localCommissions.reduce((sum, c) => sum + toNumber(c.montoTotal), 0);
 
   return (
     <div className="commissions-container">
@@ -188,7 +202,7 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
                       className="input-small"
                     />
                   </td>
-                  <td className="total-cell">${(comm.montoTotal || 0).toFixed(2)}</td>
+                  <td className="total-cell">${toNumber(comm.montoTotal).toFixed(2)}</td>
                   <td>
                     <input
                       type="text"
@@ -326,8 +340,8 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
         {newCommission.porcentaje && (
           <div className="preview-total">
             <p>
-              Cálculo: ${(newCommission.montoBase || valorViaje).toFixed(2)} × {newCommission.porcentaje}% ={' '}
-              <strong>${((newCommission.montoBase || valorViaje) * newCommission.porcentaje / 100).toFixed(2)}</strong>
+              Cálculo: ${toNumber(newCommission.montoBase) > 0 ? toNumber(newCommission.montoBase).toFixed(2) : toNumber(valorViaje).toFixed(2)} × {toNumber(newCommission.porcentaje)}% ={' '}
+              <strong>${(((toNumber(newCommission.montoBase) > 0 ? toNumber(newCommission.montoBase) : toNumber(valorViaje)) * toNumber(newCommission.porcentaje)) / 100).toFixed(2)}</strong>
             </p>
           </div>
         )}

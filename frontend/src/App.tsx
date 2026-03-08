@@ -10,6 +10,7 @@ import ChoferForm from './pages/ChoferForm';
 import ChoferDetalle from './pages/ChoferDetalle';
 import Viajes from './pages/Viajes';
 import ViajeForm from './pages/ViajeForm';
+import Reportes from './pages/Reportes';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -112,6 +113,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ViajeForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reportes"
+            element={
+              <ProtectedRoute>
+                <Reportes />
               </ProtectedRoute>
             }
           />
