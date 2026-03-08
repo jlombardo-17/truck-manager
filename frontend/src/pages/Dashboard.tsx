@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardService, DashboardResumen, DesempenoCamion, DesempenoChofer } from '../services/dashboardService';
+import HeroSection from '../components/HeroSection';
+import StatsGrid from '../components/StatsGrid';
 import '../styles/Dashboard.css';
 
 const Dashboard: React.FC = () => {
@@ -65,13 +67,62 @@ const Dashboard: React.FC = () => {
 
       {/* Main Content */}
       <div className="dashboard-content">
-        <div className="welcome-section">
-          <h2>¡Bienvenido a Truck Manager!</h2>
-          <p>Sistema de gestión y mantenimiento de flota de camiones</p>
+        <HeroSection
+          subtitle="Fleet Management Overview"
+          title={`¡Bienvenido, ${user?.firstName}!`}
+          description="Sistema integral de gestión y mantenimiento de tu flota de camiones"
+          darkBg={true}
+        />
 
-          {/* KPI Cards */}
+        <section className="dashboard-kpi-section">
+          <div className="dashboard-container-inner">
+            {!loading && resumen && (
+              <StatsGrid
+                stats={[
+                  {
+                    label: 'Ingresos del Mes',
+                    value: `$${Number(resumen.ingresosDelMes || 0).toFixed(0)}`,
+                    unit: 'USD',
+                    icon: '💰',
+                    color: 'green',
+                    trend: { direction: 'up', percentage: 12 },
+                  },
+                  {
+                    label: 'Gastos del Mes',
+                    value: `$${Number(resumen.gastosDelMes || 0).toFixed(0)}`,
+                    unit: 'USD',
+                    icon: '📉',
+                    color: 'red',
+                    trend: { direction: 'down', percentage: 5 },
+                  },
+                  {
+                    label: 'Ganancia Neta',
+                    value: `$${Number(resumen.gananciaNetaDelMes || 0).toFixed(0)}`,
+                    unit: 'USD',
+                    icon: '📊',
+                    color: 'blue',
+                    trend: { direction: 'up', percentage: 18 },
+                  },
+                  {
+                    label: 'Camiones Activos',
+                    value: String(resumen.camionesActivos || 0),
+                    unit: 'unidades',
+                    icon: '🚛',
+                    color: 'purple',
+                    trend: { direction: 'up', percentage: 3 },
+                  },
+                ]}
+                columns={4}
+                loading={loading}
+              />
+            )}
+          </div>
+        </section>
+
+        <div className="welcome-section">
+          {/* KPI Cards - Old section removed, kept for reference */}
           {!loading && resumen && (
-            <div className="kpi-cards">
+            <div className="kpi-cards" style={{display: 'none'}}>
               <div className="kpi-card success">
                 <h4>Ingresos del Mes</h4>
                 <p className="kpi-value">{formatCurrency(resumen.ingresosDelMes)}</p>

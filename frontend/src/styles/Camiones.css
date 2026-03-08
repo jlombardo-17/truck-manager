@@ -65,6 +65,25 @@
   transform: translateY(-1px);
 }
 
+/* KPI Section */
+.camiones-kpi-section {
+  background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
+  padding: 2.5rem 0;
+  margin-bottom: 2rem;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+}
+
+.camiones-container-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 1.4rem;
+}
+
 .camiones-header {
   display: flex;
   justify-content: space-between;

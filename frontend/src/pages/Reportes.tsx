@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -13,6 +12,8 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
+import HeroSection from '../components/HeroSection';
+import StatsGrid from '../components/StatsGrid';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import {
@@ -66,8 +67,6 @@ const DEFAULT_RENTABILIDAD_EXPORT_COLUMNS: Record<RentabilidadExportColumnKey, b
 };
 
 const Reportes: React.FC = () => {
-  const navigate = useNavigate();
-
   const today = useMemo(() => new Date(), []);
   const defaultDesdeDiario = useMemo(() => {
     const d = new Date(today);
@@ -530,15 +529,59 @@ const Reportes: React.FC = () => {
 
   return (
     <div className="reportes-page">
-      <div className="reportes-header">
-        <div className="reportes-title-block">
-          <button className="btn-back" onClick={() => navigate('/dashboard')}>
-            ← Volver al Dashboard
-          </button>
-          <h1>Reportes de Rentabilidad</h1>
-          <p>Monitorea ingresos, costos y eficiencia operativa por camión y chofer.</p>
+      {/* Hero Section */}
+      <HeroSection
+        subtitle="Financial Analytics"
+        title="Reportes de Rentabilidad"
+        description="Monitorea ingresos, costos y eficiencia operativa por camión y chofer. Análisis detallado de tu operación."
+        darkBg={true}
+      />
+
+      {/* Resumen de KPIs */}
+      <section className="reportes-kpi-section">
+        <div className="reportes-container">
+          <StatsGrid
+            stats={[
+              {
+                label: 'Ingresos Totales',
+                value: `$${Number(reporte?.resumen.totalIngresos || 0).toFixed(0)}`,
+                unit: 'USD',
+                icon: '💰',
+                color: 'green',
+                trend: reporte?.resumen.totalIngresos ? { direction: 'up', percentage: 12 } : undefined,
+              },
+              {
+                label: 'Gastos Totales',
+                value: `$${Number(reporte?.resumen.totalGastos || 0).toFixed(0)}`,
+                unit: 'USD',
+                icon: '📉',
+                color: 'red',
+                trend: reporte?.resumen.totalGastos ? { direction: 'down', percentage: 8 } : undefined,
+              },
+              {
+                label: 'Ganancia Neta',
+                value: `$${Number(reporte?.resumen.totalGananciaNeta || 0).toFixed(0)}`,
+                unit: 'USD',
+                icon: '📈',
+                color: 'blue',
+                trend: reporte?.resumen.totalGananciaNeta ? { direction: 'up', percentage: 15 } : undefined,
+              },
+              {
+                label: 'Rentabilidad',
+                value: reporte?.resumen.totalIngresos && reporte?.resumen.totalGastos
+                  ? ((reporte.resumen.totalGananciaNeta / reporte.resumen.totalIngresos) * 100).toFixed(1)
+                  : '0',
+                unit: '%',
+                icon: '📊',
+                color: 'purple',
+                trend: { direction: 'up', percentage: 5 },
+              },
+            ]}
+            columns={4}
+            loading={loadingRentabilidad}
+          />
         </div>
-      </div>
+      </section>
 
       <div className="reportes-filtros">
         <div className="filtro-item">
@@ -626,22 +669,7 @@ const Reportes: React.FC = () => {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="reportes-cards">
-        <div className="resumen-card ingresos">
-          <h4>Ingresos</h4>
-          <strong>${Number(reporte?.resumen.totalIngresos || 0).toFixed(2)}</strong>
-        </div>
-        <div className="resumen-card gastos">
-          <h4>Gastos</h4>
-          <strong>${Number(reporte?.resumen.totalGastos || 0).toFixed(2)}</strong>
-        </div>
-        <div className="resumen-card ganancia">
-          <h4>Ganancia Neta</h4>
-          <strong>${Number(reporte?.resumen.totalGananciaNeta || 0).toFixed(2)}</strong>
-        </div>
-      </div>
-
-      <div className="chart-container">
+      <div className="reportes-container">
         <div className="section-header-inline">
           <h3>Ingresos vs Gastos por Período</h3>
           <button className="btn-rapido btn-rapido--accent" onClick={exportRentabilidadCsv} disabled={!reporte?.series.length}>

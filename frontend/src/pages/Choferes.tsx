@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import choferesService from '../services/choferesService';
 import { Chofer, estadoChoferLabels } from '../types/chofer';
+import HeroSection from '../components/HeroSection';
+import StatsGrid from '../components/StatsGrid';
 import '../styles/Choferes.css';
 
 const Choferes: React.FC = () => {
@@ -160,14 +162,60 @@ const Choferes: React.FC = () => {
       </nav>
 
       <div className="choferes-header">
-        <div className="header-copy">
-          <h1>Gestión de Choferes</h1>
-          <p>Seguimiento de datos personales, estado y desempeño operativo.</p>
-        </div>
-        <Link to="/choferes/new" className="btn-primary">
-          + Agregar Chofer
-        </Link>
+        <HeroSection
+          subtitle="Team Management"
+          title="Gestión de Choferes"
+          description="Seguimiento de datos personales, estado y desempeño operativo."
+          darkBg={true}
+          primaryAction={{
+            label: '+ Agregar Chofer',
+            onClick: () => navigate('/choferes/new'),
+          }}
+        />
       </div>
+
+      <section className="choferes-kpi-section">
+        <div className="choferes-container-inner">
+          <StatsGrid
+            stats={[
+              {
+                label: 'Total de Choferes',
+                value: String(choferes.length),
+                unit: 'choferes',
+                icon: '👤',
+                color: 'blue',
+                trend: { direction: 'up', percentage: 3 },
+              },
+              {
+                label: 'Choferes Activos',
+                value: String(choferes.filter(c => c.estado === 'activo').length),
+                unit: 'activos',
+                icon: '✓',
+                color: 'green',
+                trend: { direction: 'up', percentage: 4 },
+              },
+              {
+                label: 'Inactivos',
+                value: String(choferes.filter(c => c.estado === 'inactivo').length),
+                unit: 'choferes',
+                icon: '⏸',
+                color: 'yellow',
+                trend: { direction: 'stable', percentage: 0 },
+              },
+              {
+                label: 'Suspendidos',
+                value: String(choferes.filter(c => c.estado === 'suspendido').length),
+                unit: 'choferes',
+                icon: '⚠️',
+                color: 'red',
+                trend: { direction: 'down', percentage: 1 },
+              },
+            ]}
+            columns={4}
+            loading={loading}
+          />
+        </div>
+      </section>
 
       <div className="search-bar">
         <input

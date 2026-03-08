@@ -5,6 +5,8 @@ import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
+import HeroSection from '../components/HeroSection';
+import StatsGrid from '../components/StatsGrid';
 import '../styles/Viajes.css';
 
 const Viajes: React.FC = () => {
@@ -117,20 +119,59 @@ const Viajes: React.FC = () => {
 
   return (
     <div className="viajes-page">
-      <div className="page-header">
-        <div className="header-left">
-          <button className="btn-back" onClick={() => navigate('/dashboard')}>
-            ← Volver al Dashboard
-          </button>
-          <div className="header-copy">
-            <h1>Viajes y Rutas</h1>
-            <p>Planificación, estado y trazabilidad de entregas.</p>
-          </div>
+      <HeroSection
+        subtitle="Trip Management"
+        title="Viajes y Rutas"
+        description="Planificación, estado y trazabilidad de entregas."
+        darkBg={true}
+        primaryAction={{
+          label: '+ Nuevo Viaje',
+          onClick: handleNew,
+        }}
+      />
+
+      <section className="viajes-kpi-section">
+        <div className="viajes-container-inner">
+          <StatsGrid
+            stats={[
+              {
+                label: 'Total de Viajes',
+                value: String(viajes.length),
+                unit: 'viajes',
+                icon: '📦',
+                color: 'blue',
+                trend: { direction: 'up', percentage: 7 },
+              },
+              {
+                label: 'En Progreso',
+                value: String(viajes.filter(v => v.estado === 'en_progreso').length),
+                unit: 'activos',
+                icon: '⏳',
+                color: 'yellow',
+                trend: { direction: 'stable', percentage: 0 },
+              },
+              {
+                label: 'Completados',
+                value: String(viajes.filter(v => v.estado === 'completado').length),
+                unit: 'viajes',
+                icon: '✓',
+                color: 'green',
+                trend: { direction: 'up', percentage: 12 },
+              },
+              {
+                label: 'Cancelados',
+                value: String(viajes.filter(v => v.estado === 'cancelado').length),
+                unit: 'viajes',
+                icon: '✕',
+                color: 'red',
+                trend: { direction: 'down', percentage: 1 },
+              },
+            ]}
+            columns={4}
+            loading={loading}
+          />
         </div>
-        <button className="btn-primary" onClick={handleNew}>
-          + Nuevo Viaje
-        </button>
-      </div>
+      </section>
 
       {error && <div className="alert alert-error">{error}</div>}
 

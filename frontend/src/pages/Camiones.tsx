@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import camionesService from '../services/camionesService';
 import { Camion } from '../types/camion';
+import HeroSection from '../components/HeroSection';
+import StatsGrid from '../components/StatsGrid';
 import '../styles/Camiones.css';
 
 const Camiones: React.FC = () => {
@@ -154,15 +156,59 @@ const Camiones: React.FC = () => {
       </nav>
 
       <div className="camiones-content">
-        <div className="camiones-header">
-          <div className="header-copy">
-            <h1>Gestión de Camiones</h1>
-            <p>Control de flota, estado operativo y datos clave de cada unidad.</p>
+        <HeroSection
+          subtitle="Fleet Management"
+          title="Gestión de Camiones"
+          description="Control de flota, estado operativo y datos clave de cada unidad."
+          darkBg={true}
+          primaryAction={{
+            label: '+ Nuevo Camión',
+            onClick: handleCreate,
+          }}
+        />
+
+        <section className="camiones-kpi-section">
+          <div className="camiones-container-inner">
+            <StatsGrid
+              stats={[
+                {
+                  label: 'Total de Camiones',
+                  value: String(camiones.length),
+                  unit: 'unidades',
+                  icon: '🚚',
+                  color: 'blue',
+                  trend: { direction: 'up', percentage: 2 },
+                },
+                {
+                  label: 'Camiones Operativos',
+                  value: String(camiones.filter(c => c.estado === 'operativo').length),
+                  unit: 'activos',
+                  icon: '✓',
+                  color: 'green',
+                  trend: { direction: 'up', percentage: 5 },
+                },
+                {
+                  label: 'Total KM Recorridos',
+                  value: `${(camiones.reduce((sum, c) => sum + Number(c.odometroKm || 0), 0) / 1000).toFixed(0)}k`,
+                  unit: 'km',
+                  icon: '📍',
+                  color: 'purple',
+                  trend: { direction: 'up', percentage: 8 },
+                },
+                {
+                  label: 'En Mantenimiento',
+                  value: String(camiones.filter(c => c.estado === 'mantenimiento').length),
+                  unit: 'camiones',
+                  icon: '🔧',
+                  color: 'red',
+                  trend: { direction: 'down', percentage: 2 },
+                },
+              ]}
+              columns={4}
+              loading={isLoading}
+            />
           </div>
-          <button onClick={handleCreate} className="create-button">
-            + Nuevo Camión
-          </button>
-        </div>
+        </section>
 
         {error && <div className="error-message">{error}</div>}
 
@@ -176,13 +222,7 @@ const Camiones: React.FC = () => {
           />
         </div>
 
-        <div className="camiones-stats">
-          <p>
-            Total: {filteredCamiones.length} {filteredCamiones.length === 1 ? 'camión' : 'camiones'}
-        </p>
-      </div>
-
-      {filteredCamiones.length === 0 ? (
+        {filteredCamiones.length === 0 ? (
         <div className="empty-state">
           <p>No se encontraron camiones.</p>
           {searchTerm && <p>Intenta con otro término de búsqueda.</p>}
