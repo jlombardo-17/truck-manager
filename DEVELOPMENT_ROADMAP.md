@@ -97,7 +97,41 @@
 
 ---
 
-## ✅ Fase 3: Documentación Mejorada (Semanas 10-12) - COMPLETADO
+## ✅ Fase 3: Reportes y Refinamientos (Semanas 10-14) - COMPLETADO
+
+### ✅ Sprint 6.1: Sistema de Reportes - COMPLETADO
+
+**Backend** (`/backend/src/modules/reportes`):
+- ✅ Módulo `reportes` implementado con NestJS
+- ✅ Endpoints de reportes con lógica de cálculo:
+  - `GET /api/reportes/rentabilidad` - Análisis de rentabilidad diaria/mensual
+  - `GET /api/reportes/rentabilidad-comparativa` - Comparativa Camión vs Chofer
+  - `GET /api/reportes/operacion-camion` - Detalles de operación por camión
+  - `GET /api/reportes/desempeño-choferes` - Performance de choferes
+  - `GET /api/reportes/gastos-mantenimiento` - Análisis de gastos
+  - `GET /api/reportes/ingresos-mensuales` - Ingresos por período
+- ✅ Integración con agregaciones de datos (JOIN con viajes, servicios, comisiones)
+- ✅ Filtros avanzados (fecha, camión, chofer, granularidad)
+
+**Frontend** (`/frontend/src/pages/Reportes.tsx`):
+- ✅ Página de Reportes con múltiples secciones
+- ✅ Gráficas interactivas con Chart.js:
+  - Gráfico de rentabilidad (línea temporal)
+  - Gráfico de comparativa (barras)
+  - Gráfico de operación (área)
+- ✅ Tablas filtradas por período, camión, chofer
+- ✅ Exportación a PDF (jsPDF con autoTable)
+- ✅ Exportación a Excel (implementada en service)
+- ✅ Formularios de filtros avanzados
+- ✅ Resumen de totales (Ingresos, Gastos, Ganancia Neta)
+
+**Características**:
+- ✅ Cálculo de KPIs: Ganancia Neta, Eficiencia, Consumo Promedio
+- ✅ Desglose de gastos: Operativos, Comisiones, Sueldos, Mantenimiento
+- ✅ Datos agregados con precisión de fechas
+- ✅ Performance optimizado con Promise.all para carga paralela
+
+---
 
 ### ✅ Sprint 7: Gestión Mejorada de Documentos - COMPLETADO
 
@@ -130,7 +164,82 @@
 
 ---
 
-### 🔧 Sprint 8: Gestión de Mantenimiento
+### ✅ Sprint 8: Segunda Pasada UI/UX - Profesionalización (Semana 13) - COMPLETADO
+
+**Frontend** (Reportes y Dashboard):
+- ✅ Refactor visual Reportes.tsx:
+  - Eliminación de emojis de títulos y encabezados
+  - Headers como cards con descripción de funcionalidad
+  - Botones de exportación con estilos profesionales (gradientes brand)
+  - Tablas con bordes suaves y espaciado mejorado
+- ✅ Refactor visual Dashboard.tsx:
+  - KPI Cards con tipografía mejorada (Plus Jakarta Sans bold)
+  - Eliminación de emojis en títulos
+  - Badges con estados más legibles
+  - Responsive mejorado en mobile
+
+**Características implementadas**:
+- ✅ Colores consistentes con design system (brand-700, teal-600)
+- ✅ Tipografía unificada (Manrope body, Plus Jakarta Sans headers)
+- ✅ Shadows suaves para profundidad visual
+- ✅ Border radius consistente (14-16px)
+
+---
+
+### ✅ Sprint 9: Tercera Pasada UX/Performance - Interactividad Mejorada (Semana 14) - COMPLETADO
+
+**Frontend** (Camiones, Choferes, Viajes - CRUD Pages):
+- ✅ Skeleton Loading Screens:
+  - Reemplazo de texto "Cargando..." con tablas esqueleto
+  - Animación shimmer (linear-gradient background-position)
+  - Mantiene estructura de navbar + header + tabla durante carga
+  - Mejora percepción de performance
+
+- ✅ Sticky Table Headers:
+  - Implementación `position: sticky; top: 0; z-index: 1`
+  - Headers permanecen visibles al scroll horizontal/vertical
+  - Aplicado a: Camiones, Choferes, Viajes
+
+- ✅ Container Max-Height:
+  - Tables con `max-height: 70vh` para scroll interno controlado
+  - Balance entre visibilidad de filas y accesibilidad
+  - Evita páginas excesivamente largas
+
+- ✅ Eliminación de Emojis en Acciones:
+  - Camiones: ✏️ → "Editar", 🗑️ → "Eliminar"
+  - Choferes: 👁️ → "Ver", ✏️ → "Editar", 🗑️ → "Eliminar"
+  - Viajes: ✎ → "Editar", ✕ → "Eliminar"
+  - Mejora accesibilidad (screen readers, keyboard navigation)
+
+- ✅ Mobile Optimizations (<768px):
+  - Button padding: 0.35rem/0.55rem (compacto)
+  - Font-size: 0.75rem (adaptado a pantalla chica)
+  - Row padding: 0.8rem (densidad visual mejorada)
+  - Viajes: ultra-compacto (0.3rem/0.45rem, 0.72rem font)
+
+- ✅ Card-Based Headers:
+  - Encabezados en contenedor card (border, padding, background)
+  - Subtítulos descriptivos en párrafos
+  - Mejora jerarquía visual y claridad
+
+**Validación**:
+- ✅ Build production exitoso (4.10s, 566 modules)
+- ✅ Sin errores TypeScript/CSS
+- ✅ Visual testing completado en browser:
+  - Skeleton animation visible (shimmer effect activo)
+  - Headers permanecen al scroll (sticky funcional)
+  - Botones con texto renderean correctamente
+  - Responsive funcionando en 768px breakpoint
+
+**Archivos modificados**:
+- `Camiones.tsx`, `Camiones.css`
+- `Choferes.tsx`, `Choferes.css`
+- `Viajes.tsx`, `Viajes.css`
+- Incluye keyframes `@keyframes skeleton-shimmer` para animación
+
+---
+
+### 🔧 Sprint 10: Gestión de Mantenimiento
 
 **Backend**:
 - [ ] Crear tablas: `mantenimiento_tipos`, `mantenimiento_registros`, `mantenimiento_alertas`
@@ -146,9 +255,9 @@
 
 ---
 
-## Fase 4: Contabilidad de Choferes (Semanas 13-15)
+## Fase 4: Contabilidad de Choferes (Semanas 16-18)
 
-### 💰 Sprint 9: Sistema de Salarios
+### 💰 Sprint 11: Sistema de Salarios
 
 **Backend**:
 - [ ] Crear tablas: `choferes_salarios_mensuales`, `choferes_ingresos_viajes`
@@ -171,48 +280,45 @@
 
 ---
 
-## Fase 5: Dashboard y Reportes (Semanas 16-18)
+## Fase 5: Accesibilidad y Escalabilidad (Semanas 19-20+)
 
-### 📊 Sprint 10: Dashboard Principal
-
-**Backend**:
-- [ ] Crear tabla: `dashboard_metricas`
-- [ ] Endpoints para datos agregados:
-  - `GET /api/dashboard/resumen` (KPIs generales)
-  - `GET /api/dashboard/camiones/:id` (desempeño por camión)
-  - `GET /api/dashboard/choferes/:id` (desempeño por chofer)
+### ♿ Sprint 12: Accesibilidad y WCAG AA
 
 **Frontend**:
-- [ ] Página inicial: Dashboard con cards de:
-  - Camiones activos hoy
-  - Ingresos totales del mes
-  - Gastos totales
-  - Mantenimiento próximo
-- [ ] Gráficas:
-  - Ingresos vs Gastos (últimos 30 días)
-  - Disponibilidad de camiones
-  - Eficiencia de choferer
+- [ ] Focus states mejorados (outline 2px solid brand-500)
+- [ ] aria-labels en botones de acción
+- [ ] aria-describedby en forms
+- [ ] Contraste de colores validado (AA mínimo 4.5:1)
+- [ ] Badges verificados:
+  - Verde #155724 en #d4edda (vigente)
+  - Rojo #721c24 en #f8d7da (vencido)
+- [ ] Testing con NVDA/JAWS (screen readers)
+
+**Backend**:
+- [ ] Validación de roles y permisos granular
+- [ ] Audit logging de operaciones críticas
 
 ---
 
-### 📈 Sprint 11: Reportes Avanzados
+### 🚀 Sprint 13: Optimización y Deploy
 
-**Backend**:
-- [ ] Endpoint para generar datos de reportes
-- [ ] Integrar librería de PDF (PDFKit o ReportLab)
-
-**Frontend**:
-- [ ] Página: Reportes
-- [ ] Tipos de reportes:
-  - Rentabilidad por camión
-  - Desempeño de choferes
-  - Gastos de mantenimiento
-  - Ingresos mensuales
-- [ ] Botón: Exportar a PDF / Excel
+- [ ] Crear archivo `docker-compose.yml` (BD + Backend + Frontend)
+- [ ] Configurar variables de entorno para producción
+- [ ] Desplegar en servidor (AWS, DigitalOcean, Heroku)
+- [ ] Configurar HTTPS / SSL
+- [ ] Testing e2e básico
+- [ ] Monitoreo y alertas
 
 ---
 
-## Fase 6: Optimizaciones y Deploy (Semanas 19-20)
+## Fase 6: Soporte y Mejoras Continuas (Post-MVP)
+
+### 📊 Sprint 14+: Futuras Mejoras
+
+**Posibles enhancements**:
+- [ ] Upload real de archivos (AWS S3 / Google Cloud Storage)
+- [ ] Sistema de notificaciones (email, SMS)
+- [ ] Mobile app nativa (React Native)
 
 ### 🚀 Sprint 12: Deployment
 

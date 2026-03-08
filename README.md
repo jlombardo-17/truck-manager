@@ -17,9 +17,10 @@ Sistema integral de gestión y mantenimiento de flota de camiones, con control d
 - **Frontend**: React.js + Vite + TypeScript
 - **Backend**: Node.js + NestJS + TypeScript
 - **Base de Datos**: MySQL
-- **UI Components**: Material-UI / TailwindCSS
-- **Mapas**: Leaflet / Mapbox
-- **Gráficas**: Chart.js / Apache ECharts
+- **Styling**: Custom CSS con Design System (Manrope + Plus Jakarta Sans)
+- **Mapas**: Leaflet + OSRM (cálculo de distancias por carretera)
+- **Gráficas**: Chart.js
+- **Reportes**: jsPDF + jspdf-autotable (PDF/Excel export)
 
 ## 📁 Estructura del Proyecto
 
