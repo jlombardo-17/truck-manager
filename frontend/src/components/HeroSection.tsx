@@ -23,6 +23,7 @@ interface HeroProps {
     src: string;
     alt: string;
   };
+  backgroundImage?: string;
   darkBg?: boolean;
 }
 
@@ -34,12 +35,22 @@ const HeroSection: React.FC<HeroProps> = ({
   primaryAction,
   secondaryAction,
   image,
+  backgroundImage,
   darkBg = true,
 }) => {
   const heroClass = darkBg ? 'hero hero-dark' : 'hero hero-light';
+  const getBackgroundImage = (img: string): string => {
+    // Check if it's a CSS gradient (linear-gradient, radial-gradient, etc.)
+    if (img.includes('gradient')) {
+      return img;
+    }
+    // Otherwise treat it as a URL
+    return `url(${img})`;
+  };
+  const heroStyle = backgroundImage ? { backgroundImage: getBackgroundImage(backgroundImage) } : {};
 
   return (
-    <section className={heroClass}>
+    <section className={heroClass} style={heroStyle}>
       <div className="hero-content">
         <div className="hero-wrapper">
           {/* Left Column: Text Content */}

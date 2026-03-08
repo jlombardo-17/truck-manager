@@ -166,6 +166,7 @@ const Choferes: React.FC = () => {
           subtitle="Team Management"
           title="Gestión de Choferes"
           description="Seguimiento de datos personales, estado y desempeño operativo."
+          backgroundImage="linear-gradient(135deg, #3498db 0%, #1abc9c 50%, #16a085 100%)"
           darkBg={true}
           primaryAction={{
             label: '+ Agregar Chofer',

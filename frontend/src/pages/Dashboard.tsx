@@ -71,6 +71,7 @@ const Dashboard: React.FC = () => {
           subtitle="Fleet Management Overview"
           title={`¡Bienvenido, ${user?.firstName}!`}
           description="Sistema integral de gestión y mantenimiento de tu flota de camiones"
+          backgroundImage="linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7aa8d8 100%)"
           darkBg={true}
         />
 

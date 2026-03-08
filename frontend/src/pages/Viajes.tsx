@@ -123,6 +123,7 @@ const Viajes: React.FC = () => {
         subtitle="Trip Management"
         title="Viajes y Rutas"
         description="Planificación, estado y trazabilidad de entregas."
+        backgroundImage="linear-gradient(135deg, #9b59b6 0%, #8e44ad 50%, #c39bd3 100%)"
         darkBg={true}
         primaryAction={{
           label: '+ Nuevo Viaje',

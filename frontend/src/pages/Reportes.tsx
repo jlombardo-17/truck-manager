@@ -534,10 +534,10 @@ const Reportes: React.FC = () => {
         subtitle="Financial Analytics"
         title="Reportes de Rentabilidad"
         description="Monitorea ingresos, costos y eficiencia operativa por camión y chofer. Análisis detallado de tu operación."
+        backgroundImage="linear-gradient(135deg, #27ae60 0%, #229954 50%, #17a2b8 100%)"
         darkBg={true}
       />
 
-      {/* Resumen de KPIs */}
       <section className="reportes-kpi-section">
         <div className="reportes-container">
           <StatsGrid

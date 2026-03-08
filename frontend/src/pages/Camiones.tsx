@@ -160,6 +160,7 @@ const Camiones: React.FC = () => {
           subtitle="Fleet Management"
           title="Gestión de Camiones"
           description="Control de flota, estado operativo y datos clave de cada unidad."
+          backgroundImage="linear-gradient(135deg, #e74c3c 0%, #e67e22 50%, #f39c12 100%)"
           darkBg={true}
           primaryAction={{
             label: '+ Nuevo Camión',
