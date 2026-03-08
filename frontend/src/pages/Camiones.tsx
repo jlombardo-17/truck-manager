@@ -156,6 +156,12 @@ const Camiones: React.FC = () => {
       </nav>
 
       <div className="camiones-content">
+        <div className="page-back-button-container">
+          <button className="btn-back-dashboard" onClick={() => navigate('/dashboard')}>
+            ← Volver al Dashboard
+          </button>
+        </div>
+        
         <HeroSection
           subtitle="Fleet Management"
           title="Gestión de Camiones"

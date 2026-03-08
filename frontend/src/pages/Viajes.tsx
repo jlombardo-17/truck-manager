@@ -119,6 +119,12 @@ const Viajes: React.FC = () => {
 
   return (
     <div className="viajes-page">
+      <div className="page-back-button-container">
+        <button className="btn-back-dashboard" onClick={() => navigate('/dashboard')}>
+          ← Volver al Dashboard
+        </button>
+      </div>
+      
       <HeroSection
         subtitle="Trip Management"
         title="Viajes y Rutas"

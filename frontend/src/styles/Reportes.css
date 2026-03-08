@@ -69,6 +69,18 @@
 
 .multi-select {
   min-height: 120px;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+}
+
+.multi-select option {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.multi-select option:checked {
+  background: linear-gradient(0deg, #0073d1 0%, #005a9e 100%);
+  color: white;
 }
 
 /* Quick Filters */

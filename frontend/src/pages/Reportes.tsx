@@ -12,6 +12,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
+import { useNavigate } from 'react-router-dom';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import camionesService from '../services/camionesService';
@@ -67,6 +68,7 @@ const DEFAULT_RENTABILIDAD_EXPORT_COLUMNS: Record<RentabilidadExportColumnKey, b
 };
 
 const Reportes: React.FC = () => {
+  const navigate = useNavigate();
   const today = useMemo(() => new Date(), []);
   const defaultDesdeDiario = useMemo(() => {
     const d = new Date(today);
@@ -529,6 +531,12 @@ const Reportes: React.FC = () => {
 
   return (
     <div className="reportes-page">
+      <div className="page-back-button-container">
+        <button className="btn-back-dashboard" onClick={() => navigate('/dashboard')}>
+          ← Volver al Dashboard
+        </button>
+      </div>
+      
       {/* Hero Section */}
       <HeroSection
         subtitle="Financial Analytics"

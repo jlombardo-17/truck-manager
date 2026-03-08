@@ -652,3 +652,45 @@ textarea {
   line-height: 1.6;
   font-size: 1rem;
 }
+
+/* 🔙 BACK TO DASHBOARD BUTTON */
+.page-back-button-container {
+  padding: 1rem 2rem 0;
+  margin-bottom: -1rem;
+  position: relative;
+  z-index: 10;
+}
+
+.btn-back-dashboard {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.btn-back-dashboard:hover {
+  background: white;
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+  transform: translateX(-3px);
+  box-shadow: 0 4px 12px rgba(0, 115, 209, 0.15);
+}
+
+.btn-back-dashboard:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(0, 115, 209, 0.1);
+}
+
+.btn-back-dashboard:active {
+  transform: translateX(-2px);
+}
