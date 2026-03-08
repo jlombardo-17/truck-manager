@@ -2,17 +2,16 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f5f5f5;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: transparent;
+  font-family: var(--font-sans);
 }
 
 .navbar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 1rem 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 0.95rem 0;
   position: sticky;
   top: 0;
+  z-index: 20;
 }
 
 .navbar-content {
@@ -25,9 +24,9 @@
 }
 
 .navbar-title {
-  font-size: 1.75rem;
+  font-size: 1.55rem;
   margin: 0;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .navbar-user {
@@ -41,11 +40,11 @@
 }
 
 .logout-button {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   color: white;
-  border: 2px solid white;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   padding: 0.5rem 1.25rem;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s;
@@ -60,21 +59,29 @@
 .dashboard-content {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
-  max-width: 1200px;
+  padding: 1.6rem 1.2rem 2rem;
+  max-width: 1240px;
   margin: 0 auto;
   width: 100%;
 }
 
+.welcome-section {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(248, 251, 255, 0.72) 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  padding: 1.2rem;
+}
+
 .welcome-section h2 {
-  font-size: 2rem;
-  color: #333;
+  font-size: clamp(1.4rem, 2.1vw, 1.95rem);
+  color: var(--text-primary);
   margin-top: 0;
 }
 
 .welcome-section p {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 2rem;
 }
 
@@ -98,7 +105,7 @@
 
 .role-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(120deg, var(--brand-700) 0%, var(--teal-600) 100%);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
@@ -109,16 +116,15 @@
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .feature-card {
-  background: white;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
   padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s, box-shadow 0.3s;
-  border-top: 4px solid #667eea;
+  border-top: 4px solid var(--teal-500);
+  border-radius: 14px;
 }
 
 .feature-card.clickable {
@@ -126,31 +132,29 @@
 }
 
 .feature-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.14);
 }
 
 .feature-card h3 {
   margin-top: 0;
-  color: #333;
+  color: var(--text-primary);
   font-size: 1.25rem;
 }
 
 .feature-card p {
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 0;
 }
 
 .feature-button {
   margin-top: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.3s;
+  width: 100%;
 }
 
 .feature-button:hover {
@@ -170,7 +174,11 @@
   }
 
   .dashboard-content {
-    padding: 1rem;
+    padding: 1rem 0.8rem 1.4rem;
+  }
+
+  .welcome-section {
+    padding: 0.9rem;
   }
 
   .welcome-section h2 {
@@ -186,15 +194,15 @@
 .kpi-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
 .kpi-card {
-  padding: 1.5rem;
-  border-radius: 8px;
+  padding: 1.25rem;
+  border-radius: 16px;
   color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
   transition: transform 0.3s;
 }
 
@@ -217,7 +225,7 @@
 }
 
 .kpi-card.warning {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #355c7d 0%, #1f7a8c 100%);
 }
 
 .kpi-card.info {
@@ -225,7 +233,7 @@
 }
 
 .kpi-card.primary {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
 }
 
 .kpi-value {
@@ -236,11 +244,14 @@
 
 /* Alerts Section */
 .alerts-section {
-  background: white;
+  background: linear-gradient(180deg, #ffffff 0%, #fff9ef 100%);
   padding: 1.5rem;
-  border-radius: 8px;
+  border-radius: 16px;
   margin-bottom: 2rem;
-  border-left: 4px solid #ff6a00;
+  border-left: 4px solid var(--accent-500);
+  border-right: 1px solid var(--border-soft);
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .alerts-section h3 {
@@ -268,11 +279,12 @@
 
 /* Performance Section */
 .performance-section {
-  background: white;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
   padding: 1.5rem;
-  border-radius: 8px;
+  border-radius: 16px;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
 }
 
 .performance-section h3 {
@@ -290,23 +302,23 @@
 }
 
 .performance-table th {
-  background: #f5f5f5;
+  background: #f5f8fc;
   padding: 1rem;
   text-align: left;
   font-weight: 600;
-  color: #333;
-  border-bottom: 2px solid #ddd;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-soft);
   font-size: 0.95rem;
 }
 
 .performance-table td {
   padding: 1rem;
-  border-bottom: 1px solid #eee;
-  color: #555;
+  border-bottom: 1px solid #edf2f7;
+  color: var(--text-secondary);
 }
 
 .performance-table tr:hover {
-  background: #fafafa;
+  background: #f4f9ff;
 }
 
 .performance-table .bold {

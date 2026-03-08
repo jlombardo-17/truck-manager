@@ -9,6 +9,7 @@ import '../styles/Viajes.css';
 
 const Viajes: React.FC = () => {
   const navigate = useNavigate();
+  const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [camiones, setCamiones] = useState<Record<number, Camion>>({});
   const [choferes, setChoferes] = useState<Record<number, Chofer>>({});
@@ -118,10 +119,13 @@ const Viajes: React.FC = () => {
     <div className="viajes-page">
       <div className="page-header">
         <div className="header-left">
-          <button className="btn-back" onClick={() => navigate('/')}>
+          <button className="btn-back" onClick={() => navigate('/dashboard')}>
             ← Volver al Dashboard
           </button>
-          <h1>🛣️ Viajes y Rutas</h1>
+          <div className="header-copy">
+            <h1>Viajes y Rutas</h1>
+            <p>Planificación, estado y trazabilidad de entregas.</p>
+          </div>
         </div>
         <button className="btn-primary" onClick={handleNew}>
           + Nuevo Viaje
@@ -178,7 +182,32 @@ const Viajes: React.FC = () => {
 
       {/* Tabla de viajes */}
       {loading ? (
-        <div className="loading">Cargando viajes...</div>
+        <div className="table-responsive skeleton-table">
+          <table className="viajes-table">
+            <thead>
+              <tr>
+                <th>Nro. Viaje</th>
+                <th>Camión</th>
+                <th>Chofer</th>
+                <th>Origen</th>
+                <th>Destino</th>
+                <th>Valor</th>
+                <th>KM</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {skeletonRows.map((row) => (
+                <tr key={row}>
+                  <td colSpan={9}>
+                    <div className="skeleton-line" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : viajes.length === 0 ? (
         <div className="no-data">
           <p>No hay viajes registrados</p>
@@ -235,14 +264,14 @@ const Viajes: React.FC = () => {
                       onClick={() => handleEdit(viaje.id!)}
                       title="Editar"
                     >
-                      ✎
+                      Editar
                     </button>
                     <button
                       className="btn-icon btn-delete"
                       onClick={() => handleDelete(viaje.id!)}
                       title="Eliminar"
                     >
-                      ✕
+                      Eliminar
                     </button>
                   </td>
                 </tr>

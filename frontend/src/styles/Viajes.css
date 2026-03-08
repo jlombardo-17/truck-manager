@@ -1,45 +1,58 @@
 /* Page Layout */
 .viajes-page {
-  padding: 24px;
-  background: #f5f5f5;
+  padding: 1.5rem 1.2rem 2rem;
+  background: transparent;
   min-height: 100vh;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding: 1.05rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: var(--shadow-sm);
 }
 
 .page-header .header-left {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
 }
 
-.page-header h1 {
+.header-copy h1 {
   margin: 0;
-  font-size: 28px;
-  color: #333;
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  color: var(--text-primary);
+}
+
+.header-copy p {
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
 }
 
 .btn-back {
   padding: 10px 16px;
-  background: #f0f0f0;
-  color: #555;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  background: #f8fbff;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  font-weight: 700;
 }
 
 .btn-back:hover {
-  background: #e0e0e0;
-  border-color: #ccc;
-  color: #333;
+  background: #f1f7ff;
+  border-color: var(--brand-500);
+  color: var(--text-primary);
 }
 
 /* Filters */
@@ -47,11 +60,12 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 1rem;
   padding: 16px;
   background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-group {
@@ -62,16 +76,14 @@
 .filter-group label {
   margin-bottom: 6px;
   font-size: 13px;
-  font-weight: 600;
-  color: #555;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 
 .filter-input {
   padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
   font-size: 14px;
   font-family: inherit;
   transition: border-color 0.2s ease;
@@ -79,16 +91,18 @@
 
 .filter-input:focus {
   outline: none;
-  border-color: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(47, 123, 182, 0.12);
 }
 
 /* Table */
 .table-responsive {
   background: #ffffff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  overflow: auto;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
+  max-height: 70vh;
 }
 
 .viajes-table {
@@ -97,33 +111,58 @@
 }
 
 .viajes-table thead {
-  background: #f5f5f5;
-  border-bottom: 2px solid #e0e0e0;
+  background: #f5f8fc;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .viajes-table th {
   padding: 14px;
   text-align: left;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .viajes-table td {
-  padding: 14px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid #edf2f7;
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
+}
+
+.skeleton-table tbody td {
+  padding: 0.65rem 1rem;
+}
+
+.skeleton-line {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eef3f8 20%, #dde7f2 38%, #eef3f8 56%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .viaje-row:hover {
-  background: #f9f9f9;
+  background: #f9fbff;
 }
 
 .numero-viaje {
-  color: #2196f3;
+  color: var(--brand-600);
   font-weight: 600;
 }
 
@@ -139,8 +178,8 @@
 
 .estado-select {
   padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -149,7 +188,8 @@
 
 .estado-select:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(47, 123, 182, 0.12);
 }
 
 .estado-select.badge-warning {
@@ -177,64 +217,61 @@
 }
 
 .btn-icon {
-  padding: 6px 10px;
-  border: none;
-  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
   transition: all 0.2s ease;
 }
 
 .btn-edit {
-  background: #2196f3;
-  color: white;
+  background: #e8f2ff;
+  color: var(--brand-700);
+  border-color: rgba(47, 123, 182, 0.25);
 }
 
 .btn-edit:hover {
-  background: #1976d2;
-  transform: scale(1.05);
+  background: #d9eaff;
+  transform: translateY(-1px);
 }
 
 .btn-delete {
-  background: #ff5252;
-  color: white;
+  background: #ffebee;
+  color: #b42318;
+  border-color: rgba(239, 83, 80, 0.35);
 }
 
 .btn-delete:hover {
-  background: #ff1744;
-  transform: scale(1.05);
+  background: #ffdfe3;
+  transform: translateY(-1px);
 }
 
 /* Buttons */
 .btn-primary {
   padding: 10px 20px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.btn-primary:hover {
-  background: #45a049;
 }
 
 .btn-secondary {
   padding: 10px 20px;
-  background: #757575;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text-primary);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background: #616161;
+  background: #f2f7ff;
+  border-color: var(--brand-500);
 }
 
 /* States */
@@ -242,17 +279,20 @@
   padding: 40px;
   text-align: center;
   background: #ffffff;
-  border-radius: 8px;
-  color: #666;
+  border-radius: 14px;
+  color: var(--text-secondary);
   font-size: 16px;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
 }
 
 .no-data {
   padding: 60px 40px;
   text-align: center;
   background: #ffffff;
-  border-radius: 8px;
-  border: 2px dashed #e0e0e0;
+  border-radius: 14px;
+  border: 1px dashed var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .no-data p {
@@ -295,6 +335,10 @@
     align-items: flex-start;
   }
 
+  .page-header .header-left {
+    width: 100%;
+  }
+
   .filters-section {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -311,11 +355,16 @@
 
 @media (max-width: 768px) {
   .viajes-page {
-    padding: 12px;
+    padding: 1rem 0.8rem 1.5rem;
   }
 
-  .page-header h1 {
+  .header-copy h1 {
     font-size: 22px;
+  }
+
+  .page-header .header-left {
+    flex-direction: column;
+    gap: 0.8rem;
   }
 
   .filters-section {
@@ -342,7 +391,7 @@
   }
 
   .btn-icon {
-    padding: 4px 6px;
-    font-size: 12px;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.72rem;
   }
 }

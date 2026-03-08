@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
       {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-content">
-          <h1 className="navbar-title">🚚 Truck Manager</h1>
+          <h1 className="navbar-title">Truck Manager</h1>
           <div className="navbar-user">
             <span className="user-name">
               {user?.firstName} {user?.lastName}
@@ -73,23 +73,23 @@ const Dashboard: React.FC = () => {
           {!loading && resumen && (
             <div className="kpi-cards">
               <div className="kpi-card success">
-                <h4>💰 Ingresos del Mes</h4>
+                <h4>Ingresos del Mes</h4>
                 <p className="kpi-value">{formatCurrency(resumen.ingresosDelMes)}</p>
               </div>
               <div className="kpi-card danger">
-                <h4>📉 Gastos del Mes</h4>
+                <h4>Gastos del Mes</h4>
                 <p className="kpi-value">{formatCurrency(resumen.gastosDelMes)}</p>
               </div>
               <div className="kpi-card warning">
-                <h4>📈 Ganancia Neta</h4>
+                <h4>Ganancia Neta</h4>
                 <p className="kpi-value">{formatCurrency(resumen.gananciaNetaDelMes)}</p>
               </div>
               <div className="kpi-card info">
-                <h4>🚚 Camiones Activos Hoy</h4>
+                <h4>Camiones Activos Hoy</h4>
                 <p className="kpi-value">{resumen.camionesActivos}</p>
               </div>
               <div className="kpi-card primary">
-                <h4>✅ Viajes Completados</h4>
+                <h4>Viajes Completados</h4>
                 <p className="kpi-value">{resumen.viajesCompletados}</p>
               </div>
             </div>
@@ -98,7 +98,7 @@ const Dashboard: React.FC = () => {
           {/* Alertas Documentos */}
           {!loading && resumen && resumen.documentosPorVencer.length > 0 && (
             <div className="alerts-section">
-              <h3>⚠️ Documentos Próximos a Vencer</h3>
+              <h3>Documentos Próximos a Vencer</h3>
               <div className="alerts-list">
                 {resumen.documentosPorVencer.map((doc, idx) => (
                   <div key={idx} className="alert-item">
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
           {/* Desempeño Camiones */}
           {!loading && desempenoCamiones.length > 0 && (
             <div className="performance-section">
-              <h3>🏅 Top Camiones por Eficiencia</h3>
+              <h3>Top Camiones por Eficiencia</h3>
               <div className="performance-table">
                 <table>
                   <thead>
@@ -151,7 +151,7 @@ const Dashboard: React.FC = () => {
           {/* Desempeño Choferes */}
           {!loading && desempenoChoferes.length > 0 && (
             <div className="performance-section">
-              <h3>👨‍✈️ Top Choferes por Viajes</h3>
+              <h3>Top Choferes por Viajes</h3>
               <div className="performance-table">
                 <table>
                   <thead>
@@ -183,25 +183,25 @@ const Dashboard: React.FC = () => {
 
           <div className="features-grid">
             <div className="feature-card clickable" onClick={() => navigate('/camiones')}>
-              <h3>📋 Gestión de Camiones</h3>
+              <h3>Gestión de Camiones</h3>
               <p>Administra tu flota de vehículos</p>
               <button className="feature-button">Ver Camiones →</button>
             </div>
 
             <div className="feature-card clickable" onClick={() => navigate('/choferes')}>
-              <h3>👥 Gestión de Choferes</h3>
+              <h3>Gestión de Choferes</h3>
               <p>Administra la información de tus conductores</p>
               <button className="feature-button">Ver Choferes →</button>
             </div>
 
             <div className="feature-card clickable" onClick={() => navigate('/viajes')}>
-              <h3>🗺️ Viajes y Rutas</h3>
+              <h3>Viajes y Rutas</h3>
               <p>Planifica y controla tus entregas con rutas en mapas</p>
               <button className="feature-button">Ver Viajes →</button>
             </div>
 
             <div className="feature-card clickable" onClick={() => navigate('/reportes')}>
-              <h3>📊 Reportes</h3>
+              <h3>Reportes</h3>
               <p>Visualiza rentabilidad diaria y mensual por camión o chofer</p>
               <button className="feature-button">Ver Reportes →</button>
             </div>

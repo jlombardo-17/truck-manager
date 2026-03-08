@@ -3,31 +3,36 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(47, 123, 182, 0.25) 0%, rgba(47, 123, 182, 0) 40%),
+    radial-gradient(circle at 85% 15%, rgba(42, 157, 173, 0.22) 0%, rgba(42, 157, 173, 0) 38%),
+    linear-gradient(120deg, #0f4c81 0%, #1b5f96 55%, #1f7a8c 100%);
+  font-family: var(--font-sans);
+  padding: 1rem;
 }
 
 .login-box {
-  background: white;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
   padding: 3rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: 18px;
+  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   width: 100%;
-  max-width: 400px;
+  max-width: 430px;
 }
 
 .login-box h1 {
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   text-align: center;
   margin: 0 0 1rem 0;
-  color: #333;
+  color: var(--brand-700);
 }
 
 .login-box h2 {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   text-align: center;
   margin: 0 0 2rem 0;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .form-group {
@@ -44,8 +49,8 @@
 .form-group input {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
   font-size: 1rem;
   transition: border-color 0.3s;
   box-sizing: border-box;
@@ -53,7 +58,8 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(47, 123, 182, 0.14);
 }
 
 .form-group input:disabled {
@@ -64,14 +70,11 @@
 .login-button {
   width: 100%;
   padding: 0.875rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   margin-bottom: 1.5rem;
 }
 

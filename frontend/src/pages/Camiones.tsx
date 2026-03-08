@@ -8,6 +8,7 @@ import '../styles/Camiones.css';
 const Camiones: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   const [camiones, setCamiones] = useState<Camion[]>([]);
   const [filteredCamiones, setFilteredCamiones] = useState<Camion[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +81,57 @@ const Camiones: React.FC = () => {
   if (isLoading) {
     return (
       <div className="camiones-container">
-        <div className="loading">Cargando camiones...</div>
+        <nav className="navbar">
+          <div className="navbar-content">
+            <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
+            <div className="navbar-user">
+              <span className="user-name">
+                {user?.firstName} {user?.lastName}
+              </span>
+              <button onClick={handleLogout} className="logout-button">
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        <div className="camiones-content">
+          <div className="camiones-header">
+            <div className="header-copy">
+              <h1>Gestión de Camiones</h1>
+              <p>Control de flota, estado operativo y datos clave de cada unidad.</p>
+            </div>
+            <button onClick={handleCreate} className="create-button" disabled>
+              + Nuevo Camión
+            </button>
+          </div>
+
+          <div className="table-container skeleton-table">
+            <table className="camiones-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Patente</th>
+                  <th>Marca</th>
+                  <th>Modelo</th>
+                  <th>Año</th>
+                  <th>Estado</th>
+                  <th>Odómetro (km)</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {skeletonRows.map((row) => (
+                  <tr key={row}>
+                    <td colSpan={8}>
+                      <div className="skeleton-line" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   }
@@ -90,7 +141,7 @@ const Camiones: React.FC = () => {
       {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
+          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
           <div className="navbar-user">
             <span className="user-name">
               {user?.firstName} {user?.lastName}
@@ -104,7 +155,10 @@ const Camiones: React.FC = () => {
 
       <div className="camiones-content">
         <div className="camiones-header">
-          <h1>Gestión de Camiones</h1>
+          <div className="header-copy">
+            <h1>Gestión de Camiones</h1>
+            <p>Control de flota, estado operativo y datos clave de cada unidad.</p>
+          </div>
           <button onClick={handleCreate} className="create-button">
             + Nuevo Camión
           </button>
@@ -170,14 +224,14 @@ const Camiones: React.FC = () => {
                   <td>{Number(camion.odometroKm).toLocaleString('es-AR')}</td>
                   <td className="actions-cell">
                     <button onClick={() => handleEdit(camion.id)} className="edit-button" title="Editar">
-                      ✏️
+                      Editar
                     </button>
                     <button
                       onClick={() => handleDelete(camion.id, camion.patente)}
                       className="delete-button"
                       title="Eliminar"
                     >
-                      🗑️
+                      Eliminar
                     </button>
                   </td>
                 </tr>

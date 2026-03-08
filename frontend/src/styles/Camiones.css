@@ -2,33 +2,33 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f8f9fa;
+  font-family: var(--font-sans);
+  background: transparent;
 }
 
 /* Navbar */
 .navbar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 1rem 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0.95rem 0;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 20;
 }
 
 .navbar-content {
-  max-width: 1400px;
+  max-width: 1240px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  padding: 0 1.4rem;
 }
 
 .navbar-title {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 1.55rem;
+  font-weight: 800;
   color: white;
   cursor: pointer;
   transition: opacity 0.3s;
@@ -45,18 +45,18 @@
 }
 
 .user-name {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .logout-button {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.3s;
 }
 
@@ -68,25 +68,30 @@
 .camiones-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  align-items: flex-start;
+  padding: 1.05rem;
   width: 100%;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: var(--shadow-sm);
 }
 
 .camiones-header h1 {
   margin: 0;
-  color: #333;
-  font-size: 2rem;
+  color: var(--text-primary);
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+}
+
+.header-copy p {
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
 }
 
 .create-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
   padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -95,39 +100,41 @@
 
 .create-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
 }
 
 .camiones-content {
-  padding: 0 2rem 2rem 2rem;
-  max-width: 1400px;
+  padding: 1.5rem 1.2rem 2rem;
+  max-width: 1240px;
   margin: 0 auto;
   width: 100%;
   flex: 1;
 }
 
 .search-bar {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .search-input {
   width: 100%;
-  max-width: 500px;
+  max-width: 560px;
   padding: 0.875rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
   font-size: 1rem;
-  transition: border-color 0.3s;
+  background: #ffffff;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(47, 123, 182, 0.14);
 }
 
 .camiones-stats {
-  margin-bottom: 1rem;
-  color: #666;
+  margin-bottom: 0.9rem;
+  color: var(--text-secondary);
   font-size: 0.95rem;
 }
 
@@ -139,28 +146,31 @@
 }
 
 .error-message {
-  background-color: #fee;
-  color: #c33;
+  background-color: #ffebee;
+  color: #b71c1c;
   padding: 1rem;
-  border-radius: 6px;
+  border-radius: 12px;
   margin-bottom: 1rem;
-  border-left: 4px solid #c33;
+  border-left: 4px solid #ef5350;
 }
 
 .empty-state {
   text-align: center;
   padding: 3rem;
-  color: #999;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--text-muted);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
 }
 
 .table-container {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
   overflow-x: auto;
+  max-height: 70vh;
 }
 
 .camiones-table {
@@ -169,8 +179,8 @@
 }
 
 .camiones-table thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #f5f8fc;
+  color: var(--text-primary);
 }
 
 .camiones-table th {
@@ -178,15 +188,41 @@
   text-align: left;
   font-weight: 600;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .camiones-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #edf2f7;
+  color: var(--text-secondary);
+}
+
+.skeleton-table tbody td {
+  padding: 0.65rem 1rem;
+}
+
+.skeleton-line {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eef3f8 20%, #dde7f2 38%, #eef3f8 56%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 .camiones-table tbody tr:hover {
-  background-color: #f9f9ff;
+  background-color: #f9fbff;
 }
 
 .camiones-table tbody tr:last-child td {
@@ -225,34 +261,36 @@
 .actions-cell {
   display: flex;
   gap: 0.5rem;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .edit-button,
 .delete-button {
-  background: transparent;
-  border: none;
-  font-size: 1.2rem;
+  font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  transition: background-color 0.2s, transform 0.1s;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  transition: background-color 0.2s, transform 0.1s, border-color 0.2s;
 }
 
 .edit-button:hover {
-  background-color: #e3f2fd;
-  transform: scale(1.1);
+  background-color: #e8f2ff;
+  border-color: var(--brand-500);
+  transform: translateY(-1px);
 }
 
 .delete-button:hover {
   background-color: #ffebee;
-  transform: scale(1.1);
+  border-color: #ef5350;
+  transform: translateY(-1px);
 }
 
 .patente-link {
   background: transparent;
   border: none;
-  color: #667eea;
+  color: var(--brand-600);
   font-weight: 600;
   cursor: pointer;
   padding: 0;
@@ -261,27 +299,26 @@
 }
 
 .patente-link:hover {
-  color: #764ba2;
+  color: var(--teal-600);
 }
 
 @media (max-width: 768px) {
-  .camiones-container {
-    padding: 1rem;
+  .navbar-content {
+    padding: 0 0.9rem;
+  }
+
+  .camiones-content {
+    padding: 1rem 0.8rem 1.5rem;
   }
 
   .camiones-header {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
+    padding: 0.9rem;
   }
 
-  .header-title {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .header-title h1 {
+  .camiones-header h1 {
     font-size: 1.5rem;
   }
 
@@ -296,5 +333,11 @@
   .camiones-table th,
   .camiones-table td {
     padding: 0.5rem;
+  }
+
+  .edit-button,
+  .delete-button {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.75rem;
   }
 }

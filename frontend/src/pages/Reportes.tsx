@@ -531,12 +531,12 @@ const Reportes: React.FC = () => {
   return (
     <div className="reportes-page">
       <div className="reportes-header">
-        <div>
+        <div className="reportes-title-block">
           <button className="btn-back" onClick={() => navigate('/dashboard')}>
             ← Volver al Dashboard
           </button>
-          <h1>📊 Reportes de Rentabilidad</h1>
-          <p>Ingresos y gastos por camión/chofer con vista diaria o mensual.</p>
+          <h1>Reportes de Rentabilidad</h1>
+          <p>Monitorea ingresos, costos y eficiencia operativa por camión y chofer.</p>
         </div>
       </div>
 
@@ -593,14 +593,14 @@ const Reportes: React.FC = () => {
       </div>
 
       <div className="filtro-rapido">
-        <button className="btn-rapido" onClick={() => { setCamionIds([]); setChoferIds([]); }}>
+        <button className="btn-rapido btn-rapido--ghost" onClick={() => { setCamionIds([]); setChoferIds([]); }}>
           Limpiar Camiones/Choferes
         </button>
-        <button className="btn-rapido" onClick={() => handlePresetDateRange(7)}>Últimos 7 días</button>
-        <button className="btn-rapido" onClick={() => handlePresetDateRange(30)}>Últimos 30 días</button>
-        <button className="btn-rapido" onClick={() => handlePresetDateRange(90)}>Últimos 90 días</button>
+        <button className="btn-rapido btn-rapido--ghost" onClick={() => handlePresetDateRange(7)}>Últimos 7 días</button>
+        <button className="btn-rapido btn-rapido--ghost" onClick={() => handlePresetDateRange(30)}>Últimos 30 días</button>
+        <button className="btn-rapido btn-rapido--ghost" onClick={() => handlePresetDateRange(90)}>Últimos 90 días</button>
         <button
-          className="btn-rapido"
+          className="btn-rapido btn-rapido--accent"
           onClick={exportReportePdf}
           disabled={!reporte?.series.length && !comparativa?.comparativas.length && !operacionCamion?.series.length}
         >
@@ -644,7 +644,7 @@ const Reportes: React.FC = () => {
       <div className="chart-container">
         <div className="section-header-inline">
           <h3>Ingresos vs Gastos por Período</h3>
-          <button className="btn-rapido" onClick={exportRentabilidadCsv} disabled={!reporte?.series.length}>
+          <button className="btn-rapido btn-rapido--accent" onClick={exportRentabilidadCsv} disabled={!reporte?.series.length}>
             Exportar CSV
           </button>
         </div>
@@ -662,7 +662,7 @@ const Reportes: React.FC = () => {
                 <option value="chofer">Chofer</option>
               </select>
             </div>
-            <button className="btn-rapido" onClick={exportComparativaCsv} disabled={!comparativa?.comparativas.length}>
+            <button className="btn-rapido btn-rapido--accent" onClick={exportComparativaCsv} disabled={!comparativa?.comparativas.length}>
               Exportar CSV
             </button>
           </div>
@@ -691,7 +691,7 @@ const Reportes: React.FC = () => {
                 <option value="semanal">Semanal</option>
               </select>
             </div>
-            <button className="btn-rapido" onClick={exportOperacionCsv} disabled={!operacionCamion?.series.length}>
+            <button className="btn-rapido btn-rapido--accent" onClick={exportOperacionCsv} disabled={!operacionCamion?.series.length}>
               Exportar CSV
             </button>
           </div>
@@ -706,7 +706,7 @@ const Reportes: React.FC = () => {
       <div className="tabla-container">
         <div className="section-header-inline">
           <h3>Detalle por período</h3>
-          <button className="btn-rapido" onClick={exportRentabilidadCsv} disabled={!reporte?.series.length}>
+          <button className="btn-rapido btn-rapido--accent" onClick={exportRentabilidadCsv} disabled={!reporte?.series.length}>
             Exportar CSV
           </button>
         </div>
@@ -749,7 +749,7 @@ const Reportes: React.FC = () => {
         <div className="section-header-inline">
           <h3>Desempeño de Choferes</h3>
           <button
-            className="btn-rapido"
+            className="btn-rapido btn-rapido--accent"
             onClick={exportDesempenoChoferesCsv}
             disabled={loadingAdicionales || !(desempenoChoferes?.desempenio || []).length}
           >
@@ -793,7 +793,7 @@ const Reportes: React.FC = () => {
         <div className="section-header-inline">
           <h3>Gastos de Mantenimiento</h3>
           <button
-            className="btn-rapido"
+            className="btn-rapido btn-rapido--accent"
             onClick={exportGastosMantenimientoCsv}
             disabled={loadingAdicionales || !(gastosMantenimiento?.gastos || []).length}
           >
@@ -838,7 +838,7 @@ const Reportes: React.FC = () => {
         <div className="section-header-inline">
           <h3>Ingresos Mensuales</h3>
           <button
-            className="btn-rapido"
+            className="btn-rapido btn-rapido--accent"
             onClick={exportIngresosMensualesCsv}
             disabled={loadingAdicionales || !(ingresosMensuales?.ingresos || []).length}
           >

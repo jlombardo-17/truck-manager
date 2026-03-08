@@ -6,6 +6,7 @@ import { Chofer, estadoChoferLabels } from '../types/chofer';
 import '../styles/Choferes.css';
 
 const Choferes: React.FC = () => {
+  const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   const [choferes, setChoferes] = useState<Chofer[]>([]);
   const [filteredChoferes, setFilteredChoferes] = useState<Chofer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,7 +87,59 @@ const Choferes: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="loading">Cargando choferes...</div>;
+    return (
+      <div className="choferes-container">
+        <nav className="navbar">
+          <div className="navbar-content">
+            <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
+            <div className="navbar-user">
+              <span className="user-name">
+                {user?.firstName} {user?.lastName}
+              </span>
+              <button onClick={handleLogout} className="logout-button">
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        <div className="choferes-header">
+          <div className="header-copy">
+            <h1>Gestión de Choferes</h1>
+            <p>Seguimiento de datos personales, estado y desempeño operativo.</p>
+          </div>
+          <button className="btn-primary" disabled>
+            + Agregar Chofer
+          </button>
+        </div>
+
+        <div className="table-container skeleton-table">
+          <table className="choferes-table">
+            <thead>
+              <tr>
+                <th>Nombre Completo</th>
+                <th>Nro. Documento</th>
+                <th>Teléfono</th>
+                <th>Fecha Ingreso</th>
+                <th>Sueldo Base</th>
+                <th>% Comisión</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {skeletonRows.map((row) => (
+                <tr key={row}>
+                  <td colSpan={8}>
+                    <div className="skeleton-line" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -94,7 +147,7 @@ const Choferes: React.FC = () => {
       {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
+          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
           <div className="navbar-user">
             <span className="user-name">
               {user?.firstName} {user?.lastName}
@@ -107,7 +160,10 @@ const Choferes: React.FC = () => {
       </nav>
 
       <div className="choferes-header">
-        <h1>Gestión de Choferes</h1>
+        <div className="header-copy">
+          <h1>Gestión de Choferes</h1>
+          <p>Seguimiento de datos personales, estado y desempeño operativo.</p>
+        </div>
         <Link to="/choferes/new" className="btn-primary">
           + Agregar Chofer
         </Link>
@@ -170,14 +226,14 @@ const Choferes: React.FC = () => {
                       className="btn-view"
                       title="Ver Detalle"
                     >
-                      👁️
+                      Ver
                     </Link>
                     <Link
                       to={`/choferes/edit/${chofer.id}`}
                       className="btn-edit"
                       title="Editar"
                     >
-                      ✏️
+                      Editar
                     </Link>
                     <button
                       onClick={() =>
@@ -186,7 +242,7 @@ const Choferes: React.FC = () => {
                       className="btn-delete"
                       title="Eliminar"
                     >
-                      🗑️
+                      Eliminar
                     </button>
                   </td>
                 </tr>
