@@ -218,6 +218,21 @@
   border-left: 4px solid #c33;
 }
 
+/* Form help text for accessibility */
+.form-help {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.form-group input:focus ~ .form-help,
+.form-group select:focus ~ .form-help {
+  color: #2563eb;
+  font-weight: 500;
+}
+
 @media (max-width: 768px) {
   .form-container {
     padding: 1rem;

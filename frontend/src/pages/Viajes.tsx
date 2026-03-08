@@ -305,6 +305,7 @@ const Viajes: React.FC = () => {
                       className="btn-icon btn-edit"
                       onClick={() => handleEdit(viaje.id!)}
                       title="Editar"
+                      aria-label={`Editar viaje ${viaje.numeroViaje}: ${viaje.origen} - ${viaje.destino}`}
                     >
                       Editar
                     </button>
@@ -312,6 +313,7 @@ const Viajes: React.FC = () => {
                       className="btn-icon btn-delete"
                       onClick={() => handleDelete(viaje.id!)}
                       title="Eliminar"
+                      aria-label={`Eliminar viaje ${viaje.numeroViaje}: ${viaje.origen} - ${viaje.destino}`}
                     >
                       Eliminar
                     </button>

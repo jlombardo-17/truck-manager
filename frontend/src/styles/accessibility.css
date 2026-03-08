@@ -1,0 +1,110 @@
+/* ♿ Global Accessibility Styles - WCAG AA Compliance */
+
+/* Focus states for all interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #2563eb; /* brand-500 blue */
+  outline-offset: 2px;
+}
+
+/* Button focus state */
+button:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 0;
+}
+
+/* Remove default browser outline and add custom */
+button:focus-visible,
+button:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Table buttons focus */
+table button:focus-visible {
+  outline: 2px solid #1e40af; /* brand-700 for better contrast */
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Link focus */
+a:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* Form inputs focus */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 0;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Skip to main content link (hidden by default, visible on focus) */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 12px 24px;
+  background-color: #1e40af;
+  color: white;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  font-weight: 600;
+}
+
+.skip-to-main:focus {
+  left: 0;
+  top: 0;
+  outline: none;
+}
+
+/* Ensure focus indicator is visible on dark backgrounds */
+.hero-dark button:focus-visible,
+.hero-dark a:focus-visible {
+  outline: 2px solid #60a5fa; /* brand-400 for better contrast on dark bg */
+  outline-offset: 2px;
+}
+
+/* Badge focus states */
+.badge:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Visually hidden class for screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

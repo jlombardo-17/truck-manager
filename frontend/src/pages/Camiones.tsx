@@ -264,13 +264,19 @@ const Camiones: React.FC = () => {
                   </td>
                   <td>{Number(camion.odometroKm).toLocaleString('es-AR')}</td>
                   <td className="actions-cell">
-                    <button onClick={() => handleEdit(camion.id)} className="edit-button" title="Editar">
+                    <button 
+                      onClick={() => handleEdit(camion.id)} 
+                      className="edit-button" 
+                      title="Editar"
+                      aria-label={`Editar camión ${camion.patente}`}
+                    >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDelete(camion.id, camion.patente)}
                       className="delete-button"
                       title="Eliminar"
+                      aria-label={`Eliminar camión ${camion.patente}`}
                     >
                       Eliminar
                     </button>

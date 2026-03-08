@@ -13,6 +13,8 @@ import ViajeForm from './pages/ViajeForm';
 import Reportes from './pages/Reportes';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
+import './styles/accessibility.css';
+import './styles/colors-wcag.css';
 
 function App() {
   return (

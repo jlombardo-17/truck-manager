@@ -274,6 +274,7 @@ const Choferes: React.FC = () => {
                       to={`/choferes/${chofer.id}`}
                       className="btn-view"
                       title="Ver Detalle"
+                      aria-label={`Ver detalle de ${chofer.nombre} ${chofer.apellido}`}
                     >
                       Ver
                     </Link>
@@ -281,6 +282,7 @@ const Choferes: React.FC = () => {
                       to={`/choferes/edit/${chofer.id}`}
                       className="btn-edit"
                       title="Editar"
+                      aria-label={`Editar información de ${chofer.nombre} ${chofer.apellido}`}
                     >
                       Editar
                     </Link>
@@ -290,6 +292,7 @@ const Choferes: React.FC = () => {
                       }
                       className="btn-delete"
                       title="Eliminar"
+                      aria-label={`Eliminar chofer ${chofer.nombre} ${chofer.apellido}`}
                     >
                       Eliminar
                     </button>

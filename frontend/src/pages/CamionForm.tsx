@@ -137,17 +137,32 @@ const CamionForm: React.FC = () => {
                 disabled={isLoading}
                 placeholder="Ej: ABC123"
                 maxLength={10}
+                aria-describedby="patente-help"
+                aria-required="true"
               />
+              <small id="patente-help" className="form-help">
+                Identificación única del vehículo
+              </small>
             </div>
 
             <div className="form-group">
               <label htmlFor="estado">Estado</label>
-              <select id="estado" name="estado" value={formData.estado} onChange={handleChange} disabled={isLoading}>
+              <select 
+                id="estado" 
+                name="estado" 
+                value={formData.estado} 
+                onChange={handleChange} 
+                disabled={isLoading}
+                aria-describedby="estado-help"
+              >
                 <option value="activo">Activo</option>
                 <option value="inactivo">Inactivo</option>
                 <option value="mantenimiento">Mantenimiento</option>
                 <option value="fuera_de_servicio">Fuera de Servicio</option>
               </select>
+              <small id="estado-help" className="form-help">
+                Estado operativo actual del camión
+              </small>
             </div>
           </div>
 
