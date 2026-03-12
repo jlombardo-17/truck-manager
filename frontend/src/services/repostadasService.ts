@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import authService from './authService';
 import { Repostada, CreateRepostadaDto, Estadisticas } from '../types/repostada';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 class RepostadasService {
   private api: AxiosInstance;

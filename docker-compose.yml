@@ -17,7 +17,7 @@ services:
       - db_data:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "3306:3306"           # Expuesto solo en dev; remover en producción real
+      - "3307:3306"           # Puerto local 3307 para no conflictuar con MySQL local
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
       interval: 10s
@@ -38,7 +38,7 @@ services:
     container_name: truck_manager_backend
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       DB_HOST: db
       DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE:-truck_manager}

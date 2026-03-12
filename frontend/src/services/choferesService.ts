@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Chofer, CreateChoferDto, UpdateChoferDto } from '../types/chofer';
 import authService from './authService';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = '/api';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,

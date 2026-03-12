@@ -1,7 +1,7 @@
 import { MantenimientoTipo, MantenimientoRegistro } from '../types/mantenimiento';
 import authService from './authService';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const getAuthHeaders = () => ({
   Authorization: `Bearer ${authService.getToken()}`,
