@@ -30,6 +30,8 @@ const CamionDetalle: React.FC = () => {
   const [showServicioModal, setShowServicioModal] = useState(false);
   const [showDocumentoModal, setShowDocumentoModal] = useState(false);
   const [showRepostadaModal, setShowRepostadaModal] = useState(false);
+  const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
+  const [viewingDocumento, setViewingDocumento] = useState<Documento | null>(null);
 
   useEffect(() => {
     loadData();
@@ -78,6 +80,11 @@ const CamionDetalle: React.FC = () => {
     }
   };
 
+  const handleEditDocumento = (doc: Documento) => {
+    setEditingDocumento(doc);
+    setShowDocumentoModal(true);
+  };
+
   const handleDeleteRepostada = async (repostadaId: number) => {
     if (!window.confirm('¿Estás seguro de eliminar esta repostada?')) return;
     try {
@@ -120,6 +127,15 @@ const CamionDetalle: React.FC = () => {
   }
 
   const ultimoServicio = servicios.length > 0 ? servicios[0] : null;
+
+  const documentosVencidos = documentos.filter(
+    (d) => d.fechaVencimiento && new Date(d.fechaVencimiento) < new Date()
+  );
+  const documentosProximos = documentos.filter((d) => {
+    if (!d.fechaVencimiento) return false;
+    const dias = Math.floor((new Date(d.fechaVencimiento).getTime() - Date.now()) / 86400000);
+    return dias >= 0 && dias <= 30;
+  });
 
   return (
     <div className="detalle-container">
@@ -266,42 +282,102 @@ const CamionDetalle: React.FC = () => {
       <section className="info-section">
         <div className="section-header">
           <h2>📄 Documentación</h2>
-          <button onClick={() => setShowDocumentoModal(true)} className="add-button">
+          <button
+            onClick={() => { setEditingDocumento(null); setShowDocumentoModal(true); }}
+            className="add-button"
+          >
             + Agregar Documento
           </button>
         </div>
+
+        {(documentosVencidos.length > 0 || documentosProximos.length > 0) && (
+          <div className="docs-alert-strip">
+            {documentosVencidos.length > 0 && (
+              <span className="docs-alert-item docs-alert-vencido">
+                ✕ {documentosVencidos.length} documento{documentosVencidos.length > 1 ? 's' : ''} vencido{documentosVencidos.length > 1 ? 's' : ''}
+              </span>
+            )}
+            {documentosProximos.length > 0 && (
+              <span className="docs-alert-item docs-alert-proximo">
+                ⚠ {documentosProximos.length} próximo{documentosProximos.length > 1 ? 's' : ''} a vencer
+              </span>
+            )}
+          </div>
+        )}
 
         {documentos.length === 0 ? (
           <div className="empty-message">No hay documentos registrados</div>
         ) : (
           <div className="documentos-grid">
-            {documentos.map((doc) => (
-              <div key={doc.id} className="documento-card">
-                <div className="documento-tipo">{TipoDocumentoLabels[doc.tipo]}</div>
-                {doc.rutaArchivo && (
-                  <div className="documento-preview">
-                    <img src={doc.rutaArchivo} alt={doc.nombre || 'Documento'} />
+            {[...documentos]
+              .sort((a, b) => {
+                const getOrder = (doc: Documento) => {
+                  if (!doc.fechaVencimiento) return 3;
+                  const dias = Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000);
+                  if (dias < 0) return 0;
+                  if (dias <= 30) return 1;
+                  return 2;
+                };
+                return getOrder(a) - getOrder(b);
+              })
+              .map((doc) => {
+                const dias = doc.fechaVencimiento
+                  ? Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000)
+                  : null;
+                const cardStatus =
+                  dias === null ? 'sin-fecha' : dias < 0 ? 'vencido' : dias <= 30 ? 'proximo' : 'vigente';
+                return (
+                  <div key={doc.id} className={`documento-card documento-card-${cardStatus}`}>
+                    <div className="documento-card-header">
+                      <span className="documento-tipo">{TipoDocumentoLabels[doc.tipo]}</span>
+                      <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />
+                    </div>
+
+                    {doc.rutaArchivo ? (
+                      <div
+                        className="documento-preview clickable"
+                        onClick={() => setViewingDocumento(doc)}
+                        title="Ver imagen completa"
+                      >
+                        <img src={doc.rutaArchivo} alt={doc.nombre || 'Documento'} />
+                        <div className="preview-overlay">🔍 Ver imagen</div>
+                      </div>
+                    ) : (
+                      <div className="documento-no-imagen">
+                        <span>📄</span>
+                        <small>Sin imagen</small>
+                      </div>
+                    )}
+
+                    <div className="documento-details">
+                      {doc.nombre && <h4 className="doc-nombre">{doc.nombre}</h4>}
+                      {doc.descripcion && <p className="doc-descripcion">{doc.descripcion}</p>}
+                      {doc.fechaVencimiento && (
+                        <p className="doc-vencimiento">
+                          📅 Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="doc-card-actions">
+                      <button
+                        onClick={() => handleEditDocumento(doc)}
+                        className="doc-action-btn doc-edit-btn"
+                        title="Editar documento"
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDocumento(doc.id)}
+                        className="doc-action-btn doc-delete-btn"
+                        title="Eliminar documento"
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   </div>
-                )}
-                {doc.nombre && <h4>{doc.nombre}</h4>}
-                {doc.descripcion && <p className="descripcion">{doc.descripcion}</p>}
-                <div className="documento-info">
-                  {doc.fechaVencimiento && (
-                    <p className="vencimiento">
-                      Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
-                    </p>
-                  )}
-                  <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />
-                </div>
-                <button
-                  onClick={() => handleDeleteDocumento(doc.id)}
-                  className="delete-btn"
-                  title="Eliminar"
-                >
-                  🗑️ Eliminar
-                </button>
-              </div>
-            ))}
+                );
+              })}
           </div>
         )}
       </section>
@@ -410,11 +486,23 @@ const CamionDetalle: React.FC = () => {
       {showDocumentoModal && (
         <DocumentoModal
           camionId={camionId}
-          onClose={() => setShowDocumentoModal(false)}
+          documento={editingDocumento}
+          onClose={() => {
+            setShowDocumentoModal(false);
+            setEditingDocumento(null);
+          }}
           onSave={() => {
             setShowDocumentoModal(false);
+            setEditingDocumento(null);
             loadData();
           }}
+        />
+      )}
+
+      {viewingDocumento && (
+        <DocumentoViewModal
+          documento={viewingDocumento}
+          onClose={() => setViewingDocumento(null)}
         />
       )}
 
@@ -569,15 +657,19 @@ const ServicioModal: React.FC<{
 // Modal para Documento
 const DocumentoModal: React.FC<{
   camionId: number;
+  documento?: Documento | null;
   onClose: () => void;
   onSave: () => void;
-}> = ({ camionId, onClose, onSave }) => {
+}> = ({ camionId, documento, onClose, onSave }) => {
+  const isEditing = !!documento;
   const [formData, setFormData] = useState({
-    tipo: TipoDocumento.SEGURO as TipoDocumento,
-    nombre: '',
-    rutaArchivo: '',
-    descripcion: '',
-    fechaVencimiento: '',
+    tipo: (documento?.tipo ?? TipoDocumento.SEGURO) as TipoDocumento,
+    nombre: documento?.nombre ?? '',
+    rutaArchivo: documento?.rutaArchivo ?? '',
+    descripcion: documento?.descripcion ?? '',
+    fechaVencimiento: documento?.fechaVencimiento
+      ? documento.fechaVencimiento.split('T')[0]
+      : '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -587,7 +679,7 @@ const DocumentoModal: React.FC<{
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setFormData({ ...formData, rutaArchivo: event.target?.result as string });
+        setFormData((prev) => ({ ...prev, rutaArchivo: event.target?.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -595,17 +687,26 @@ const DocumentoModal: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isEditing && !formData.rutaArchivo) {
+      setError('Selecciona una imagen del documento');
+      return;
+    }
     setIsLoading(true);
     setError(null);
 
     try {
-      await documentosService.create(camionId, {
+      const payload = {
         tipo: formData.tipo,
         nombre: formData.nombre || undefined,
         rutaArchivo: formData.rutaArchivo,
         descripcion: formData.descripcion || undefined,
         fechaVencimiento: formData.fechaVencimiento || undefined,
-      });
+      };
+      if (isEditing) {
+        await documentosService.update(documento!.id, camionId, payload);
+      } else {
+        await documentosService.create(camionId, payload);
+      }
       onSave();
     } catch (err: any) {
       setError(err.message || 'Error al guardar documento');
@@ -618,7 +719,7 @@ const DocumentoModal: React.FC<{
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Agregar Documento</h2>
+          <h2>{isEditing ? 'Editar Documento' : 'Agregar Documento'}</h2>
           <button onClick={onClose} className="close-btn">
             ✕
           </button>
@@ -654,13 +755,15 @@ const DocumentoModal: React.FC<{
           </div>
 
           <div className="form-group">
-            <label>Imagen del Documento</label>
+            <label>
+              Imagen del Documento{isEditing ? ' (dejar vacío para mantener la actual)' : ''}
+            </label>
             <input
               type="file"
               accept="image/*"
               onChange={handleImageChange}
               disabled={isLoading}
-              required
+              required={!isEditing}
             />
             {formData.rutaArchivo && (
               <div className="image-preview">
@@ -694,10 +797,59 @@ const DocumentoModal: React.FC<{
               Cancelar
             </button>
             <button type="submit" className="submit-btn" disabled={isLoading}>
-              {isLoading ? 'Guardando...' : 'Guardar Documento'}
+              {isLoading ? 'Guardando...' : isEditing ? 'Actualizar Documento' : 'Guardar Documento'}
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// Modal para ver documento completo
+const DocumentoViewModal: React.FC<{
+  documento: Documento;
+  onClose: () => void;
+}> = ({ documento, onClose }) => {
+  return (
+    <div className="modal-overlay doc-view-overlay" onClick={onClose}>
+      <div className="doc-view-container" onClick={(e) => e.stopPropagation()}>
+        <div className="doc-view-header">
+          <div className="doc-view-title">
+            <span className="documento-tipo">{TipoDocumentoLabels[documento.tipo]}</span>
+            {documento.nombre && <h3>{documento.nombre}</h3>}
+          </div>
+          <button onClick={onClose} className="close-btn">✕</button>
+        </div>
+
+        {documento.rutaArchivo && (
+          <div className="doc-view-image">
+            <img src={documento.rutaArchivo} alt={documento.nombre || 'Documento'} />
+          </div>
+        )}
+
+        <div className="doc-view-details">
+          {documento.descripcion && (
+            <div className="doc-view-field">
+              <label>Descripción</label>
+              <span>{documento.descripcion}</span>
+            </div>
+          )}
+          {documento.fechaVencimiento && (
+            <div className="doc-view-field">
+              <label>Fecha de Vencimiento</label>
+              <span>{new Date(documento.fechaVencimiento).toLocaleDateString('es-AR')}</span>
+            </div>
+          )}
+          <div className="doc-view-field">
+            <label>Estado</label>
+            <DocumentoEstadoBadge fechaVencimiento={documento.fechaVencimiento} mostrarDias={true} />
+          </div>
+          <div className="doc-view-field">
+            <label>Cargado el</label>
+            <span>{new Date(documento.createdAt).toLocaleDateString('es-AR')}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
