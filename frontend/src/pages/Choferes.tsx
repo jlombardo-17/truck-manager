@@ -285,7 +285,7 @@ const Choferes: React.FC = () => {
                       Ver
                     </Link>
                     <Link
-                      to={`/choferes/edit/${chofer.id}`}
+                      to={`/choferes/${chofer.id}?mode=edit`}
                       className="btn-edit"
                       title="Editar"
                       aria-label={`Editar información de ${chofer.nombre} ${chofer.apellido}`}

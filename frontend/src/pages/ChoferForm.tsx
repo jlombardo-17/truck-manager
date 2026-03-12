@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import choferesService from '../services/choferesService';
 import { EstadoChofer } from '../types/chofer';
@@ -19,9 +19,7 @@ interface FormData {
 }
 
 const ChoferForm: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isEditMode = Boolean(id);
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -44,44 +42,6 @@ const ChoferForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (isEditMode && id) {
-      loadChofer(parseInt(id));
-    }
-  }, [id, isEditMode]);
-
-  const loadChofer = async (choferId: number) => {
-    try {
-      setLoading(true);
-      const chofer = await choferesService.getById(choferId);
-      setFormData({
-        numeroDocumento: chofer.numeroDocumento,
-        nombre: chofer.nombre,
-        apellido: chofer.apellido,
-        telefono: chofer.telefono,
-        direccion: chofer.direccion || '',
-        fechaIngreso:
-          typeof chofer.fechaIngreso === 'string'
-            ? chofer.fechaIngreso.split('T')[0]
-            : new Date(chofer.fechaIngreso).toISOString().split('T')[0],
-        fechaNacimiento: chofer.fechaNacimiento
-          ? typeof chofer.fechaNacimiento === 'string'
-            ? chofer.fechaNacimiento.split('T')[0]
-            : new Date(chofer.fechaNacimiento).toISOString().split('T')[0]
-          : '',
-        estado: chofer.estado as EstadoChofer,
-        sueldoBase: chofer.sueldoBase ? chofer.sueldoBase.toString() : '',
-        porcentajeComision: chofer.porcentajeComision ? chofer.porcentajeComision.toString() : '',
-      });
-    } catch (error) {
-      console.error('Error al cargar chofer:', error);
-      alert('Error al cargar el chofer');
-      navigate('/choferes');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -147,11 +107,7 @@ const ChoferForm: React.FC = () => {
         porcentajeComision: formData.porcentajeComision ? parseFloat(formData.porcentajeComision) : undefined,
       };
 
-      if (isEditMode && id) {
-        await choferesService.update(parseInt(id), dataToSend);
-      } else {
-        await choferesService.create(dataToSend);
-      }
+      await choferesService.create(dataToSend);
 
       navigate('/choferes');
     } catch (error: any) {
@@ -184,7 +140,7 @@ const ChoferForm: React.FC = () => {
       </nav>
 
       <div className="page-header">
-        <h1>{isEditMode ? 'Editar Chofer' : 'Nuevo Chofer'}</h1>
+        <h1>➕ Nuevo Chofer</h1>
         <button onClick={() => navigate('/choferes')} className="btn-back">
           ← Volver a Choferes
         </button>
@@ -359,7 +315,7 @@ const ChoferForm: React.FC = () => {
             Cancelar
           </button>
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Guardando...' : isEditMode ? 'Guardar Cambios' : 'Crear Chofer'}
+            {loading ? 'Creando...' : '💾 Crear Chofer'}
           </button>
         </div>
       </form>

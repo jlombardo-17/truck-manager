@@ -413,14 +413,53 @@
 
 ---
 
-### 🚀 Sprint 13: Optimización y Deploy
+### ✅ Sprint 13: Dockerización y Deploy - COMPLETADO (Marzo 11, 2026)
 
-- [ ] Crear archivo `docker-compose.yml` (BD + Backend + Frontend)
-- [ ] Configurar variables de entorno para producción
-- [ ] Desplegar en servidor (AWS, DigitalOcean, Heroku)
-- [ ] Configurar HTTPS / SSL
-- [ ] Testing e2e básico
-- [ ] Monitoreo y alertas
+**Archivos creados**:
+- ✅ `backend/Dockerfile` — Multi-stage build (builder + production), usuario non-root
+- ✅ `frontend/Dockerfile` — Multi-stage build React/Vite + nginx:1.25-alpine
+- ✅ `frontend/nginx.conf` — Proxy `/api/` → backend, gzip, SPA fallback, security headers
+- ✅ `docker-compose.yml` — Orquestación completa: MySQL 8 + NestJS + nginx
+- ✅ `.env.production.example` — Template de variables de producción documentado
+- ✅ `backend/.dockerignore` / `frontend/.dockerignore`
+- ✅ `docker/mysql/init/01_init.sql` — Script de inicialización de BD
+
+**Arquitectura Docker**:
+```
+Internet → puerto 80 → [frontend nginx]
+                            ↓ proxy /api/
+                        [backend :3000]
+                            ↓
+                        [mysql db :3306]
+```
+
+**Para levantar en producción**:
+```bash
+# 1. Crear .env.production desde el ejemplo
+cp .env.production.example .env.production
+# Editar con valores reales
+
+# 2. Levantar todo
+docker compose --env-file .env.production up -d --build
+
+# 3. Ver logs
+docker compose logs -f
+```
+
+**Pendiente para deploy real**:
+- ✅ Configurar HTTPS / SSL (nginx-proxy + acme-companion, Let's Encrypt automático)
+- ✅ Scripts de deploy automatizados (`scripts/deploy.sh`, `scripts/renew-ssl.sh`)
+- [ ] Desplegar en servidor (DigitalOcean, AWS EC2, Hetzner, etc.)
+- [ ] Apuntar dominio a IP del servidor (registro DNS tipo A)
+- [ ] Ejecutar `scripts/deploy.sh` en el servidor
+- [ ] Configurar backups automáticos de la BD
+- [ ] Monitoreo y alertas (Uptime Robot, Grafana/Loki)
+
+**Para deploy en producción real (resumen)**:
+```bash
+# En el servidor (Ubuntu 22.04+):
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/<USER>/truck-manager/main/scripts/deploy.sh)
+```
 
 ---
 

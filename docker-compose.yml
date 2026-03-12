@@ -1,0 +1,94 @@
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────
+  # Base de Datos MySQL 8
+  # ─────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: truck_manager_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE:-truck_manager}
+      MYSQL_USER: ${DB_USERNAME:-truck_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"           # Expuesto solo en dev; remover en producción real
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - truck_network
+
+  # ─────────────────────────────────────────
+  # Backend NestJS
+  # ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: truck_manager_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-truck_manager}
+      DB_USERNAME: ${DB_USERNAME:-truck_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      API_PORT: 3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - truck_network
+    # No exponer el puerto directamente; nginx hace el proxy
+    expose:
+      - "3000"
+
+  # ─────────────────────────────────────────
+  # Frontend React + Nginx
+  # ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_URL: /api
+    container_name: truck_manager_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - truck_network
+
+# ─────────────────────────────────────────
+# Volúmenes y Redes
+# ─────────────────────────────────────────
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  truck_network:
+    driver: bridge

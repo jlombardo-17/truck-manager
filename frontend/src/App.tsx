@@ -108,7 +108,7 @@ function App() {
             path="/choferes/edit/:id"
             element={
               <ProtectedRoute>
-                <ChoferForm />
+                <ChoferDetalle />
               </ProtectedRoute>
             }
           />

@@ -1,14 +1,29 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Chofer } from '../types/chofer';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Chofer, EstadoChofer, estadoChoferLabels } from '../types/chofer';
 import { ChoferDocumento, TipoDocumentoChofer, TipoDocumentoChoferLabels } from '../types/chofer-documento';
 import choferesService from '../services/choferesService';
 import choferDocumentosService from '../services/choferDocumentosService';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import '../styles/ChoferDetalle.css';
 
+interface ChoferEditFormData {
+  numeroDocumento: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  direccion: string;
+  fechaIngreso: string;
+  fechaNacimiento: string;
+  estado: EstadoChofer;
+  sueldoBase: string;
+  porcentajeComision: string;
+}
+
 const ChoferDetalle: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { id } = useParams<{ id: string }>();
   const choferId = parseInt(id || '0');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -17,7 +32,22 @@ const ChoferDetalle: React.FC = () => {
   const [documentos, setDocumentos] = useState<ChoferDocumento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSavingChofer, setIsSavingChofer] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'documentos'>('info');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editFormData, setEditFormData] = useState<ChoferEditFormData>({
+    numeroDocumento: '',
+    nombre: '',
+    apellido: '',
+    telefono: '',
+    direccion: '',
+    fechaIngreso: '',
+    fechaNacimiento: '',
+    estado: EstadoChofer.ACTIVO,
+    sueldoBase: '',
+    porcentajeComision: '',
+  });
 
   // Formulario de nuevo documento
   const [showDocumentoForm, setShowDocumentoForm] = useState(false);
@@ -129,6 +159,17 @@ const ChoferDetalle: React.FC = () => {
     loadData();
   }, [choferId]);
 
+  useEffect(() => {
+    const queryMode = searchParams.get('mode');
+    const isLegacyEditPath = location.pathname.includes('/choferes/edit/');
+    const shouldStartInEdit = queryMode === 'edit' || isLegacyEditPath;
+
+    if (shouldStartInEdit) {
+      setActiveTab('info');
+      setIsEditMode(true);
+    }
+  }, [location.pathname, searchParams]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -141,6 +182,26 @@ const ChoferDetalle: React.FC = () => {
 
       setChofer(choferData);
       setDocumentos(documentosData);
+      setEditFormData({
+        numeroDocumento: choferData.numeroDocumento || '',
+        nombre: choferData.nombre || '',
+        apellido: choferData.apellido || '',
+        telefono: choferData.telefono || '',
+        direccion: choferData.direccion || '',
+        fechaIngreso:
+          typeof choferData.fechaIngreso === 'string'
+            ? choferData.fechaIngreso.split('T')[0]
+            : new Date(choferData.fechaIngreso).toISOString().split('T')[0],
+        fechaNacimiento: choferData.fechaNacimiento
+          ? typeof choferData.fechaNacimiento === 'string'
+            ? choferData.fechaNacimiento.split('T')[0]
+            : new Date(choferData.fechaNacimiento).toISOString().split('T')[0]
+          : '',
+        estado: (choferData.estado as EstadoChofer) || EstadoChofer.ACTIVO,
+        sueldoBase: choferData.sueldoBase ? String(choferData.sueldoBase) : '',
+        porcentajeComision: choferData.porcentajeComision ? String(choferData.porcentajeComision) : '',
+      });
+      setEditErrors({});
     } catch (err) {
       setError('Error al cargar los datos del chofer');
       console.error(err);
@@ -192,6 +253,78 @@ const ChoferDetalle: React.FC = () => {
     await handleFileSelection(file);
   };
 
+  const handleEditChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (editErrors[name]) {
+      setEditErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  };
+
+  const validateEditForm = (): boolean => {
+    const nextErrors: Record<string, string> = {};
+
+    if (!editFormData.numeroDocumento.trim()) {
+      nextErrors.numeroDocumento = 'El número de documento es obligatorio';
+    }
+    if (!editFormData.nombre.trim()) {
+      nextErrors.nombre = 'El nombre es obligatorio';
+    }
+    if (!editFormData.apellido.trim()) {
+      nextErrors.apellido = 'El apellido es obligatorio';
+    }
+    if (!editFormData.telefono.trim()) {
+      nextErrors.telefono = 'El teléfono es obligatorio';
+    }
+    if (!editFormData.fechaIngreso) {
+      nextErrors.fechaIngreso = 'La fecha de ingreso es obligatoria';
+    }
+
+    setEditErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSaveChofer = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateEditForm()) {
+      return;
+    }
+
+    try {
+      setIsSavingChofer(true);
+      setError(null);
+
+      await choferesService.update(choferId, {
+        numeroDocumento: editFormData.numeroDocumento,
+        nombre: editFormData.nombre,
+        apellido: editFormData.apellido,
+        telefono: editFormData.telefono,
+        direccion: editFormData.direccion || undefined,
+        fechaIngreso: editFormData.fechaIngreso,
+        fechaNacimiento: editFormData.fechaNacimiento || undefined,
+        estado: editFormData.estado,
+        sueldoBase: editFormData.sueldoBase ? parseFloat(editFormData.sueldoBase) : undefined,
+        porcentajeComision: editFormData.porcentajeComision ? parseFloat(editFormData.porcentajeComision) : undefined,
+      });
+
+      await loadData();
+      setIsEditMode(false);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data?.message || 'Error al actualizar el chofer');
+    } finally {
+      setIsSavingChofer(false);
+    }
+  };
+
   if (loading) {
     return <div className="loading-container">Cargando...</div>;
   }
@@ -220,9 +353,12 @@ const ChoferDetalle: React.FC = () => {
                   </button>
                   <button 
           className="btn-edit"
-          onClick={() => navigate(`/choferes/${choferId}/editar`)}
+          onClick={() => {
+            setActiveTab('info');
+            setIsEditMode((prev) => !prev);
+          }}
         >
-          ✏️ Editar
+          {isEditMode ? '👁️ Ver' : '✏️ Editar'}
         </button>
       </div>
 
@@ -258,7 +394,96 @@ const ChoferDetalle: React.FC = () => {
       <div className="tab-content">
         {activeTab === 'info' && (
           <div className="info-section">
-            <div className="info-grid">
+            <div className="section-header section-header-inline">
+              <h3>{isEditMode ? '✏️ Editando Información del Chofer' : '📄 Información del Chofer'}</h3>
+              <button
+                className="btn-primary"
+                onClick={() => setIsEditMode((prev) => !prev)}
+                type="button"
+              >
+                {isEditMode ? 'Cancelar edición' : 'Editar información'}
+              </button>
+            </div>
+
+            {isEditMode ? (
+              <form className="documento-form" onSubmit={handleSaveChofer}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Número de Documento / CI *</label>
+                    <input
+                      type="text"
+                      name="numeroDocumento"
+                      value={editFormData.numeroDocumento}
+                      onChange={handleEditChange}
+                    />
+                    {editErrors.numeroDocumento && <span className="error-message">{editErrors.numeroDocumento}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Estado *</label>
+                    <select name="estado" value={editFormData.estado} onChange={handleEditChange}>
+                      <option value={EstadoChofer.ACTIVO}>Activo</option>
+                      <option value={EstadoChofer.INACTIVO}>Inactivo</option>
+                      <option value={EstadoChofer.SUSPENDIDO}>Suspendido</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Nombre *</label>
+                    <input type="text" name="nombre" value={editFormData.nombre} onChange={handleEditChange} />
+                    {editErrors.nombre && <span className="error-message">{editErrors.nombre}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Apellido *</label>
+                    <input type="text" name="apellido" value={editFormData.apellido} onChange={handleEditChange} />
+                    {editErrors.apellido && <span className="error-message">{editErrors.apellido}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Teléfono *</label>
+                    <input type="text" name="telefono" value={editFormData.telefono} onChange={handleEditChange} />
+                    {editErrors.telefono && <span className="error-message">{editErrors.telefono}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Fecha de Ingreso *</label>
+                    <input type="date" name="fechaIngreso" value={editFormData.fechaIngreso} onChange={handleEditChange} />
+                    {editErrors.fechaIngreso && <span className="error-message">{editErrors.fechaIngreso}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label>Fecha de Nacimiento</label>
+                    <input type="date" name="fechaNacimiento" value={editFormData.fechaNacimiento} onChange={handleEditChange} />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Sueldo Base ($)</label>
+                    <input type="number" min="0" step="0.01" name="sueldoBase" value={editFormData.sueldoBase} onChange={handleEditChange} />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Porcentaje Comisión (%)</label>
+                    <input type="number" min="0" max="100" step="0.01" name="porcentajeComision" value={editFormData.porcentajeComision} onChange={handleEditChange} />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Dirección</label>
+                    <textarea name="direccion" rows={3} value={editFormData.direccion} onChange={handleEditChange} />
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button type="button" className="btn-secondary" onClick={() => setIsEditMode(false)} disabled={isSavingChofer}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn-primary" disabled={isSavingChofer}>
+                    {isSavingChofer ? 'Guardando...' : '💾 Guardar Cambios'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="info-grid">
               <div className="info-card">
                 <h3>👤 Datos Personales</h3>
                 <div className="info-item">
@@ -303,7 +528,9 @@ const ChoferDetalle: React.FC = () => {
                 )}
                 <div className="info-item">
                   <label>Estado:</label>
-                  <span className={`estado-${chofer.estado}`}>{chofer.estado}</span>
+                  <span className={`estado-${chofer.estado}`}>
+                    {estadoChoferLabels[chofer.estado as EstadoChofer] || chofer.estado}
+                  </span>
                 </div>
               </div>
 
@@ -322,7 +549,8 @@ const ChoferDetalle: React.FC = () => {
                   </div>
                 )}
               </div>
-            </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,0 +1,159 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.prod.yml — Producción con HTTPS automático
+#
+# Uso:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Arquitectura:
+#   Internet → :443/:80 [nginx-proxy + SSL] → [frontend nginx]
+#                                                    ↓ proxy /api/
+#                                             [backend :3000]
+#                                                    ↓
+#                                             [mysql db :3306]
+#
+# SSL: nginx-proxy/acme-companion gestiona Let's Encrypt automáticamente.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────
+  # Reverse Proxy con SSL automático
+  # ─────────────────────────────────────────
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:1.5
+    container_name: truck_nginx_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+    networks:
+      - truck_network
+
+  # ─────────────────────────────────────────
+  # Gestor automático de certificados SSL (Let's Encrypt)
+  # ─────────────────────────────────────────
+  acme-companion:
+    image: nginxproxy/acme-companion:2.4
+    container_name: truck_acme
+    restart: unless-stopped
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - acme_state:/etc/acme.sh
+    environment:
+      DEFAULT_EMAIL: ${SSL_EMAIL}
+    depends_on:
+      - nginx-proxy
+    networks:
+      - truck_network
+
+  # ─────────────────────────────────────────
+  # Base de Datos MySQL 8
+  # ─────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: truck_manager_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE:-truck_manager}
+      MYSQL_USER: ${DB_USERNAME:-truck_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    # Puerto NO expuesto en producción (solo accesible internamente)
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - truck_network
+
+  # ─────────────────────────────────────────
+  # Backend NestJS
+  # ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: truck_manager_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-truck_manager}
+      DB_USERNAME: ${DB_USERNAME:-truck_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      API_PORT: 3000
+      FRONTEND_URL: https://${DOMAIN}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Solo accesible internamente via el nombre de servicio
+    expose:
+      - "3000"
+    networks:
+      - truck_network
+
+  # ─────────────────────────────────────────
+  # Frontend React + Nginx (sirve app + proxy /api/)
+  # ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_URL: /api
+    container_name: truck_manager_frontend
+    restart: unless-stopped
+    # nginx-proxy detecta este contenedor y le asigna el cert SSL automáticamente
+    environment:
+      VIRTUAL_HOST: ${DOMAIN}
+      LETSENCRYPT_HOST: ${DOMAIN}
+      VIRTUAL_PORT: 80
+    depends_on:
+      - backend
+    expose:
+      - "80"
+    networks:
+      - truck_network
+
+# ─────────────────────────────────────────
+# Volúmenes y Redes
+# ─────────────────────────────────────────
+volumes:
+  db_data:
+    driver: local
+  nginx_certs:
+    driver: local
+  nginx_vhost:
+    driver: local
+  nginx_html:
+    driver: local
+  acme_state:
+    driver: local
+
+networks:
+  truck_network:
+    driver: bridge
