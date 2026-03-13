@@ -78,10 +78,11 @@ export class ViajsService {
 
     // Agregar comisiones si existen
     if (createViajDTO.comisiones && createViajDTO.comisiones.length > 0) {
-      const comisiones = createViajDTO.comisiones.map((comisionDTO) =>
-        this.calcularYCrearComision(savedViaje.id, savedViaje.valorViaje, comisionDTO),
+      await this.guardarComisiones(
+        savedViaje.id,
+        savedViaje.valorViaje,
+        createViajDTO.comisiones,
       );
-      await this.viajComisionRepository.save(comisiones);
     }
 
     // Retornar el viaje completo con relaciones
@@ -160,35 +161,37 @@ export class ViajsService {
    */
   async update(id: number, updateViajDTO: UpdateViajDTO): Promise<Viaje> {
     const viaje = await this.findOne(id);
+    const {
+      rutas,
+      comisiones,
+      ...viajeChanges
+    } = updateViajDTO;
 
     // Actualizar campos
     Object.assign(viaje, {
-      ...updateViajDTO,
-      fechaInicio: updateViajDTO.fechaInicio ? new Date(updateViajDTO.fechaInicio) : viaje.fechaInicio,
-      fechaFin: updateViajDTO.fechaFin ? new Date(updateViajDTO.fechaFin) : viaje.fechaFin,
+      ...viajeChanges,
+      fechaInicio: viajeChanges.fechaInicio ? new Date(viajeChanges.fechaInicio) : viaje.fechaInicio,
+      fechaFin: viajeChanges.fechaFin ? new Date(viajeChanges.fechaFin) : viaje.fechaFin,
     });
 
     await this.viajRepository.save(viaje);
 
     // Eliminar y recrear rutas si se proporcionan
-    if (updateViajDTO.rutas) {
+    if (rutas) {
       await this.viajRutaRepository.delete({ viajeId: id });
-      const rutas = updateViajDTO.rutas.map((rutaDTO) =>
+      const rutasToSave = rutas.map((rutaDTO) =>
         this.viajRutaRepository.create({
           viajeId: id,
           ...rutaDTO,
         }),
       );
-      await this.viajRutaRepository.save(rutas);
+      await this.viajRutaRepository.save(rutasToSave);
     }
 
     // Eliminar y recrear comisiones si se proporcionan
-    if (updateViajDTO.comisiones) {
+    if (comisiones) {
       await this.viajComisionRepository.delete({ viajeId: id });
-      const comisiones = updateViajDTO.comisiones.map((comisionDTO) =>
-        this.calcularYCrearComision(id, viaje.valorViaje, comisionDTO),
-      );
-      await this.viajComisionRepository.save(comisiones);
+      await this.guardarComisiones(id, viaje.valorViaje, comisiones);
     }
 
     return this.findOneWithRelations(id);
@@ -223,7 +226,7 @@ export class ViajsService {
   /**
    * Calcular ycrear una comisión
    */
-  private calcularYCrearComision(viajeId: number, montoBase: number, comisionDTO: any): any {
+  private calcularYCrearComision(viajeId: number, montoBase: number, comisionDTO: any) {
     let montoTotal = 0;
 
     // Calcular monto total
@@ -242,6 +245,50 @@ export class ViajsService {
       montoTotal: Math.round(montoTotal * 100) / 100, // Redondear a 2 decimales
       estado: comisionDTO.estado || 'pendiente',
     };
+  }
+
+  private async guardarComisiones(
+    viajeId: number,
+    montoBase: number,
+    comisionesDTO: any[],
+  ): Promise<void> {
+    for (const comisionDTO of comisionesDTO) {
+      const comision = this.calcularYCrearComision(viajeId, montoBase, comisionDTO);
+
+      await this.viajComisionRepository.query(
+        `
+          INSERT INTO viajes_comisiones (
+            viajeId,
+            viaje_id,
+            tipo,
+            concepto,
+            montoBase,
+            porcentaje,
+            montoFijo,
+            montoTotal,
+            beneficiario,
+            estado,
+            notas,
+            created_at,
+            updated_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+        `,
+        [
+          viajeId,
+          viajeId,
+          comision.tipo,
+          comision.concepto ?? null,
+          comision.montoBase ?? null,
+          comision.porcentaje ?? null,
+          comision.montoFijo ?? null,
+          comision.montoTotal,
+          comision.beneficiario ?? null,
+          comision.estado,
+          comision.notas ?? null,
+        ],
+      );
+    }
   }
 
   /**
