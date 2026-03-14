@@ -16,7 +16,7 @@ import { SalariosService } from './salarios.service';
 import { CreateSalarioDto, UpdateSalarioDto, GenerarSalariosDto } from './dto/salario.dto';
 import { ChoferSalario } from './chofer-salario.entity';
 
-@Controller('api/salarios')
+@Controller('salarios')
 @UseGuards(JwtAuthGuard)
 export class SalariosController {
   constructor(private readonly salariosService: SalariosService) {}

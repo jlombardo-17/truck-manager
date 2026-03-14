@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
-import { Repostada } from '../camiones/repostada.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
 import { ChoferDocumento } from '../choferes/chofer-documento.entity';
 
@@ -48,13 +47,16 @@ export class DashboardService {
   constructor(
     @InjectRepository(Viaje)
     private viajesRepository: Repository<Viaje>,
-    @InjectRepository(Repostada)
-    private repostadasRepository: Repository<Repostada>,
     @InjectRepository(MantenimientoRegistro)
     private mantenimientoRepository: Repository<MantenimientoRegistro>,
     @InjectRepository(ChoferDocumento)
     private choferDocumentosRepository: Repository<ChoferDocumento>,
   ) {}
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
 
   async getResumen(): Promise<DashboardResumen> {
     const ahora = new Date();
@@ -76,16 +78,21 @@ export class DashboardService {
 
     // Ingresos del mes
     const ingresosDelMes = viajesMes.reduce(
-      (sum, v) => sum + parseFloat((v.valorViaje || 0).toString()),
+      (sum, v) => sum + this.toNumber(v.valorViaje),
       0,
     );
 
-    // Gastos del mes (combustible + mantenimiento)
-    const repostadasMes = await this.repostadasRepository.find({
-      where: {
-        fechaRepostada: MoreThanOrEqual(primerDiaDelMes) as any,
-      },
-    });
+    const gastosOperativosViajes = viajesMes.reduce(
+      (sum, viaje) => sum + this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos),
+      0,
+    );
+
+    const gastosComisionChofer = viajesMes.reduce(
+      (sum, viaje) =>
+        sum +
+        (this.toNumber(viaje.valorViaje) * this.toNumber(viaje.chofer?.porcentajeComision)) / 100,
+      0,
+    );
 
     const mantenimientoMes = await this.mantenimientoRepository.find({
       relations: ['camion'],
@@ -94,15 +101,11 @@ export class DashboardService {
       },
     });
 
-    const gastoCombustible = repostadasMes.reduce(
-      (sum, r) => sum + parseFloat((r.costo || 0).toString()),
-      0,
-    );
     const gastoMantenimiento = mantenimientoMes.reduce(
-      (sum, m) => sum + parseFloat((m.costoReal || 0).toString()),
+      (sum, m) => sum + this.toNumber(m.costoReal),
       0,
     );
-    const gastosDelMes = gastoCombustible + gastoMantenimiento;
+    const gastosDelMes = gastosOperativosViajes + gastosComisionChofer + gastoMantenimiento;
 
     // Camiones activos hoy (viajes completados o en progreso hoy)
     const hoy = new Date();
@@ -173,23 +176,21 @@ export class DashboardService {
           id: viaje.camionId,
           patente: viaje.camion?.patente || '',
           ingresos: 0,
+          gastosViaje: 0,
           kmRecorridos: 0,
           viajesCompletos: 0,
         });
       }
 
       const camion = camionesMap.get(viaje.camionId);
-      camion.ingresos += parseFloat((viaje.valorViaje || 0).toString());
-      camion.kmRecorridos += parseFloat((viaje.kmRecorridos || 0).toString());
+      camion.ingresos += this.toNumber(viaje.valorViaje);
+      camion.gastosViaje +=
+        this.toNumber(viaje.costoCombustible) +
+        this.toNumber(viaje.otrosGastos) +
+        (this.toNumber(viaje.valorViaje) * this.toNumber(viaje.chofer?.porcentajeComision)) / 100;
+      camion.kmRecorridos += this.toNumber(viaje.kmRecorridos);
       camion.viajesCompletos += 1;
     }
-
-    // Calcular gastos por camión
-    const repostadas = await this.repostadasRepository.find({
-      where: {
-        fechaRepostada: MoreThanOrEqual(primerDiaDelMes) as any,
-      },
-    });
 
     const mantenimientos = await this.mantenimientoRepository.find({
       relations: ['camion'],
@@ -198,31 +199,22 @@ export class DashboardService {
       },
     });
 
-    // Agrupar gastos por camión
+    // Agrupar gastos de mantenimiento por camión
     const gastosMap = new Map<number, number>();
-
-    repostadas.forEach((r) => {
-      const camionId = r.camionId;
-      if (!gastosMap.has(camionId)) gastosMap.set(camionId, 0);
-      gastosMap.set(
-        camionId,
-        gastosMap.get(camionId) + parseFloat((r.costo || 0).toString()),
-      );
-    });
 
     mantenimientos.forEach((m) => {
       const camionId = m.camionId;
       if (!gastosMap.has(camionId)) gastosMap.set(camionId, 0);
       gastosMap.set(
         camionId,
-        gastosMap.get(camionId) + parseFloat((m.costoReal || 0).toString()),
+        gastosMap.get(camionId) + this.toNumber(m.costoReal),
       );
     });
 
     // Calcular eficiencia
     const resultado: DesempenoCamion[] = Array.from(camionesMap.values()).map(
       (camion) => {
-        const gastos = gastosMap.get(camion.id) || 0;
+        const gastos = camion.gastosViaje + (gastosMap.get(camion.id) || 0);
         const ganancia = camion.ingresos - gastos;
         const eficiencia =
           camion.ingresos > 0 ? (ganancia / camion.ingresos) * 100 : 0;

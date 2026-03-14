@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import {
   ChoferSalario,
   CreateSalarioDto,
@@ -7,157 +7,132 @@ import {
   GenerarSalariosResponse,
   ViajeConComision,
 } from '../types/salario';
+import authService from './authService';
 
-const API_BASE_URL = '/api/salarios';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-export const salariosService = {
+class SalariosService {
+  private api: AxiosInstance;
+
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    this.api.interceptors.request.use((config) => {
+      const token = authService.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+  }
+
   /**
    * Obtener todos los salarios (admin)
    */
-  getAll: async (): Promise<ChoferSalario[]> => {
-    const response = await axios.get(API_BASE_URL, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
+  async getAll(): Promise<ChoferSalario[]> {
+    const response = await this.api.get('/salarios');
     return response.data;
-  },
+  }
 
   /**
    * Obtener salarios de un chofer específico
    */
-  getByChofer: async (choferId: number): Promise<ChoferSalario[]> => {
-    const response = await axios.get(`${API_BASE_URL}/chofer/${choferId}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
+  async getByChofer(choferId: number): Promise<ChoferSalario[]> {
+    const response = await this.api.get(`/salarios/chofer/${choferId}`);
     return response.data;
-  },
+  }
 
   /**
    * Obtener salarios por período (todos los choferes)
    */
-  getByPeriodo: async (anio: number, mes: number): Promise<ChoferSalario[]> => {
-    const response = await axios.get(`${API_BASE_URL}/periodo/${anio}/${mes}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
+  async getByPeriodo(anio: number, mes: number): Promise<ChoferSalario[]> {
+    const response = await this.api.get(`/salarios/periodo/${anio}/${mes}`);
     return response.data;
-  },
+  }
 
   /**
    * Obtener salario específico de un chofer por período
    */
-  getSalarioChoferPeriodo: async (
+  async getSalarioChoferPeriodo(
     choferId: number,
     anio: number,
     mes: number,
-  ): Promise<ChoferSalario> => {
-    const response = await axios.get(
-      `${API_BASE_URL}/chofer/${choferId}/${anio}/${mes}`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      },
-    );
+  ): Promise<ChoferSalario> {
+    const response = await this.api.get(`/salarios/chofer/${choferId}/${anio}/${mes}`);
     return response.data;
-  },
+  }
 
   /**
    * Obtener detalle de viajes y comisiones
    */
-  getViajesConComisiones: async (
+  async getViajesConComisiones(
     choferId: number,
     anio: number,
     mes: number,
-  ): Promise<{ viajes: ViajeConComision[]; totalComisiones: number }> => {
-    const response = await axios.get(
-      `${API_BASE_URL}/chofer/${choferId}/${anio}/${mes}/detalle`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      },
-    );
+  ): Promise<{ viajes: ViajeConComision[]; totalComisiones: number }> {
+    const response = await this.api.get(`/salarios/chofer/${choferId}/${anio}/${mes}/detalle`);
     return response.data;
-  },
+  }
 
   /**
    * Crear un nuevo registro de salario
    */
-  create: async (dto: CreateSalarioDto): Promise<ChoferSalario> => {
-    const response = await axios.post(API_BASE_URL, dto, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
+  async create(dto: CreateSalarioDto): Promise<ChoferSalario> {
+    const response = await this.api.post('/salarios', dto);
     return response.data;
-  },
+  }
 
   /**
    * Generar salarios masivamente
    */
-  generarSalariosMasivo: async (
+  async generarSalariosMasivo(
     dto: GenerarSalariosDto,
-  ): Promise<GenerarSalariosResponse> => {
-    const response = await axios.post(`${API_BASE_URL}/generar`, dto, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
+  ): Promise<GenerarSalariosResponse> {
+    const response = await this.api.post('/salarios/generar', dto);
     return response.data;
-  },
+  }
 
   /**
    * Actualizar un salario
    */
-  update: async (id: number, dto: UpdateSalarioDto): Promise<ChoferSalario> => {
-    const response = await axios.put(`${API_BASE_URL}/${id}`, dto, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
+  async update(id: number, dto: UpdateSalarioDto): Promise<ChoferSalario> {
+    const response = await this.api.put(`/salarios/${id}`, dto);
     return response.data;
-  },
+  }
 
   /**
    * Marcar salario como pagado
    */
-  marcarComoPagado: async (
+  async marcarComoPagado(
     id: number,
     fechaPago: string,
     metodoPago: string,
     comprobante?: string,
-  ): Promise<ChoferSalario> => {
-    const response = await axios.put(
-      `${API_BASE_URL}/${id}/pagar`,
+  ): Promise<ChoferSalario> {
+    const response = await this.api.put(
+      `/salarios/${id}/pagar`,
       {
         fechaPago,
         metodoPago,
         comprobante,
       },
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      },
     );
     return response.data;
-  },
+  }
 
   /**
    * Eliminar un salario
    */
-  delete: async (id: number): Promise<void> => {
-    await axios.delete(`${API_BASE_URL}/${id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
-  },
-};
+  async delete(id: number): Promise<void> {
+    await this.api.delete(`/salarios/${id}`);
+  }
+}
+
+export const salariosService = new SalariosService();
 
 export default salariosService;
