@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import salariosService from '../services/salariosService';
 import choferesService from '../services/choferesService';
 import {
@@ -13,11 +13,11 @@ import {
 import { Chofer } from '../types/chofer';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import BackButton from '../components/BackButton';
 import '../styles/SalarioDetalle.css';
 
 const SalarioDetalle: React.FC = () => {
   const { choferId, salarioId } = useParams<{ choferId: string; salarioId: string }>();
-  const navigate = useNavigate();
   const choferIdNum = parseInt(choferId || '0');
   const salarioIdNum = parseInt(salarioId || '0');
 
@@ -242,9 +242,11 @@ const SalarioDetalle: React.FC = () => {
       <div className="error-container">
         <h2>Error</h2>
         <p>{error || 'Salario no encontrado'}</p>
-        <button onClick={() => navigate(`/choferes/${choferIdNum}/salarios`)}>
-          Volver a Salarios
-        </button>
+        <BackButton
+          label="← Volver a Salarios"
+          to={`/choferes/${choferIdNum}/salarios`}
+          variant="compact"
+        />
       </div>
     );
   }
@@ -253,12 +255,11 @@ const SalarioDetalle: React.FC = () => {
     <div className="salario-detalle-container">
       {/* Header */}
       <div className="page-header">
-        <button
-          className="btn-back"
-          onClick={() => navigate(`/choferes/${choferIdNum}/salarios`)}
-        >
-          ← Volver a Salarios
-        </button>
+        <BackButton
+          label="← Volver a Salarios"
+          to={`/choferes/${choferIdNum}/salarios`}
+          variant="ghost"
+        />
         <div>
           <h1>
             Detalle de Salario - {formatPeriodo(salario.mes, salario.anio)}

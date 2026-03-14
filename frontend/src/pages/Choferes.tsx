@@ -5,6 +5,7 @@ import choferesService from '../services/choferesService';
 import { Chofer, estadoChoferLabels } from '../types/chofer';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
+import BackButton from '../components/BackButton';
 import '../styles/Choferes.css';
 
 const Choferes: React.FC = () => {
@@ -163,9 +164,7 @@ const Choferes: React.FC = () => {
 
       <div className="choferes-header">
         <div className="page-back-button-container">
-          <button className="btn-back-dashboard" onClick={() => navigate('/dashboard')}>
-            ← Volver al Dashboard
-          </button>
+          <BackButton label="← Volver al Dashboard" to="/dashboard" />
         </div>
         
         <HeroSection

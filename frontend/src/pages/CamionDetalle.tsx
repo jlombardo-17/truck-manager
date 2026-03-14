@@ -12,6 +12,7 @@ import { Repostada, TipoCombustibleLabels, Estadisticas } from '../types/reposta
 import { RepostadaModal } from '../components/RepostadaModal';
 import { MantenimientoTab } from '../components/MantenimientoTab';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
+import BackButton from '../components/BackButton';
 import '../styles/CamionDetalle.css';
 
 const CamionDetalle: React.FC = () => {
@@ -156,9 +157,7 @@ const CamionDetalle: React.FC = () => {
 
       <div className="detalle-content">
         <div className="page-header">
-          <button onClick={() => navigate('/camiones')} className="btn-back">
-            ← Volver a Camiones
-          </button>
+          <BackButton label="← Volver a Camiones" to="/camiones" variant="ghost" />
           <h1>{camion.patente} - {camion.marca} {camion.modelo}</h1>
         </div>
 

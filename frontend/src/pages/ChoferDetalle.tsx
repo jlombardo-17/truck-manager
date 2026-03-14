@@ -5,6 +5,7 @@ import { ChoferDocumento, TipoDocumentoChofer, TipoDocumentoChoferLabels } from 
 import choferesService from '../services/choferesService';
 import choferDocumentosService from '../services/choferDocumentosService';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
+import BackButton from '../components/BackButton';
 import '../styles/ChoferDetalle.css';
 
 interface ChoferEditFormData {
@@ -333,7 +334,7 @@ const ChoferDetalle: React.FC = () => {
     return (
       <div className="error-container">
         <p>{error || 'Chofer no encontrado'}</p>
-        <button onClick={() => navigate('/choferes')}>Volver a Choferes</button>
+        <BackButton label="← Volver a Choferes" to="/choferes" variant="compact" />
       </div>
     );
   }
@@ -341,9 +342,7 @@ const ChoferDetalle: React.FC = () => {
   return (
     <div className="chofer-detalle-page">
       <div className="page-header">
-        <button className="btn-back" onClick={() => navigate('/choferes')}>
-          ← Volver
-        </button>
+        <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
         <h1>📋 Detalle del Chofer</h1>
         <button 
                     className="btn-salarios"

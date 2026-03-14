@@ -7,6 +7,7 @@ import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
 import { MapEditor } from '../components/MapEditor';
 import CommissionsTable from '../components/CommissionsTable';
+import BackButton from '../components/BackButton';
 import '../styles/ViajeForm.css';
 
 const ViajeForm: React.FC = () => {
@@ -290,9 +291,7 @@ const ViajeForm: React.FC = () => {
     <div className="viaje-form-page">
       <div className="form-header">
         <h1>{isEditing ? '✎ Editar Viaje' : '+ Nuevo Viaje'}</h1>
-        <button className="btn-back" onClick={() => navigate('/viajes')}>
-          ← Volver
-        </button>
+        <BackButton label="← Volver a Viajes" to="/viajes" variant="ghost" />
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}

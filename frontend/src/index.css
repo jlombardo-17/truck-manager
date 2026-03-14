@@ -694,3 +694,34 @@ textarea {
 .btn-back-dashboard:active {
   transform: translateX(-2px);
 }
+
+.btn-back-dashboard:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-back-dashboard--compact {
+  padding: 0.45rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.btn-back-dashboard--ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.btn-back-dashboard--ghost:hover {
+  background: rgba(12, 58, 102, 0.08);
+  border-color: rgba(0, 115, 209, 0.25);
+  box-shadow: none;
+}
+
+.btn-back-dashboard--sticky {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 20;
+}

@@ -11,6 +11,7 @@ import {
   getEstadoSalarioColor,
 } from '../types/salario';
 import { Chofer } from '../types/chofer';
+import BackButton from '../components/BackButton';
 import '../styles/ChoferSalarios.css';
 
 const ChoferSalarios: React.FC = () => {
@@ -113,7 +114,7 @@ const ChoferSalarios: React.FC = () => {
       <div className="error-container">
         <h2>Error</h2>
         <p>{error}</p>
-        <button onClick={() => navigate('/choferes')}>Volver a Choferes</button>
+        <BackButton label="← Volver a Choferes" to="/choferes" variant="compact" />
       </div>
     );
   }
@@ -125,9 +126,11 @@ const ChoferSalarios: React.FC = () => {
     <div className="chofer-salarios-container">
       {/* Header */}
       <div className="page-header">
-        <button className="btn-back" onClick={() => navigate(`/choferes/${choferId}`)}>
-          ← Volver
-        </button>
+        <BackButton
+          label="← Volver al Detalle del Chofer"
+          to={`/choferes/${choferId}`}
+          variant="ghost"
+        />
         <div>
           <h1>Salarios de {chofer?.nombre} {chofer?.apellido}</h1>
           <p className="subtitle">RUT: {chofer?.numeroDocumento}</p>

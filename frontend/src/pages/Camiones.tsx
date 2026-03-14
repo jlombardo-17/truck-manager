@@ -5,6 +5,7 @@ import camionesService from '../services/camionesService';
 import { Camion } from '../types/camion';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
+import BackButton from '../components/BackButton';
 import '../styles/Camiones.css';
 
 const Camiones: React.FC = () => {
@@ -157,9 +158,7 @@ const Camiones: React.FC = () => {
 
       <div className="camiones-content">
         <div className="page-back-button-container">
-          <button className="btn-back-dashboard" onClick={() => navigate('/dashboard')}>
-            ← Volver al Dashboard
-          </button>
+          <BackButton label="← Volver al Dashboard" to="/dashboard" />
         </div>
         
         <HeroSection

@@ -46,6 +46,10 @@ truck-manager/
 └── docker-compose.yml   # (Opcional para desarrollo)
 ```
 
+## 📚 Guías de UI
+
+- [UI Navigation Guidelines](UI_NAVIGATION_GUIDELINES.md): convención de BackButton, variantes y criterios de uso.
+
 ## 🚀 Inicio Rápido
 
 ### Requisitos

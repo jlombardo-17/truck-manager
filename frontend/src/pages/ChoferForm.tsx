@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import choferesService from '../services/choferesService';
 import { EstadoChofer } from '../types/chofer';
+import BackButton from '../components/BackButton';
 import '../styles/ChoferForm.css';
 
 interface FormData {
@@ -141,9 +142,7 @@ const ChoferForm: React.FC = () => {
 
       <div className="page-header">
         <h1>➕ Nuevo Chofer</h1>
-        <button onClick={() => navigate('/choferes')} className="btn-back">
-          ← Volver a Choferes
-        </button>
+        <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
       </div>
 
       <form onSubmit={handleSubmit} className="chofer-form">

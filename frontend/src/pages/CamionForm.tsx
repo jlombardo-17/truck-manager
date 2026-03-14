@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import camionesService from '../services/camionesService';
 import { CreateCamionDto } from '../types/camion';
+import BackButton from '../components/BackButton';
 import '../styles/CamionForm.css';
 
 const CamionForm: React.FC = () => {
@@ -112,9 +113,7 @@ const CamionForm: React.FC = () => {
 
       <div className="form-content">
         <div className="page-header">
-          <button onClick={handleCancel} className="btn-back">
-            ← Volver a Camiones
-          </button>
+          <BackButton label="← Volver a Camiones" onClick={handleCancel} variant="ghost" />
           <h1>{isEditing ? '✏️ Editar Camión' : '➕ Nuevo Camión'}</h1>
         </div>
 

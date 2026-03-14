@@ -7,6 +7,7 @@ import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
+import BackButton from '../components/BackButton';
 import '../styles/Viajes.css';
 
 const Viajes: React.FC = () => {
@@ -120,9 +121,7 @@ const Viajes: React.FC = () => {
   return (
     <div className="viajes-page">
       <div className="page-back-button-container">
-        <button className="btn-back-dashboard" onClick={() => navigate('/dashboard')}>
-          ← Volver al Dashboard
-        </button>
+        <BackButton label="← Volver al Dashboard" to="/dashboard" />
       </div>
       
       <HeroSection
