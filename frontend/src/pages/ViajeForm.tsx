@@ -50,9 +50,6 @@ const ViajeForm: React.FC = () => {
   const [rutas, setRutas] = useState<ViajRuta[]>([]);
   const [comisiones, setComisiones] = useState<ViajComision[]>([]);
 
-  // Valores económicos calculados
-  const [gananciaNeta, setGananciaNeta] = useState<number>(0);
-
   // Datos complementarios
   const [camiones, setCamiones] = useState<Camion[]>([]);
   const [choferes, setChoferes] = useState<Chofer[]>([]);
@@ -68,11 +65,21 @@ const ViajeForm: React.FC = () => {
     loadDataAndForm();
   }, [id]);
 
-  // Calcular ganancia neta cuando cambien valores económicos
-  useEffect(() => {
-    const ganancia = (formData.valorViaje || 0) - (formData.costoCombustible || 0) - (formData.otrosGastos || 0);
-    setGananciaNeta(Math.max(0, ganancia)); // No permitir ganancias negativas en el display
-  }, [formData.valorViaje, formData.costoCombustible, formData.otrosGastos]);
+  const gastosOperativos = (formData.costoCombustible || 0) + (formData.otrosGastos || 0);
+  const gananciaAntesDeComisiones = (formData.valorViaje || 0) - gastosOperativos;
+  const totalComisiones = comisiones.reduce(
+    (sum, comision) => sum + (Number(comision.montoTotal) || 0),
+    0,
+  );
+  const gananciaNetaFinal = gananciaAntesDeComisiones - totalComisiones;
+
+  const getAmountStyles = (amount: number) => ({
+    backgroundColor: amount >= 0 ? '#D5F4E6' : '#FADBD8',
+    color: amount >= 0 ? '#27AE60' : '#E74C3C',
+    fontWeight: 'bold' as const,
+    fontSize: '1.1em',
+    textAlign: 'center' as const,
+  });
 
   const loadDataAndForm = async () => {
     try {
@@ -606,21 +613,35 @@ const ViajeForm: React.FC = () => {
             </div>
 
             <div className="form-field">
-              <label htmlFor="gananciaNeta" style={{ color: gananciaNeta > 0 ? '#27AE60' : '#E74C3C' }}>
-                💵 Ganancia Neta (después de gastos)
+              <label
+                htmlFor="gananciaAntesDeComisiones"
+                style={{ color: gananciaAntesDeComisiones >= 0 ? '#27AE60' : '#E74C3C' }}
+              >
+                💵 Ganancia antes de comisiones
               </label>
               <input
                 type="text"
-                id="gananciaNeta"
-                value={Number(gananciaNeta || 0).toFixed(2)}
+                id="gananciaAntesDeComisiones"
+                value={Number(gananciaAntesDeComisiones || 0).toFixed(2)}
                 disabled
-                style={{
-                  backgroundColor: gananciaNeta > 0 ? '#D5F4E6' : '#FADBD8',
-                  color: gananciaNeta > 0 ? '#27AE60' : '#E74C3C',
-                  fontWeight: 'bold',
-                  fontSize: '1.1em',
-                  textAlign: 'center',
-                }}
+                style={getAmountStyles(gananciaAntesDeComisiones)}
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-field">
+              <label
+                htmlFor="gananciaNetaFinal"
+                style={{ color: gananciaNetaFinal >= 0 ? '#27AE60' : '#E74C3C' }}
+              >
+                💸 Ganancia neta final
+              </label>
+              <input
+                type="text"
+                id="gananciaNetaFinal"
+                value={Number(gananciaNetaFinal || 0).toFixed(2)}
+                disabled
+                style={getAmountStyles(gananciaNetaFinal)}
                 className="form-input"
               />
             </div>
@@ -633,6 +654,8 @@ const ViajeForm: React.FC = () => {
             commissions={comisiones}
             onCommissionsChange={setComisiones}
             valorViaje={formData.valorViaje}
+            costoCombustible={formData.costoCombustible}
+            otrosGastos={formData.otrosGastos}
             commissionTypes={['Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Otro']}
           />
         </section>

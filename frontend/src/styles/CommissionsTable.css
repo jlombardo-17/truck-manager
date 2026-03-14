@@ -43,6 +43,18 @@
   border-left: 4px solid #4caf50;
 }
 
+.summary-item.expense {
+  background: #fff3e0;
+  color: #e65100;
+  border-left: 4px solid #fb8c00;
+}
+
+.summary-item.net {
+  background: #e3f2fd;
+  color: #1565c0;
+  border-left: 4px solid #1e88e5;
+}
+
 /* Commissions Table */
 .commissions-table-wrapper {
   overflow-x: auto;

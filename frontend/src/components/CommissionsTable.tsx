@@ -18,6 +18,8 @@ interface CommissionsTableProps {
   commissions: Commission[];
   onCommissionsChange: (commissions: Commission[]) => void;
   valorViaje: number;
+  costoCombustible?: number;
+  otrosGastos?: number;
   commissionTypes?: string[];
 }
 
@@ -25,6 +27,8 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
   commissions,
   onCommissionsChange,
   valorViaje,
+  costoCombustible = 0,
+  otrosGastos = 0,
   commissionTypes = ['Contratista', 'Flete', 'Operario', 'Cliente', 'Otro'],
 }) => {
   const [localCommissions, setLocalCommissions] = useState<Commission[]>(commissions);
@@ -106,6 +110,9 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
 
   // Calcular total de comisiones
   const totalComisiones = localCommissions.reduce((sum, c) => sum + toNumber(c.montoTotal), 0);
+  const gastosOperativos = toNumber(costoCombustible) + toNumber(otrosGastos);
+  const gananciaAntesDeComisiones = toNumber(valorViaje) - gastosOperativos;
+  const gananciaNetaFinal = gananciaAntesDeComisiones - totalComisiones;
 
   return (
     <div className="commissions-container">
@@ -115,11 +122,17 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
           <span className="summary-item">
             <strong>Valor Viaje:</strong> ${Number(valorViaje || 0).toFixed(2)}
           </span>
+          <span className="summary-item expense">
+            <strong>Gastos Operativos:</strong> ${gastosOperativos.toFixed(2)}
+          </span>
+          <span className="summary-item">
+            <strong>Antes de Comisiones:</strong> ${gananciaAntesDeComisiones.toFixed(2)}
+          </span>
           <span className="summary-item highlight">
             <strong>Total Comisiones:</strong> ${Number(totalComisiones || 0).toFixed(2)}
           </span>
-          <span className="summary-item">
-            <strong>Ganancia Neta:</strong> ${(Number(valorViaje || 0) - Number(totalComisiones || 0)).toFixed(2)}
+          <span className="summary-item net">
+            <strong>Ganancia Neta Final:</strong> ${gananciaNetaFinal.toFixed(2)}
           </span>
         </div>
       </div>
