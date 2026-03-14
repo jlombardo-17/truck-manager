@@ -4,6 +4,7 @@ import { Between, In, Repository } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
 import { Chofer } from '../choferes/chofer.entity';
+import { Camion } from '../camiones/camion.entity';
 
 type Granularidad = 'diaria' | 'mensual';
 type GranularidadOperacion = 'diaria' | 'semanal';
@@ -40,6 +41,8 @@ export class ReportesService {
     private readonly mantenimientoRepository: Repository<MantenimientoRegistro>,
     @InjectRepository(Chofer)
     private readonly choferRepository: Repository<Chofer>,
+    @InjectRepository(Camion)
+    private readonly camionRepository: Repository<Camion>,
   ) {}
 
   async getRentabilidad(filters: Partial<RentabilidadFilters>) {
@@ -181,8 +184,10 @@ export class ReportesService {
           id: filters.compararPor === 'camion' ? viaje.camionId : viaje.choferId,
           label:
             filters.compararPor === 'camion'
-              ? `${viaje.camion?.patente || 'Camión'} ${viaje.camion?.marca ? `- ${viaje.camion.marca}` : ''}`.trim()
-              : `${viaje.chofer?.nombre || 'Chofer'} ${viaje.chofer?.apellido || ''}`.trim(),
+              ? (viaje.camion?.patente
+                  ? `${viaje.camion.patente}${viaje.camion?.marca ? ` - ${viaje.camion.marca}` : ''}`
+                  : `Camión #${viaje.camionId}`)
+              : (`${viaje.chofer?.nombre || ''} ${viaje.chofer?.apellido || ''}`.trim() || `Chofer #${viaje.choferId}`),
           ingresos: 0,
           gastosOperativos: 0,
           gastosComisionChofer: 0,
@@ -270,6 +275,48 @@ export class ReportesService {
       })
       .sort((a, b) => b.gananciaNeta - a.gananciaNeta);
 
+    if (filters.compararPor === 'camion') {
+      const missingCamionLabelIds = comparativas
+        .filter((item) => item.label === `Camión #${item.id}`)
+        .map((item) => item.id);
+
+      if (missingCamionLabelIds.length > 0) {
+        const camiones = await this.camionRepository.find({
+          where: { id: In(missingCamionLabelIds) },
+        });
+
+        const camionLabelById = new Map<number, string>();
+        for (const camion of camiones) {
+          camionLabelById.set(
+            camion.id,
+            camion.patente
+              ? `${camion.patente}${camion.marca ? ` - ${camion.marca}` : ''}`
+              : `Camión #${camion.id}`,
+          );
+        }
+
+        for (const item of comparativas) {
+          const enrichedLabel = camionLabelById.get(item.id);
+          if (enrichedLabel) {
+            item.label = enrichedLabel;
+          }
+        }
+      }
+    } else {
+      const choferLabelById = new Map<number, string>();
+      for (const chofer of choferesById.values()) {
+        const fullName = `${chofer.nombre || ''} ${chofer.apellido || ''}`.trim();
+        choferLabelById.set(chofer.id, fullName || `Chofer #${chofer.id}`);
+      }
+
+      for (const item of comparativas) {
+        const enrichedLabel = choferLabelById.get(item.id);
+        if (enrichedLabel) {
+          item.label = enrichedLabel;
+        }
+      }
+    }
+
     return {
       filtrosAplicados: {
         compararPor: filters.compararPor,
@@ -351,7 +398,7 @@ export class ReportesService {
     return this.viajeRepository.find({
       where,
       order: { fechaInicio: 'ASC' },
-      relations: ['chofer'],
+      relations: ['chofer', 'camion'],
     });
   }
 
