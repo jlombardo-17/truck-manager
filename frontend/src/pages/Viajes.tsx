@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { viajsService, Viaje } from '../services/viajsService';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
@@ -12,6 +13,7 @@ import '../styles/Viajes.css';
 
 const Viajes: React.FC = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [camiones, setCamiones] = useState<Record<number, Camion>>({});
@@ -25,6 +27,11 @@ const Viajes: React.FC = () => {
     camionId: '',
     choferId: '',
   });
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     loadViajes();
@@ -120,6 +127,20 @@ const Viajes: React.FC = () => {
 
   return (
     <div className="viajes-page">
+      <nav className="navbar">
+        <div className="navbar-content">
+          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
+          <div className="navbar-user">
+            <span className="user-name">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <button onClick={handleLogout} className="logout-button">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </nav>
+
       <div className="page-back-button-container">
         <BackButton label="Volver al Dashboard" to="/dashboard" />
       </div>

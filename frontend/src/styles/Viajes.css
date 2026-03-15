@@ -8,6 +8,65 @@
   overflow-x: clip;
 }
 
+/* Navbar */
+.navbar {
+  color: white;
+  padding: 0.95rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.navbar-content {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 var(--page-gutter);
+}
+
+.navbar-title {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.navbar-title:hover {
+  opacity: 0.9;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-name {
+  font-weight: 600;
+}
+
+.logout-button {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.logout-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -379,6 +438,10 @@
 @media (max-width: 768px) {
   .viajes-page {
     padding: 1rem var(--page-gutter-mobile) 1.5rem;
+  }
+
+  .navbar-content {
+    padding: 0 var(--page-gutter-mobile);
   }
 
   .header-copy h1 {

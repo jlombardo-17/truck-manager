@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -27,6 +28,7 @@ import {
 } from '../services/reportesService';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
+import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/BackButton';
 import '../styles/Reportes.css';
 
@@ -81,6 +83,8 @@ const OPERATION_COLORS = [
 ];
 
 const Reportes: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const today = useMemo(() => new Date(), []);
   const defaultDesdeDiario = useMemo(() => {
     const d = new Date(today);
@@ -127,6 +131,11 @@ const Reportes: React.FC = () => {
   const [rentabilidadExportColumns, setRentabilidadExportColumns] = useState<Record<RentabilidadExportColumnKey, boolean>>(
     DEFAULT_RENTABILIDAD_EXPORT_COLUMNS,
   );
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     const loadCatalogs = async () => {
@@ -951,6 +960,20 @@ const Reportes: React.FC = () => {
 
   return (
     <div className="reportes-page">
+      <nav className="navbar">
+        <div className="navbar-content">
+          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
+          <div className="navbar-user">
+            <span className="user-name">
+              {user?.firstName} {user?.lastName}
+            </span>
+            <button onClick={handleLogout} className="logout-button">
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </nav>
+
       <div className="page-back-button-container">
         <BackButton label="Volver al Dashboard" to="/dashboard" />
       </div>

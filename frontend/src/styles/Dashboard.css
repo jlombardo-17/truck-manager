@@ -1,9 +1,12 @@
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: transparent;
+  min-height: 100vh;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  background: var(--bg-page);
   font-family: var(--font-sans);
+  overflow-x: clip;
 }
 
 .navbar {
@@ -63,6 +66,21 @@
   max-width: var(--page-max-width);
   margin: 0 auto;
   width: 100%;
+}
+
+.dashboard-kpi-section {
+  background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
+  padding: 2.5rem 0;
+  margin-bottom: 2rem;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-container-inner {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 0 var(--page-gutter);
 }
 
 .welcome-section {
