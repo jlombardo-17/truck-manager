@@ -81,7 +81,7 @@ export function RepostadaModal({
       <div className="modal-content">
         <div className="modal-header">
           <h2>Agregar Repostada</h2>
-          <button className="modal-close" onClick={onClose}>
+          <button type="button" className="modal-close" onClick={onClose}>
             ✕
           </button>
         </div>

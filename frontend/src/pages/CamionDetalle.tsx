@@ -148,7 +148,7 @@ const CamionDetalle: React.FC = () => {
             <span className="user-name">
               {user?.firstName} {user?.lastName}
             </span>
-            <button onClick={handleLogout} className="logout-button">
+            <button type="button" onClick={handleLogout} className="logout-button">
               Cerrar Sesión
             </button>
           </div>
@@ -238,7 +238,7 @@ const CamionDetalle: React.FC = () => {
       <section className="info-section">
         <div className="section-header">
           <h2>🛠️ Historial de Servicios</h2>
-          <button onClick={() => setShowServicioModal(true)} className="add-button">
+          <button type="button" onClick={() => setShowServicioModal(true)} className="add-button">
             + Agregar Servicio
           </button>
         </div>
@@ -252,6 +252,7 @@ const CamionDetalle: React.FC = () => {
                 <div className="servicio-header">
                   <span className="fecha">{new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}</span>
                   <button
+                    type="button"
                     onClick={() => handleDeleteServicio(servicio.id)}
                     className="delete-btn"
                     title="Eliminar"
@@ -282,6 +283,7 @@ const CamionDetalle: React.FC = () => {
         <div className="section-header">
           <h2>📄 Documentación</h2>
           <button
+            type="button"
             onClick={() => { setEditingDocumento(null); setShowDocumentoModal(true); }}
             className="add-button"
           >
@@ -360,6 +362,7 @@ const CamionDetalle: React.FC = () => {
 
                     <div className="doc-card-actions">
                       <button
+                        type="button"
                         onClick={() => handleEditDocumento(doc)}
                         className="doc-action-btn doc-edit-btn"
                         title="Editar documento"
@@ -367,6 +370,7 @@ const CamionDetalle: React.FC = () => {
                         ✏️ Editar
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDeleteDocumento(doc.id)}
                         className="doc-action-btn doc-delete-btn"
                         title="Eliminar documento"
@@ -385,7 +389,7 @@ const CamionDetalle: React.FC = () => {
       <section className="info-section">
         <div className="section-header">
           <h2>⛽ Historial de Repostadas</h2>
-          <button onClick={() => setShowRepostadaModal(true)} className="add-button">
+          <button type="button" onClick={() => setShowRepostadaModal(true)} className="add-button">
             + Agregar Repostada
           </button>
         </div>
@@ -429,6 +433,7 @@ const CamionDetalle: React.FC = () => {
                   <span className="fecha">{new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}</span>
                   <span className="tipo-combustible">{TipoCombustibleLabels[repostada.tipoCombustible]}</span>
                   <button
+                    type="button"
                     onClick={() => handleDeleteRepostada(repostada.id)}
                     className="delete-btn"
                     title="Eliminar"
@@ -571,7 +576,7 @@ const ServicioModal: React.FC<{
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Agregar Servicio</h2>
-          <button onClick={onClose} className="close-btn">
+          <button type="button" onClick={onClose} className="close-btn">
             ✕
           </button>
         </div>
@@ -719,7 +724,7 @@ const DocumentoModal: React.FC<{
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{isEditing ? 'Editar Documento' : 'Agregar Documento'}</h2>
-          <button onClick={onClose} className="close-btn">
+          <button type="button" onClick={onClose} className="close-btn">
             ✕
           </button>
         </div>
@@ -818,7 +823,7 @@ const DocumentoViewModal: React.FC<{
             <span className="documento-tipo">{TipoDocumentoLabels[documento.tipo]}</span>
             {documento.nombre && <h3>{documento.nombre}</h3>}
           </div>
-          <button onClick={onClose} className="close-btn">✕</button>
+          <button type="button" onClick={onClose} className="close-btn">✕</button>
         </div>
 
         {documento.rutaArchivo && (

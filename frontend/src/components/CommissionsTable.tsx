@@ -240,6 +240,7 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
                   </td>
                   <td>
                     <button
+                      type="button"
                       className="btn-delete-row"
                       onClick={() => removeCommission(comm.id)}
                       title="Eliminar comisión"
@@ -345,7 +346,7 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
             />
           </div>
 
-          <button className="btn-add-commission" onClick={addCommission}>
+          <button type="button" className="btn-add-commission" onClick={addCommission}>
             + Agregar Comisión
           </button>
         </div>

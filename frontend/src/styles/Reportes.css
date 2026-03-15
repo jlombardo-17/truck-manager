@@ -308,7 +308,7 @@
 }
 
 .inline-controls-compact {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 0.85rem;
 }
 
@@ -331,6 +331,23 @@
 .filtro-item.small-inline select,
 .filtro-item.small-inline input {
   font-size: 0.875rem;
+}
+
+.resource-limit-control label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.resource-limit-control input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--primary-blue);
+}
+
+.resource-limit-control input[type='number'] {
+  max-width: 86px;
 }
 
 .operacion-resumen {

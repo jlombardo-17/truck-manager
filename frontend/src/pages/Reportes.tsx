@@ -83,6 +83,13 @@ const OPERATION_COLORS = [
   '#FD7E14',
 ];
 
+const DEFAULT_RESOURCE_LIMIT = 5;
+
+type ComparativaEntityOption = {
+  id: number;
+  label: string;
+};
+
 const Reportes: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -115,6 +122,8 @@ const Reportes: React.FC = () => {
   const [ingresosMode, setIngresosMode] = useState<'agregado' | 'por_camion'>('agregado');
   const [ingresosMetric, setIngresosMetric] = useState<'ingresos' | 'gastos' | 'gananciaNeta'>('ingresos');
   const [ingresosSelectedCamionIds, setIngresosSelectedCamionIds] = useState<string[]>([]);
+  const [ingresosLimitEnabled, setIngresosLimitEnabled] = useState(true);
+  const [ingresosLimitCount, setIngresosLimitCount] = useState(DEFAULT_RESOURCE_LIMIT);
   const [rentabilidadDetalleCamion, setRentabilidadDetalleCamion] = useState<Record<number, RentabilidadResponse>>({});
   const [loadingRentabilidadDetalle, setLoadingRentabilidadDetalle] = useState(false);
   const [camionIds, setCamionIds] = useState<string[]>([]);
@@ -126,11 +135,59 @@ const Reportes: React.FC = () => {
   const [comparativaMetric, setComparativaMetric] = useState<'rentabilidad' | 'ingresos' | 'gastos' | 'gananciaNeta'>('rentabilidad');
   const [comparativaGranularidad, setComparativaGranularidad] = useState<'diaria' | 'semanal' | 'mensual'>('diaria');
   const [selectedComparativaEntityIds, setSelectedComparativaEntityIds] = useState<string[]>([]);
+  const [comparativaLimitEnabled, setComparativaLimitEnabled] = useState(true);
+  const [comparativaLimitCount, setComparativaLimitCount] = useState(DEFAULT_RESOURCE_LIMIT);
   const [selectedOperacionCamionIds, setSelectedOperacionCamionIds] = useState<string[]>([]);
+  const [operacionLimitEnabled, setOperacionLimitEnabled] = useState(true);
+  const [operacionLimitCount, setOperacionLimitCount] = useState(DEFAULT_RESOURCE_LIMIT);
   const [granularidadOperacion, setGranularidadOperacion] = useState<'diaria' | 'semanal' | 'mensual'>('diaria');
   const [operacionSerieVista, setOperacionSerieVista] = useState<'ambos' | 'km' | 'toneladas'>('ambos');
   const [rentabilidadExportColumns, setRentabilidadExportColumns] = useState<Record<RentabilidadExportColumnKey, boolean>>(
     DEFAULT_RENTABILIDAD_EXPORT_COLUMNS,
+  );
+
+  const limitList = <T,>(list: T[], enabled: boolean, count: number): T[] => {
+    if (!enabled) return list;
+    return list.slice(0, Math.max(1, count));
+  };
+
+  const ingresosCamionesDisponibles = useMemo(() => {
+    const filteredIds = camionIds.length ? new Set(camionIds.map((id) => Number(id))) : null;
+    return camiones.filter((camion) => !filteredIds || filteredIds.has(camion.id));
+  }, [camiones, camionIds]);
+
+  const ingresosCamionesOptionList = useMemo(
+    () => limitList(ingresosCamionesDisponibles, ingresosLimitEnabled, ingresosLimitCount),
+    [ingresosCamionesDisponibles, ingresosLimitEnabled, ingresosLimitCount],
+  );
+
+  const operacionCamionesDisponibles = useMemo(() => {
+    const filteredIds = camionIds.length ? new Set(camionIds.map((id) => Number(id))) : null;
+    return camiones.filter((camion) => !filteredIds || filteredIds.has(camion.id));
+  }, [camiones, camionIds]);
+
+  const operacionCamionesOptionList = useMemo(
+    () => limitList(operacionCamionesDisponibles, operacionLimitEnabled, operacionLimitCount),
+    [operacionCamionesDisponibles, operacionLimitEnabled, operacionLimitCount],
+  );
+
+  const comparativaEntitiesDisponibles = useMemo<ComparativaEntityOption[]>(() => {
+    if (compararPor === 'camion') {
+      const filteredIds = camionIds.length ? new Set(camionIds.map((id) => Number(id))) : null;
+      return camiones
+        .filter((camion) => !filteredIds || filteredIds.has(camion.id))
+        .map((camion) => ({ id: camion.id, label: `${camion.patente} - ${camion.marca}` }));
+    }
+
+    const filteredIds = choferIds.length ? new Set(choferIds.map((id) => Number(id))) : null;
+    return choferes
+      .filter((chofer) => !filteredIds || filteredIds.has(chofer.id))
+      .map((chofer) => ({ id: chofer.id, label: `${chofer.nombre} ${chofer.apellido}`.trim() }));
+  }, [compararPor, camiones, choferes, camionIds, choferIds]);
+
+  const comparativaEntitiesOptionList = useMemo(
+    () => limitList(comparativaEntitiesDisponibles, comparativaLimitEnabled, comparativaLimitCount),
+    [comparativaEntitiesDisponibles, comparativaLimitEnabled, comparativaLimitCount],
   );
 
   const handleLogout = () => {
@@ -172,20 +229,36 @@ const Reportes: React.FC = () => {
   }, [compararPor, desde, hasta]);
 
   useEffect(() => {
-    const availableIds = new Set((comparativa?.comparativas || []).map((item) => String(item.id)));
+    const availableIds = new Set(comparativaEntitiesOptionList.map((item) => String(item.id)));
     setSelectedComparativaEntityIds((prev) => {
       const stillAvailable = prev.filter((id) => availableIds.has(id));
       return stillAvailable.length > 0 ? stillAvailable : Array.from(availableIds);
     });
-  }, [comparativa, compararPor]);
+  }, [comparativaEntitiesOptionList]);
+
+  useEffect(() => {
+    const availableIds = new Set(ingresosCamionesOptionList.map((camion) => String(camion.id)));
+    setIngresosSelectedCamionIds((prev) => {
+      const stillAvailable = prev.filter((id) => availableIds.has(id));
+      return stillAvailable.length > 0 ? stillAvailable : Array.from(availableIds);
+    });
+  }, [ingresosCamionesOptionList]);
+
+  useEffect(() => {
+    const availableIds = new Set(operacionCamionesOptionList.map((camion) => String(camion.id)));
+    setSelectedOperacionCamionIds((prev) => {
+      const stillAvailable = prev.filter((id) => availableIds.has(id));
+      return stillAvailable.length > 0 ? stillAvailable : Array.from(availableIds);
+    });
+  }, [operacionCamionesOptionList]);
 
   useEffect(() => {
     fetchComparativaTimeline();
-  }, [comparativa, compararPor, comparativaGranularidad, camionIds, choferIds, desde, hasta]);
+  }, [selectedComparativaEntityIds, comparativaEntitiesOptionList, compararPor, comparativaGranularidad, camionIds, choferIds, desde, hasta]);
 
   useEffect(() => {
     fetchOperacionCamiones();
-  }, [camiones, camionIds, granularidadOperacion, desde, hasta]);
+  }, [operacionCamionesOptionList, granularidadOperacion, desde, hasta]);
 
   useEffect(() => {
     fetchReportesAdicionales();
@@ -259,7 +332,8 @@ const Reportes: React.FC = () => {
   };
 
   const fetchComparativaTimeline = async () => {
-    const entities = comparativa?.comparativas || [];
+    const selectedIds = new Set(selectedComparativaEntityIds.map((id) => Number(id)));
+    const entities = comparativaEntitiesOptionList.filter((item) => selectedIds.has(item.id));
     if (entities.length === 0) {
       setComparativaTimeline({});
       return;
@@ -298,9 +372,7 @@ const Reportes: React.FC = () => {
       return;
     }
 
-    const targetCamionIds = camionIds.length
-      ? camionIds.map((id) => Number(id))
-      : camiones.map((camion) => camion.id);
+    const targetCamionIds = operacionCamionesOptionList.map((camion) => camion.id);
 
     try {
       setLoadingOperacion(true);
@@ -434,11 +506,17 @@ const Reportes: React.FC = () => {
   const readMultiSelectValues = (event: React.ChangeEvent<HTMLSelectElement>) =>
     Array.from(event.target.selectedOptions).map((option) => option.value);
 
+  const parseLimitCount = (value: string) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return DEFAULT_RESOURCE_LIMIT;
+    return Math.max(1, Math.floor(parsed));
+  };
+
   const comparativaFilteredData = useMemo(() => {
-    const rows = comparativa?.comparativas || [];
+    const rows = comparativaEntitiesOptionList;
     const selectedIdSet = new Set(selectedComparativaEntityIds.map((id) => Number(id)));
     return rows.filter((item) => selectedIdSet.has(item.id));
-  }, [comparativa, selectedComparativaEntityIds]);
+  }, [comparativaEntitiesOptionList, selectedComparativaEntityIds]);
 
   const exportRentabilidadCsv = () => {
     const rows = (reporte?.series || []).map((point) => buildRentabilidadRowBySelectedColumns(point));
@@ -493,11 +571,6 @@ const Reportes: React.FC = () => {
       rows,
     );
   };
-
-  const operacionCamionesDisponibles = useMemo(() => {
-    const filteredIds = camionIds.length ? new Set(camionIds.map((id) => Number(id))) : null;
-    return camiones.filter((camion) => !filteredIds || filteredIds.has(camion.id));
-  }, [camiones, camionIds]);
 
   const operacionCamionById = useMemo(() => {
     const map = new Map<number, Camion>();
@@ -702,11 +775,6 @@ const Reportes: React.FC = () => {
 
     doc.save(`reporte_rentabilidad_${desde}_${hasta}.pdf`);
   };
-
-  const ingresosCamionesDisponibles = useMemo(() => {
-    const filteredIds = camionIds.length ? new Set(camionIds.map((id) => Number(id))) : null;
-    return camiones.filter((camion) => !filteredIds || filteredIds.has(camion.id));
-  }, [camiones, camionIds]);
 
   const ingresosSelectedIdsNum = useMemo(
     () => ingresosSelectedCamionIds.map((id) => Number(id)).filter((id) => Number.isFinite(id)),
@@ -1142,6 +1210,24 @@ const Reportes: React.FC = () => {
             </div>
             {ingresosMode === 'por_camion' && (
               <>
+                <div className="filtro-item small-inline resource-limit-control">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={ingresosLimitEnabled}
+                      onChange={(e) => setIngresosLimitEnabled(e.target.checked)}
+                    />
+                    Limitar recursos
+                  </label>
+                  {ingresosLimitEnabled && (
+                    <input
+                      type="number"
+                      min={1}
+                      value={ingresosLimitCount}
+                      onChange={(e) => setIngresosLimitCount(parseLimitCount(e.target.value))}
+                    />
+                  )}
+                </div>
                 <div className="filtro-item small-inline">
                   <label>Métrica</label>
                   <select
@@ -1161,7 +1247,7 @@ const Reportes: React.FC = () => {
                     value={ingresosSelectedCamionIds}
                     onChange={(e) => setIngresosSelectedCamionIds(readMultiSelectValues(e))}
                   >
-                    {ingresosCamionesDisponibles.map((camion) => (
+                    {ingresosCamionesOptionList.map((camion) => (
                       <option key={camion.id} value={camion.id}>
                         {camion.patente} - {camion.marca}
                       </option>
@@ -1183,7 +1269,7 @@ const Reportes: React.FC = () => {
           <div className="operation-selection-actions">
             <button
               className="btn-rapido btn-rapido--ghost"
-              onClick={() => setIngresosSelectedCamionIds(ingresosCamionesDisponibles.map((camion) => String(camion.id)))}
+              onClick={() => setIngresosSelectedCamionIds(ingresosCamionesOptionList.map((camion) => String(camion.id)))}
             >
               Mostrar todos
             </button>
@@ -1236,6 +1322,24 @@ const Reportes: React.FC = () => {
                 <option value="gananciaNeta">Ganancia Neta</option>
               </select>
             </div>
+            <div className="filtro-item small-inline resource-limit-control">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={comparativaLimitEnabled}
+                  onChange={(e) => setComparativaLimitEnabled(e.target.checked)}
+                />
+                Limitar recursos
+              </label>
+              {comparativaLimitEnabled && (
+                <input
+                  type="number"
+                  min={1}
+                  value={comparativaLimitCount}
+                  onChange={(e) => setComparativaLimitCount(parseLimitCount(e.target.value))}
+                />
+              )}
+            </div>
             <div className="filtro-item small-inline">
               <label>{compararPor === 'camion' ? 'Camiones' : 'Choferes'} en gráfica</label>
               <select
@@ -1244,7 +1348,7 @@ const Reportes: React.FC = () => {
                 value={selectedComparativaEntityIds}
                 onChange={(e) => setSelectedComparativaEntityIds(readMultiSelectValues(e))}
               >
-                {(comparativa?.comparativas || []).map((item) => (
+                {comparativaEntitiesOptionList.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.label}
                   </option>
@@ -1259,7 +1363,7 @@ const Reportes: React.FC = () => {
         <div className="operation-selection-actions">
           <button
             className="btn-rapido btn-rapido--ghost"
-            onClick={() => setSelectedComparativaEntityIds((comparativa?.comparativas || []).map((item) => String(item.id)))}
+            onClick={() => setSelectedComparativaEntityIds(comparativaEntitiesOptionList.map((item) => String(item.id)))}
           >
             Mostrar todos
           </button>
@@ -1299,6 +1403,24 @@ const Reportes: React.FC = () => {
                 <option value="toneladas">Solo Toneladas</option>
               </select>
             </div>
+            <div className="filtro-item small-inline resource-limit-control">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={operacionLimitEnabled}
+                  onChange={(e) => setOperacionLimitEnabled(e.target.checked)}
+                />
+                Limitar recursos
+              </label>
+              {operacionLimitEnabled && (
+                <input
+                  type="number"
+                  min={1}
+                  value={operacionLimitCount}
+                  onChange={(e) => setOperacionLimitCount(parseLimitCount(e.target.value))}
+                />
+              )}
+            </div>
             <div className="filtro-item small-inline">
               <label>Camiones en gráfica</label>
               <select
@@ -1307,7 +1429,7 @@ const Reportes: React.FC = () => {
                 value={selectedOperacionCamionIds}
                 onChange={(e) => setSelectedOperacionCamionIds(readMultiSelectValues(e))}
               >
-                {operacionCamionesDisponibles.map((camion) => (
+                {operacionCamionesOptionList.map((camion) => (
                   <option key={camion.id} value={camion.id}>
                     {camion.patente} - {camion.marca}
                   </option>
@@ -1322,7 +1444,7 @@ const Reportes: React.FC = () => {
         <div className="operation-selection-actions">
           <button
             className="btn-rapido btn-rapido--ghost"
-            onClick={() => setSelectedOperacionCamionIds(operacionCamionesDisponibles.map((camion) => String(camion.id)))}
+            onClick={() => setSelectedOperacionCamionIds(operacionCamionesOptionList.map((camion) => String(camion.id)))}
           >
             Mostrar todos
           </button>

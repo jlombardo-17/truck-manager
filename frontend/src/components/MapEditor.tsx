@@ -337,7 +337,7 @@ const MapEditor: React.FC<MapEditorProps> = ({
                       km
                     </span>
                   )}
-                  <button className="btn-delete" onClick={() => deletePoint(route.id)}>
+                  <button type="button" className="btn-delete" onClick={() => deletePoint(route.id)}>
                     ✕
                   </button>
                 </div>

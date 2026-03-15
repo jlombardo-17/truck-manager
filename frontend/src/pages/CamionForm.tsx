@@ -104,7 +104,7 @@ const CamionForm: React.FC = () => {
             <span className="user-name">
               {user?.firstName} {user?.lastName}
             </span>
-            <button onClick={handleLogout} className="logout-button">
+            <button type="button" onClick={handleLogout} className="logout-button">
               Cerrar Sesión
             </button>
           </div>

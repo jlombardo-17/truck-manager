@@ -238,7 +238,7 @@ export const MantenimientoTab = ({ camionId }: Props) => {
       </div>
 
       {/* Botón para agregar nuevo registro */}
-      <button onClick={() => handleOpenModal()} className="addButton">
+      <button type="button" onClick={() => handleOpenModal()} className="addButton">
         + Nuevo Mantenimiento
       </button>
 
@@ -277,6 +277,7 @@ export const MantenimientoTab = ({ camionId }: Props) => {
                   <td className="actions">
                     {registro.estado === EstadoMantenimiento.PENDIENTE && (
                       <button
+                        type="button"
                         onClick={() => handleMarkCompleted(registro.id!)}
                         className="btnSmall"
                         title="Marcar como completado"
@@ -285,6 +286,7 @@ export const MantenimientoTab = ({ camionId }: Props) => {
                       </button>
                     )}
                     <button
+                      type="button"
                       onClick={() => handleOpenModal(registro)}
                       className="btnSmall"
                       title="Editar"
@@ -292,6 +294,7 @@ export const MantenimientoTab = ({ camionId }: Props) => {
                       ✎
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleDelete(registro.id!)}
                       className="btnSmall btnDelete"
                       title="Eliminar"

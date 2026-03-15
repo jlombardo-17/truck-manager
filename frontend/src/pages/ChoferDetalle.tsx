@@ -345,12 +345,14 @@ const ChoferDetalle: React.FC = () => {
         <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
         <h1>📋 Detalle del Chofer</h1>
         <button 
+                    type="button"
                     className="btn-salarios"
                     onClick={() => navigate(`/choferes/${choferId}/salarios`)}
                   >
                     💰 Ver Salarios
                   </button>
                   <button 
+          type="button"
           className="btn-edit"
           onClick={() => {
             setActiveTab('info');
@@ -377,12 +379,14 @@ const ChoferDetalle: React.FC = () => {
 
       <div className="tabs">
         <button
+          type="button"
           className={`tab ${activeTab === 'info' ? 'active' : ''}`}
           onClick={() => setActiveTab('info')}
         >
           📄 Información
         </button>
         <button
+          type="button"
           className={`tab ${activeTab === 'documentos' ? 'active' : ''}`}
           onClick={() => setActiveTab('documentos')}
         >
@@ -558,6 +562,7 @@ const ChoferDetalle: React.FC = () => {
             <div className="section-header">
               <h3>📎 Documentos del Chofer</h3>
               <button
+                type="button"
                 className="btn-primary"
                 onClick={() => setShowDocumentoForm(!showDocumentoForm)}
               >
@@ -758,6 +763,7 @@ const ChoferDetalle: React.FC = () => {
                       <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleDeleteDocumento(doc.id!)}
                       className="delete-btn"
                       title="Eliminar"
