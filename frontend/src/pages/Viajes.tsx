@@ -9,6 +9,7 @@ import { Chofer } from '../types/chofer';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
+import heroRoutesViolet from '../assets/hero-routes-violet.svg';
 import '../styles/Viajes.css';
 
 const Viajes: React.FC = () => {
@@ -149,7 +150,7 @@ const Viajes: React.FC = () => {
         subtitle="Trip Management"
         title="Viajes y Rutas"
         description="Planificación, estado y trazabilidad de entregas."
-        backgroundImage="linear-gradient(135deg, #9b59b6 0%, #8e44ad 50%, #c39bd3 100%)"
+        backgroundImage={`linear-gradient(135deg, rgba(155, 89, 182, 0.9) 0%, rgba(142, 68, 173, 0.88) 50%, rgba(195, 155, 211, 0.85) 100%), url(${heroRoutesViolet})`}
         darkBg={true}
         primaryAction={{
           label: '+ Nuevo Viaje',

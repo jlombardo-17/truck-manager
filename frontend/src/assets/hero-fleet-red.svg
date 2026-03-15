@@ -1,0 +1,62 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="road" x1="180" y1="670" x2="1500" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5A1E14" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#7E2F1E" stop-opacity="0.26"/>
+    </linearGradient>
+    <linearGradient id="truckCab" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F6A04D"/>
+      <stop offset="1" stop-color="#D9652B"/>
+    </linearGradient>
+    <linearGradient id="trailer" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#A63A2B"/>
+      <stop offset="1" stop-color="#7E2E25"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M160 710C340 650 510 650 710 685C910 720 1150 790 1490 818L1490 890L160 890V710Z" fill="url(#road)"/>
+  <path d="M210 740C410 705 560 708 760 748C970 792 1190 826 1450 840" stroke="#FFD8C2" stroke-opacity="0.4" stroke-width="8" stroke-linecap="round" stroke-dasharray="18 16"/>
+
+  <g opacity="0.72">
+    <rect x="880" y="510" width="330" height="128" rx="14" fill="url(#trailer)"/>
+    <rect x="1198" y="536" width="140" height="102" rx="14" fill="url(#truckCab)"/>
+    <rect x="1221" y="555" width="47" height="36" rx="6" fill="#FFEAD5"/>
+    <rect x="1274" y="555" width="47" height="36" rx="6" fill="#FFEAD5"/>
+
+    <circle cx="970" cy="653" r="33" fill="#4A1C14"/>
+    <circle cx="970" cy="653" r="15" fill="#FFC79C"/>
+    <circle cx="1088" cy="653" r="33" fill="#4A1C14"/>
+    <circle cx="1088" cy="653" r="15" fill="#FFC79C"/>
+    <circle cx="1225" cy="653" r="33" fill="#4A1C14"/>
+    <circle cx="1225" cy="653" r="15" fill="#FFC79C"/>
+    <circle cx="1314" cy="653" r="33" fill="#4A1C14"/>
+    <circle cx="1314" cy="653" r="15" fill="#FFC79C"/>
+  </g>
+
+  <g opacity="0.5">
+    <rect x="470" y="505" width="220" height="94" rx="12" fill="#A63A2B"/>
+    <rect x="678" y="526" width="96" height="73" rx="12" fill="#D86A30"/>
+    <circle cx="535" cy="614" r="26" fill="#4A1C14"/>
+    <circle cx="535" cy="614" r="11" fill="#FFC79C"/>
+    <circle cx="618" cy="614" r="26" fill="#4A1C14"/>
+    <circle cx="618" cy="614" r="11" fill="#FFC79C"/>
+    <circle cx="706" cy="614" r="26" fill="#4A1C14"/>
+    <circle cx="706" cy="614" r="11" fill="#FFC79C"/>
+  </g>
+
+  <g opacity="0.62">
+    <rect x="300" y="254" width="190" height="94" rx="16" fill="#7E2E25"/>
+    <circle cx="352" cy="300" r="27" fill="#F1B080"/>
+    <circle cx="352" cy="300" r="13" fill="#7E2E25"/>
+    <circle cx="440" cy="300" r="27" fill="#F1B080"/>
+    <circle cx="440" cy="300" r="13" fill="#7E2E25"/>
+    <rect x="338" y="268" width="116" height="15" rx="7" fill="#F1B080"/>
+  </g>
+
+  <g opacity="0.5">
+    <path d="M160 640C210 560 250 520 300 430C348 525 390 566 438 640H160Z" fill="#7E3F27"/>
+    <path d="M1250 640C1300 560 1340 520 1390 430C1438 525 1480 566 1528 640H1250Z" fill="#8B482A"/>
+    <rect x="287" y="640" width="26" height="54" fill="#6C3522"/>
+    <rect x="1377" y="640" width="26" height="54" fill="#733B24"/>
+  </g>
+</svg>

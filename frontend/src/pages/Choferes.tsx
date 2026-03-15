@@ -6,6 +6,7 @@ import { Chofer, estadoChoferLabels } from '../types/chofer';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
+import heroTeamTeal from '../assets/hero-team-teal.svg';
 import '../styles/Choferes.css';
 
 const Choferes: React.FC = () => {
@@ -170,7 +171,7 @@ const Choferes: React.FC = () => {
         subtitle="Team Management"
         title="Gestión de Choferes"
         description="Seguimiento de datos personales, estado y desempeño operativo."
-        backgroundImage="linear-gradient(135deg, #3498db 0%, #1abc9c 50%, #16a085 100%)"
+        backgroundImage={`linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(26, 188, 156, 0.88) 50%, rgba(22, 160, 133, 0.85) 100%), url(${heroTeamTeal})`}
         darkBg={true}
         primaryAction={{
           label: '+ Agregar Chofer',

@@ -6,6 +6,7 @@ import { Camion } from '../types/camion';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
+import heroFleetRed from '../assets/hero-fleet-red.svg';
 import '../styles/Camiones.css';
 
 const Camiones: React.FC = () => {
@@ -165,7 +166,7 @@ const Camiones: React.FC = () => {
           subtitle="Fleet Management"
           title="Gestión de Camiones"
           description="Control de flota, estado operativo y datos clave de cada unidad."
-          backgroundImage="linear-gradient(135deg, #e74c3c 0%, #e67e22 50%, #f39c12 100%)"
+          backgroundImage={`linear-gradient(135deg, rgba(231, 76, 60, 0.9) 0%, rgba(230, 126, 34, 0.88) 50%, rgba(243, 156, 18, 0.85) 100%), url(${heroFleetRed})`}
           darkBg={true}
           primaryAction={{
             label: '+ Nuevo Camión',

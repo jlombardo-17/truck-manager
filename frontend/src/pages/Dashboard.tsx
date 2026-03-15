@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { dashboardService, DashboardResumen, DesempenoCamion, DesempenoChofer } from '../services/dashboardService';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
+import dashboardLogisticsHero from '../assets/dashboard-logistics-hero.svg';
 import '../styles/Dashboard.css';
 
 const Dashboard: React.FC = () => {
@@ -71,7 +72,7 @@ const Dashboard: React.FC = () => {
           subtitle="Fleet Management Overview"
           title={`¡Bienvenido, ${user?.firstName}!`}
           description="Sistema integral de gestión y mantenimiento de tu flota de camiones"
-          backgroundImage="linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7aa8d8 100%)"
+          backgroundImage={`linear-gradient(135deg, rgba(30, 60, 114, 0.95) 0%, rgba(42, 82, 152, 0.92) 50%, rgba(122, 168, 216, 0.88) 100%), url(${dashboardLogisticsHero})`}
           darkBg={true}
         />
 

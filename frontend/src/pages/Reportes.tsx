@@ -30,6 +30,7 @@ import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/BackButton';
+import heroAnalyticsGreen from '../assets/hero-analytics-green.svg';
 import '../styles/Reportes.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend);
@@ -983,7 +984,7 @@ const Reportes: React.FC = () => {
         subtitle="Financial Analytics"
         title="Reportes de Rentabilidad"
         description="Monitorea ingresos, costos y eficiencia operativa por camión y chofer. Análisis detallado de tu operación."
-        backgroundImage="linear-gradient(135deg, #27ae60 0%, #229954 50%, #17a2b8 100%)"
+        backgroundImage={`linear-gradient(135deg, rgba(39, 174, 96, 0.9) 0%, rgba(34, 153, 84, 0.88) 50%, rgba(23, 162, 184, 0.84) 100%), url(${heroAnalyticsGreen})`}
         darkBg={true}
       />
 
