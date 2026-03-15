@@ -952,7 +952,7 @@ const Reportes: React.FC = () => {
   return (
     <div className="reportes-page">
       <div className="page-back-button-container">
-        <BackButton label="← Volver al Dashboard" to="/dashboard" />
+        <BackButton label="Volver al Dashboard" to="/dashboard" />
       </div>
       
       {/* Hero Section */}

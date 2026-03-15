@@ -121,7 +121,7 @@ const Viajes: React.FC = () => {
   return (
     <div className="viajes-page">
       <div className="page-back-button-container">
-        <BackButton label="← Volver al Dashboard" to="/dashboard" />
+        <BackButton label="Volver al Dashboard" to="/dashboard" />
       </div>
       
       <HeroSection

@@ -2,7 +2,11 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: transparent;
+  background: var(--bg-page);
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 1.6rem 1.2rem 2rem;
+  overflow-x: clip;
 }
 
 /* Navbar */
@@ -67,12 +71,9 @@
   background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
   padding: 2.5rem 0;
   margin-bottom: 2rem;
-  width: 100vw;
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
 }
 
 .choferes-container-inner {
@@ -83,17 +84,23 @@
 
 .choferes-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  justify-content: flex-start;
+  align-items: stretch;
   margin-bottom: 1rem;
-  padding: 1.05rem;
-  max-width: var(--page-max-width);
-  margin: 0 auto;
+  padding: 0;
+  max-width: none;
+  margin: 0 0 1rem;
   width: 100%;
-  border: 1px solid var(--border-soft);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: var(--shadow-sm);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.choferes-container .page-back-button-container {
+  max-width: none;
+  margin: 0 0 1rem;
+  padding: 0;
 }
 
 .choferes-header h1 {
@@ -319,6 +326,10 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .choferes-container {
+    padding: 1rem var(--page-gutter-mobile) 1.5rem;
+  }
+
   .navbar-content {
     padding: 0 var(--page-gutter-mobile);
   }
@@ -326,19 +337,19 @@
   .choferes-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
-    padding: 0.9rem;
-    margin: 0 0.8rem 1rem;
-    width: auto;
+    gap: 0;
+    padding: 0;
+    margin: 0 0 1rem;
+    width: 100%;
   }
 
   .search-bar,
   .table-container,
   .empty-state,
   .summary {
-    margin-left: 0.8rem;
-    margin-right: 0.8rem;
-    width: auto;
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
   }
 
   .table-container {

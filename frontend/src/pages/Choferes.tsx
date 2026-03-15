@@ -164,7 +164,7 @@ const Choferes: React.FC = () => {
 
       <div className="choferes-header">
         <div className="page-back-button-container">
-          <BackButton label="← Volver al Dashboard" to="/dashboard" />
+          <BackButton label="Volver al Dashboard" to="/dashboard" />
         </div>
         
         <HeroSection

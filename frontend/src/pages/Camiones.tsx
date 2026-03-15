@@ -158,7 +158,7 @@ const Camiones: React.FC = () => {
 
       <div className="camiones-content">
         <div className="page-back-button-container">
-          <BackButton label="← Volver al Dashboard" to="/dashboard" />
+          <BackButton label="Volver al Dashboard" to="/dashboard" />
         </div>
         
         <HeroSection

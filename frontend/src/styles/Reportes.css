@@ -8,6 +8,32 @@
   overflow-x: clip;
 }
 
+.reportes-page .page-back-button-container {
+  max-width: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  z-index: 1;
+}
+
+.reportes-page .btn-back-dashboard {
+  border-radius: 10px;
+  padding: 0.62rem 1rem;
+  font-weight: 600;
+  background: #ffffff;
+  border-color: rgba(12, 58, 102, 0.14);
+  box-shadow: 0 4px 14px rgba(12, 58, 102, 0.12);
+}
+
+.reportes-page .btn-back-dashboard:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+.reportes-page .btn-back-dashboard:active {
+  transform: translateY(0);
+}
+
 .reportes-kpi-section {
   background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
   padding: 2.5rem 0;

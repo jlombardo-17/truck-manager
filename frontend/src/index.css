@@ -659,34 +659,34 @@ textarea {
 /* 🔙 BACK TO DASHBOARD BUTTON */
 .page-back-button-container {
   max-width: var(--page-max-width);
-  margin: 0 auto -1rem;
-  padding: 1rem var(--page-gutter) 0;
+  margin: 0 auto 1rem;
+  padding: 0 var(--page-gutter);
   position: relative;
-  z-index: 10;
+  z-index: 1;
 }
 
 .btn-back-dashboard {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.7rem 1.2rem;
-  background: rgba(255, 255, 255, 0.95);
+  padding: 0.62rem 1rem;
+  background: #ffffff;
   color: var(--text-primary);
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border: 1px solid rgba(12, 58, 102, 0.14);
+  border-radius: 10px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(12, 58, 102, 0.12);
 }
 
 .btn-back-dashboard:hover {
-  background: white;
+  background: #ffffff;
   border-color: var(--primary-blue);
   color: var(--primary-blue);
-  transform: translateX(-3px);
-  box-shadow: 0 4px 12px rgba(0, 115, 209, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 115, 209, 0.14);
 }
 
 .btn-back-dashboard:focus {
@@ -696,7 +696,7 @@ textarea {
 }
 
 .btn-back-dashboard:active {
-  transform: translateX(-2px);
+  transform: translateY(0);
 }
 
 .btn-back-dashboard:disabled {

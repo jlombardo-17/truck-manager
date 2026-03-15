@@ -3,7 +3,11 @@
   flex-direction: column;
   min-height: 100vh;
   font-family: var(--font-sans);
-  background: transparent;
+  background: var(--bg-page);
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 1.6rem 1.2rem 2rem;
+  overflow-x: clip;
 }
 
 /* Navbar */
@@ -70,12 +74,9 @@
   background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
   padding: 2.5rem 0;
   margin-bottom: 2rem;
-  width: 100vw;
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
 }
 
 .camiones-container-inner {
@@ -123,11 +124,17 @@
 }
 
 .camiones-content {
-  padding: 1.5rem 1.2rem 2rem;
-  max-width: var(--page-max-width);
-  margin: 0 auto;
+  padding: 0;
+  max-width: none;
+  margin: 0;
   width: 100%;
   flex: 1;
+}
+
+.camiones-container .page-back-button-container {
+  max-width: none;
+  margin: 0 0 1rem;
+  padding: 0;
 }
 
 .search-bar {
@@ -322,12 +329,16 @@
 }
 
 @media (max-width: 768px) {
+  .camiones-container {
+    padding: 1rem var(--page-gutter-mobile) 1.5rem;
+  }
+
   .navbar-content {
     padding: 0 var(--page-gutter-mobile);
   }
 
   .camiones-content {
-    padding: 1rem 0.8rem 1.5rem;
+    padding: 0;
   }
 
   .camiones-header {
