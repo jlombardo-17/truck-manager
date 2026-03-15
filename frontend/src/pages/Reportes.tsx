@@ -106,7 +106,12 @@ const Reportes: React.FC = () => {
   const [gastosMantenimiento, setGastosMantenimiento] = useState<GastosMantenimientoResponse | null>(null);
   const [ingresosMensuales, setIngresosMensuales] = useState<IngresosMensualesResponse | null>(null);
 
-  const [granularidad, setGranularidad] = useState<'diaria' | 'mensual'>('diaria');
+  const [granularidadIngresos, setGranularidadIngresos] = useState<'diaria' | 'semanal' | 'mensual'>('diaria');
+  const [ingresosMode, setIngresosMode] = useState<'agregado' | 'por_camion'>('agregado');
+  const [ingresosMetric, setIngresosMetric] = useState<'ingresos' | 'gastos' | 'gananciaNeta'>('ingresos');
+  const [ingresosSelectedCamionIds, setIngresosSelectedCamionIds] = useState<string[]>([]);
+  const [rentabilidadDetalleCamion, setRentabilidadDetalleCamion] = useState<Record<number, RentabilidadResponse>>({});
+  const [loadingRentabilidadDetalle, setLoadingRentabilidadDetalle] = useState(false);
   const [camionIds, setCamionIds] = useState<string[]>([]);
   const [choferIds, setChoferIds] = useState<string[]>([]);
   const [desde, setDesde] = useState<string>(defaultDesdeDiario);
@@ -133,6 +138,7 @@ const Reportes: React.FC = () => {
         setCamiones(camionesData);
         setChoferes(choferesData);
         setSelectedOperacionCamionIds(camionesData.map((camion) => String(camion.id)));
+        setIngresosSelectedCamionIds(camionesData.map((camion) => String(camion.id)));
       } catch (err) {
         console.error(err);
       }
@@ -143,7 +149,13 @@ const Reportes: React.FC = () => {
 
   useEffect(() => {
     fetchRentabilidad();
-  }, [granularidad, camionIds, choferIds, desde, hasta]);
+  }, [granularidadIngresos, camionIds, choferIds, desde, hasta]);
+
+  useEffect(() => {
+    if (ingresosMode === 'por_camion') {
+      fetchRentabilidadDetalleCamion();
+    }
+  }, [ingresosMode, granularidadIngresos, ingresosSelectedCamionIds, camionIds, choferIds, desde, hasta]);
 
   useEffect(() => {
     fetchComparativa();
@@ -174,7 +186,7 @@ const Reportes: React.FC = () => {
       setLoadingRentabilidad(true);
       setError(null);
       const data = await reportesService.getRentabilidad({
-        granularidad,
+        granularidad: granularidadIngresos,
         camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
         choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
         desde,
@@ -185,6 +197,36 @@ const Reportes: React.FC = () => {
       setError(err?.response?.data?.message || 'No se pudo cargar el reporte de rentabilidad');
     } finally {
       setLoadingRentabilidad(false);
+    }
+  };
+
+  const fetchRentabilidadDetalleCamion = async () => {
+    const targetIds = ingresosSelectedCamionIds.map((id) => Number(id)).filter((id) => Number.isFinite(id));
+    if (targetIds.length === 0) {
+      setRentabilidadDetalleCamion({});
+      return;
+    }
+    try {
+      setLoadingRentabilidadDetalle(true);
+      const results = await Promise.all(
+        targetIds.map(async (camionId) => {
+          const data = await reportesService.getRentabilidad({
+            granularidad: granularidadIngresos,
+            camionIds: [camionId],
+            choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
+            desde,
+            hasta,
+          });
+          return [camionId, data] as const;
+        }),
+      );
+      const next: Record<number, RentabilidadResponse> = {};
+      for (const [id, data] of results) next[id] = data;
+      setRentabilidadDetalleCamion(next);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudo cargar el detalle por camión');
+    } finally {
+      setLoadingRentabilidadDetalle(false);
     }
   };
 
@@ -573,7 +615,7 @@ const Reportes: React.FC = () => {
     doc.text('Reporte de Rentabilidad', 14, 16);
     doc.setFontSize(10);
     doc.text(`Periodo: ${desde} a ${hasta}`, 14, 22);
-    doc.text(`Granularidad: ${granularidad}`, 14, 27);
+    doc.text(`Granularidad: ${granularidadIngresos}`, 14, 27);
     doc.text(`Emitido: ${fechaEmision}`, 14, 32);
 
     autoTable(doc, {
@@ -651,32 +693,87 @@ const Reportes: React.FC = () => {
     doc.save(`reporte_rentabilidad_${desde}_${hasta}.pdf`);
   };
 
-  const chartData = {
-    labels: reporte?.series.map((s) => s.etiqueta) || [],
-    datasets: [
-      {
-        label: 'Ingresos',
-        data: reporte?.series.map((s) => s.ingresos) || [],
-        borderColor: '#2E8B57',
-        backgroundColor: 'rgba(46, 139, 87, 0.15)',
-        tension: 0.25,
-      },
-      {
-        label: 'Gastos',
-        data: reporte?.series.map((s) => s.gastos) || [],
-        borderColor: '#C0392B',
-        backgroundColor: 'rgba(192, 57, 43, 0.15)',
-        tension: 0.25,
-      },
-      {
-        label: 'Ganancia Neta',
-        data: reporte?.series.map((s) => s.gananciaNeta) || [],
-        borderColor: '#9B59B6',
-        backgroundColor: 'rgba(155, 89, 182, 0.15)',
-        tension: 0.25,
-      },
-    ],
-  };
+  const ingresosCamionesDisponibles = useMemo(() => {
+    const filteredIds = camionIds.length ? new Set(camionIds.map((id) => Number(id))) : null;
+    return camiones.filter((camion) => !filteredIds || filteredIds.has(camion.id));
+  }, [camiones, camionIds]);
+
+  const ingresosSelectedIdsNum = useMemo(
+    () => ingresosSelectedCamionIds.map((id) => Number(id)).filter((id) => Number.isFinite(id)),
+    [ingresosSelectedCamionIds],
+  );
+
+  const ingresosChartPeriods = useMemo(() => {
+    if (ingresosMode === 'agregado') return [] as string[];
+    const allPeriods = new Set<string>();
+    for (const camionId of ingresosSelectedIdsNum) {
+      for (const p of rentabilidadDetalleCamion[camionId]?.series || []) allPeriods.add(p.periodo);
+    }
+    return Array.from(allPeriods).sort((a, b) => a.localeCompare(b));
+  }, [ingresosMode, rentabilidadDetalleCamion, ingresosSelectedIdsNum]);
+
+  const ingresosChartLabelByPeriod = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const camionId of ingresosSelectedIdsNum) {
+      for (const p of rentabilidadDetalleCamion[camionId]?.series || []) {
+        if (!map.has(p.periodo)) map.set(p.periodo, p.etiqueta);
+      }
+    }
+    return map;
+  }, [rentabilidadDetalleCamion, ingresosSelectedIdsNum]);
+
+  const chartData = useMemo(() => {
+    if (ingresosMode === 'agregado') {
+      return {
+        labels: reporte?.series.map((s) => s.etiqueta) || [],
+        datasets: [
+          {
+            label: 'Ingresos',
+            data: reporte?.series.map((s) => s.ingresos) || [],
+            borderColor: '#2E8B57',
+            backgroundColor: 'rgba(46, 139, 87, 0.15)',
+            tension: 0.25,
+          },
+          {
+            label: 'Gastos',
+            data: reporte?.series.map((s) => s.gastos) || [],
+            borderColor: '#C0392B',
+            backgroundColor: 'rgba(192, 57, 43, 0.15)',
+            tension: 0.25,
+          },
+          {
+            label: 'Ganancia Neta',
+            data: reporte?.series.map((s) => s.gananciaNeta) || [],
+            borderColor: '#9B59B6',
+            backgroundColor: 'rgba(155, 89, 182, 0.15)',
+            tension: 0.25,
+          },
+        ],
+      };
+    }
+    return {
+      labels: ingresosChartPeriods.map((p) => ingresosChartLabelByPeriod.get(p) || p),
+      datasets: ingresosSelectedIdsNum.map((camionId, index) => {
+        const camion = operacionCamionById.get(camionId);
+        const label = camion?.patente || `Camión ${camionId}`;
+        const color = OPERATION_COLORS[index % OPERATION_COLORS.length];
+        const byPeriod = new Map((rentabilidadDetalleCamion[camionId]?.series || []).map((p) => [p.periodo, p]));
+        return {
+          label,
+          data: ingresosChartPeriods.map((period) => {
+            const point = byPeriod.get(period);
+            if (!point) return 0;
+            if (ingresosMetric === 'gastos') return point.gastos;
+            if (ingresosMetric === 'gananciaNeta') return point.gananciaNeta;
+            return point.ingresos;
+          }),
+          borderColor: color,
+          backgroundColor: `${color}26`,
+          tension: 0.25,
+        };
+      }),
+    };
+  }, [ingresosMode, ingresosMetric, ingresosSelectedIdsNum, ingresosChartPeriods, ingresosChartLabelByPeriod, reporte, rentabilidadDetalleCamion, operacionCamionById]);
 
   const comparativaPeriods = useMemo(() => {
     const allPeriods = new Set<string>();
@@ -914,14 +1011,6 @@ const Reportes: React.FC = () => {
 
       <div className="reportes-filtros">
         <div className="filtro-item">
-          <label>Granularidad</label>
-          <select value={granularidad} onChange={(e) => setGranularidad(e.target.value as 'diaria' | 'mensual')}>
-            <option value="diaria">Diaria</option>
-            <option value="mensual">Mensual</option>
-          </select>
-        </div>
-
-        <div className="filtro-item">
           <label>Camiones (multi)</label>
           <select
             multiple
@@ -1005,11 +1094,88 @@ const Reportes: React.FC = () => {
       <div className="chart-container">
         <div className="section-header-inline">
           <h3>Ingresos vs Gastos por Período</h3>
-          <button className="btn-rapido btn-rapido--accent" onClick={exportRentabilidadCsv} disabled={!reporte?.series.length}>
-            Exportar CSV
-          </button>
+          <div className="inline-controls inline-controls-compact">
+            <div className="filtro-item small-inline">
+              <label>Agrupar por</label>
+              <select
+                value={granularidadIngresos}
+                onChange={(e) => setGranularidadIngresos(e.target.value as 'diaria' | 'semanal' | 'mensual')}
+              >
+                <option value="diaria">Día</option>
+                <option value="semanal">Semana</option>
+                <option value="mensual">Mes</option>
+              </select>
+            </div>
+            <div className="filtro-item small-inline">
+              <label>Vista</label>
+              <select
+                value={ingresosMode}
+                onChange={(e) => setIngresosMode(e.target.value as 'agregado' | 'por_camion')}
+              >
+                <option value="agregado">Todos (suma)</option>
+                <option value="por_camion">Por camión</option>
+              </select>
+            </div>
+            {ingresosMode === 'por_camion' && (
+              <>
+                <div className="filtro-item small-inline">
+                  <label>Métrica</label>
+                  <select
+                    value={ingresosMetric}
+                    onChange={(e) => setIngresosMetric(e.target.value as 'ingresos' | 'gastos' | 'gananciaNeta')}
+                  >
+                    <option value="ingresos">Ingresos</option>
+                    <option value="gastos">Gastos</option>
+                    <option value="gananciaNeta">Ganancia Neta</option>
+                  </select>
+                </div>
+                <div className="filtro-item small-inline">
+                  <label>Camiones en gráfica</label>
+                  <select
+                    multiple
+                    className="multi-select multi-select-compact"
+                    value={ingresosSelectedCamionIds}
+                    onChange={(e) => setIngresosSelectedCamionIds(readMultiSelectValues(e))}
+                  >
+                    {ingresosCamionesDisponibles.map((camion) => (
+                      <option key={camion.id} value={camion.id}>
+                        {camion.patente} - {camion.marca}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+            <button
+              className="btn-rapido btn-rapido--accent"
+              onClick={exportRentabilidadCsv}
+              disabled={ingresosMode === 'agregado' ? !reporte?.series.length : ingresosChartPeriods.length === 0}
+            >
+              Exportar CSV
+            </button>
+          </div>
         </div>
-        {loadingRentabilidad ? <p>Cargando gráfico...</p> : <Line data={chartData} />}
+        {ingresosMode === 'por_camion' && (
+          <div className="operation-selection-actions">
+            <button
+              className="btn-rapido btn-rapido--ghost"
+              onClick={() => setIngresosSelectedCamionIds(ingresosCamionesDisponibles.map((camion) => String(camion.id)))}
+            >
+              Mostrar todos
+            </button>
+            <button
+              className="btn-rapido btn-rapido--ghost"
+              onClick={() => setIngresosSelectedCamionIds([])}
+            >
+              Limpiar selección
+            </button>
+          </div>
+        )}
+        {loadingRentabilidad || (ingresosMode === 'por_camion' && loadingRentabilidadDetalle) ? (
+          <p>Cargando gráfico...</p>
+        ) : (
+          <Line data={chartData} />
+        )}
       </div>
 
       <div className="chart-container">
