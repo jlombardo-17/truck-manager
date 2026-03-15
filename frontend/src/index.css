@@ -9,6 +9,9 @@
 :root {
   --font-sans: 'Manrope', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   --font-display: 'Plus Jakarta Sans', 'Manrope', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --page-max-width: 1240px;
+  --page-gutter: 1.4rem;
+  --page-gutter-mobile: 0.8rem;
 
   /* 🎨 GEOTAB COLOR PALETTE */
   /* Primary Colors */
@@ -655,8 +658,9 @@ textarea {
 
 /* 🔙 BACK TO DASHBOARD BUTTON */
 .page-back-button-container {
-  padding: 1rem 2rem 0;
-  margin-bottom: -1rem;
+  max-width: var(--page-max-width);
+  margin: 0 auto -1rem;
+  padding: 1rem var(--page-gutter) 0;
   position: relative;
   z-index: 10;
 }

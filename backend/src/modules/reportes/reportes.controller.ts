@@ -16,7 +16,7 @@ export class ReportesController {
 
   @Get('rentabilidad')
   async getRentabilidad(
-    @Query('granularidad') granularidad: 'diaria' | 'mensual' = 'diaria',
+    @Query('granularidad') granularidad: 'diaria' | 'semanal' | 'mensual' = 'diaria',
     @Query('camionId') camionId?: string,
     @Query('choferId') choferId?: string,
     @Query('camionIds') camionIds?: string,
@@ -61,7 +61,7 @@ export class ReportesController {
   @Get('operacion/camion/:camionId')
   async getOperacionCamion(
     @Param('camionId') camionIdParam: string,
-    @Query('granularidad') granularidad: 'diaria' | 'semanal' = 'diaria',
+    @Query('granularidad') granularidad: 'diaria' | 'semanal' | 'mensual' = 'diaria',
     @Query('desde') desde: string | undefined,
     @Query('hasta') hasta: string | undefined,
   ) {

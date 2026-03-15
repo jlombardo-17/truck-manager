@@ -16,13 +16,13 @@
 }
 
 .navbar-content {
-  max-width: 1240px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 0 1.4rem;
+  padding: 0 var(--page-gutter);
 }
 
 .navbar-title {
@@ -79,9 +79,9 @@
 }
 
 .camiones-container-inner {
-  max-width: 1240px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 0 1.4rem;
+  padding: 0 var(--page-gutter);
 }
 
 .camiones-header {
@@ -124,7 +124,7 @@
 
 .camiones-content {
   padding: 1.5rem 1.2rem 2rem;
-  max-width: 1240px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
   width: 100%;
   flex: 1;
@@ -323,7 +323,7 @@
 
 @media (max-width: 768px) {
   .navbar-content {
-    padding: 0 0.9rem;
+    padding: 0 var(--page-gutter-mobile);
   }
 
   .camiones-content {

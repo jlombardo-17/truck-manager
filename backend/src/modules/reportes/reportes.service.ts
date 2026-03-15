@@ -6,8 +6,8 @@ import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity
 import { Chofer } from '../choferes/chofer.entity';
 import { Camion } from '../camiones/camion.entity';
 
-type Granularidad = 'diaria' | 'mensual';
-type GranularidadOperacion = 'diaria' | 'semanal';
+type Granularidad = 'diaria' | 'semanal' | 'mensual';
+type GranularidadOperacion = 'diaria' | 'semanal' | 'mensual';
 
 interface RentabilidadFilters {
   granularidad: Granularidad;
@@ -483,12 +483,24 @@ export class ReportesService {
     }
   }
 
+  private getWeekStartKey(date: Date): string {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diffToMonday);
+    return d.toISOString().split('T')[0];
+  }
+
   private toBucketKey(date: Date, granularidad: Granularidad): string {
     const year = date.getFullYear();
     const month = `${date.getMonth() + 1}`.padStart(2, '0');
 
     if (granularidad === 'mensual') {
       return `${year}-${month}`;
+    }
+
+    if (granularidad === 'semanal') {
+      return this.getWeekStartKey(date);
     }
 
     const day = `${date.getDate()}`.padStart(2, '0');
@@ -500,17 +512,22 @@ export class ReportesService {
       return this.toBucketKey(date, 'diaria');
     }
 
-    const d = new Date(date);
-    const day = d.getDay();
-    const diffToMonday = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diffToMonday);
-    return d.toISOString().split('T')[0];
+    if (granularidad === 'mensual') {
+      return this.toBucketKey(date, 'mensual');
+    }
+
+    return this.getWeekStartKey(date);
   }
 
   private formatLabel(bucketKey: string, granularidad: Granularidad): string {
     if (granularidad === 'mensual') {
       const [year, month] = bucketKey.split('-');
       return `${month}/${year}`;
+    }
+
+    if (granularidad === 'semanal') {
+      const [year, month, day] = bucketKey.split('-');
+      return `Sem ${day}/${month}/${year}`;
     }
 
     const [year, month, day] = bucketKey.split('-');
@@ -520,6 +537,10 @@ export class ReportesService {
   private formatOperacionLabel(bucketKey: string, granularidad: GranularidadOperacion): string {
     if (granularidad === 'diaria') {
       return this.formatLabel(bucketKey, 'diaria');
+    }
+
+    if (granularidad === 'mensual') {
+      return this.formatLabel(bucketKey, 'mensual');
     }
 
     const [year, month, day] = bucketKey.split('-');

@@ -20,7 +20,7 @@ export interface RentabilidadPoint {
 
 export interface RentabilidadResponse {
   filtrosAplicados: {
-    granularidad: 'diaria' | 'mensual';
+    granularidad: 'diaria' | 'semanal' | 'mensual';
     camionIds?: number[];
     choferIds?: number[];
     desde: string;
@@ -54,7 +54,7 @@ export interface RentabilidadComparativaResponse {
 export interface OperacionCamionResponse {
   filtrosAplicados: {
     camionId: number;
-    granularidad: 'diaria' | 'semanal';
+    granularidad: 'diaria' | 'semanal' | 'mensual';
     desde: string;
     hasta: string;
   };
@@ -153,7 +153,7 @@ class ReportesService {
   }
 
   async getRentabilidad(filters: {
-    granularidad: 'diaria' | 'mensual';
+    granularidad: 'diaria' | 'semanal' | 'mensual';
     camionIds?: number[];
     choferIds?: number[];
     desde?: string;
@@ -194,7 +194,7 @@ class ReportesService {
 
   async getOperacionCamion(filters: {
     camionId: number;
-    granularidad: 'diaria' | 'semanal';
+    granularidad: 'diaria' | 'semanal' | 'mensual';
     desde?: string;
     hasta?: string;
   }): Promise<OperacionCamionResponse> {

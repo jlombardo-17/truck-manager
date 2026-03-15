@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { Bar, Line } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import camionesService from '../services/camionesService';
@@ -67,6 +67,19 @@ const DEFAULT_RENTABILIDAD_EXPORT_COLUMNS: Record<RentabilidadExportColumnKey, b
   comisionChofer: true,
 };
 
+const OPERATION_COLORS = [
+  '#1F77B4',
+  '#2E8B57',
+  '#9B59B6',
+  '#FF7F0E',
+  '#17A2B8',
+  '#E83E8C',
+  '#6C757D',
+  '#20C997',
+  '#D63384',
+  '#FD7E14',
+];
+
 const Reportes: React.FC = () => {
   const today = useMemo(() => new Date(), []);
   const defaultDesdeDiario = useMemo(() => {
@@ -80,13 +93,15 @@ const Reportes: React.FC = () => {
 
   const [loadingRentabilidad, setLoadingRentabilidad] = useState(false);
   const [loadingComparativa, setLoadingComparativa] = useState(false);
+  const [loadingComparativaTimeline, setLoadingComparativaTimeline] = useState(false);
   const [loadingOperacion, setLoadingOperacion] = useState(false);
   const [loadingAdicionales, setLoadingAdicionales] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [reporte, setReporte] = useState<RentabilidadResponse | null>(null);
   const [comparativa, setComparativa] = useState<RentabilidadComparativaResponse | null>(null);
-  const [operacionCamion, setOperacionCamion] = useState<OperacionCamionResponse | null>(null);
+  const [comparativaTimeline, setComparativaTimeline] = useState<Record<number, RentabilidadResponse>>({});
+  const [operacionCamiones, setOperacionCamiones] = useState<Record<number, OperacionCamionResponse>>({});
   const [desempenoChoferes, setDesempenoChoferes] = useState<DesempenoChoferesResponse | null>(null);
   const [gastosMantenimiento, setGastosMantenimiento] = useState<GastosMantenimientoResponse | null>(null);
   const [ingresosMensuales, setIngresosMensuales] = useState<IngresosMensualesResponse | null>(null);
@@ -98,8 +113,12 @@ const Reportes: React.FC = () => {
   const [hasta, setHasta] = useState<string>(today.toISOString().split('T')[0]);
 
   const [compararPor, setCompararPor] = useState<'camion' | 'chofer'>('camion');
-  const [camionOperacionId, setCamionOperacionId] = useState<string>('');
-  const [granularidadOperacion, setGranularidadOperacion] = useState<'diaria' | 'semanal'>('diaria');
+  const [comparativaMetric, setComparativaMetric] = useState<'rentabilidad' | 'ingresos' | 'gastos' | 'gananciaNeta'>('rentabilidad');
+  const [comparativaGranularidad, setComparativaGranularidad] = useState<'diaria' | 'semanal' | 'mensual'>('diaria');
+  const [selectedComparativaEntityIds, setSelectedComparativaEntityIds] = useState<string[]>([]);
+  const [selectedOperacionCamionIds, setSelectedOperacionCamionIds] = useState<string[]>([]);
+  const [granularidadOperacion, setGranularidadOperacion] = useState<'diaria' | 'semanal' | 'mensual'>('diaria');
+  const [operacionSerieVista, setOperacionSerieVista] = useState<'ambos' | 'km' | 'toneladas'>('ambos');
   const [rentabilidadExportColumns, setRentabilidadExportColumns] = useState<Record<RentabilidadExportColumnKey, boolean>>(
     DEFAULT_RENTABILIDAD_EXPORT_COLUMNS,
   );
@@ -113,10 +132,7 @@ const Reportes: React.FC = () => {
         ]);
         setCamiones(camionesData);
         setChoferes(choferesData);
-
-        if (camionesData.length > 0) {
-          setCamionOperacionId(String(camionesData[0].id));
-        }
+        setSelectedOperacionCamionIds(camionesData.map((camion) => String(camion.id)));
       } catch (err) {
         console.error(err);
       }
@@ -134,8 +150,20 @@ const Reportes: React.FC = () => {
   }, [compararPor, desde, hasta]);
 
   useEffect(() => {
-    fetchOperacionCamion();
-  }, [camionOperacionId, granularidadOperacion, desde, hasta]);
+    const availableIds = new Set((comparativa?.comparativas || []).map((item) => String(item.id)));
+    setSelectedComparativaEntityIds((prev) => {
+      const stillAvailable = prev.filter((id) => availableIds.has(id));
+      return stillAvailable.length > 0 ? stillAvailable : Array.from(availableIds);
+    });
+  }, [comparativa, compararPor]);
+
+  useEffect(() => {
+    fetchComparativaTimeline();
+  }, [comparativa, compararPor, comparativaGranularidad, camionIds, choferIds, desde, hasta]);
+
+  useEffect(() => {
+    fetchOperacionCamiones();
+  }, [camiones, camionIds, granularidadOperacion, desde, hasta]);
 
   useEffect(() => {
     fetchReportesAdicionales();
@@ -178,23 +206,77 @@ const Reportes: React.FC = () => {
     }
   };
 
-  const fetchOperacionCamion = async () => {
-    if (!camionOperacionId) {
-      setOperacionCamion(null);
+  const fetchComparativaTimeline = async () => {
+    const entities = comparativa?.comparativas || [];
+    if (entities.length === 0) {
+      setComparativaTimeline({});
       return;
     }
 
     try {
-      setLoadingOperacion(true);
-      const data = await reportesService.getOperacionCamion({
-        camionId: Number(camionOperacionId),
-        granularidad: granularidadOperacion,
-        desde,
-        hasta,
-      });
-      setOperacionCamion(data);
+      setLoadingComparativaTimeline(true);
+      const results = await Promise.all(
+        entities.map(async (entity) => {
+          const data = await reportesService.getRentabilidad({
+            granularidad: comparativaGranularidad,
+            camionIds: compararPor === 'camion' ? [entity.id] : (camionIds.length ? camionIds.map((id) => Number(id)) : undefined),
+            choferIds: compararPor === 'chofer' ? [entity.id] : (choferIds.length ? choferIds.map((id) => Number(id)) : undefined),
+            desde,
+            hasta,
+          });
+          return [entity.id, data] as const;
+        }),
+      );
+
+      const nextTimeline: Record<number, RentabilidadResponse> = {};
+      for (const [entityId, data] of results) {
+        nextTimeline[entityId] = data;
+      }
+      setComparativaTimeline(nextTimeline);
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'No se pudo cargar la operación del camión');
+      setError(err?.response?.data?.message || 'No se pudo cargar la comparativa temporal');
+    } finally {
+      setLoadingComparativaTimeline(false);
+    }
+  };
+
+  const fetchOperacionCamiones = async () => {
+    if (camiones.length === 0) {
+      setOperacionCamiones({});
+      return;
+    }
+
+    const targetCamionIds = camionIds.length
+      ? camionIds.map((id) => Number(id))
+      : camiones.map((camion) => camion.id);
+
+    try {
+      setLoadingOperacion(true);
+      const results = await Promise.all(
+        targetCamionIds.map(async (camionId) => {
+          const data = await reportesService.getOperacionCamion({
+            camionId,
+            granularidad: granularidadOperacion,
+            desde,
+            hasta,
+          });
+          return [camionId, data] as const;
+        }),
+      );
+
+      const nextOperacionCamiones: Record<number, OperacionCamionResponse> = {};
+      for (const [camionId, data] of results) {
+        nextOperacionCamiones[camionId] = data;
+      }
+
+      setOperacionCamiones(nextOperacionCamiones);
+      setSelectedOperacionCamionIds((prev) => {
+        const availableIdSet = new Set(targetCamionIds.map((id) => String(id)));
+        const stillAvailable = prev.filter((id) => availableIdSet.has(id));
+        return stillAvailable.length > 0 ? stillAvailable : Array.from(availableIdSet);
+      });
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudo cargar la operación de los camiones');
     } finally {
       setLoadingOperacion(false);
     }
@@ -300,6 +382,12 @@ const Reportes: React.FC = () => {
   const readMultiSelectValues = (event: React.ChangeEvent<HTMLSelectElement>) =>
     Array.from(event.target.selectedOptions).map((option) => option.value);
 
+  const comparativaFilteredData = useMemo(() => {
+    const rows = comparativa?.comparativas || [];
+    const selectedIdSet = new Set(selectedComparativaEntityIds.map((id) => Number(id)));
+    return rows.filter((item) => selectedIdSet.has(item.id));
+  }, [comparativa, selectedComparativaEntityIds]);
+
   const exportRentabilidadCsv = () => {
     const rows = (reporte?.series || []).map((point) => buildRentabilidadRowBySelectedColumns(point));
 
@@ -311,30 +399,121 @@ const Reportes: React.FC = () => {
   };
 
   const exportComparativaCsv = () => {
-    const rows = (comparativa?.comparativas || []).map((item) => [
-      item.label,
-      item.ingresos.toFixed(2),
-      item.gastos.toFixed(2),
-      item.gananciaNeta.toFixed(2),
-    ]);
+    const selectedEntityIds = comparativaFilteredData.map((item) => item.id);
+    const allPeriods = new Set<string>();
+
+    for (const entityId of selectedEntityIds) {
+      const series = comparativaTimeline[entityId]?.series || [];
+      for (const point of series) {
+        allPeriods.add(point.periodo);
+      }
+    }
+
+    const sortedPeriods = Array.from(allPeriods).sort((a, b) => a.localeCompare(b));
+    const headers = ['Periodo', ...comparativaFilteredData.map((item) => item.label)];
+
+    const rows = sortedPeriods.map((period) => {
+      const firstPoint = (comparativaTimeline[selectedEntityIds[0]]?.series || []).find((point) => point.periodo === period);
+      const periodLabel = firstPoint?.etiqueta || period;
+      const row: Array<string | number> = [periodLabel];
+
+      for (const entity of comparativaFilteredData) {
+        const point = (comparativaTimeline[entity.id]?.series || []).find((item) => item.periodo === period);
+        const ingresos = point?.ingresos || 0;
+        const gastos = point?.gastos || 0;
+        const gananciaNeta = point?.gananciaNeta || 0;
+        const rentabilidad = ingresos > 0 ? (gananciaNeta / ingresos) * 100 : 0;
+
+        let value = rentabilidad;
+        if (comparativaMetric === 'ingresos') value = ingresos;
+        if (comparativaMetric === 'gastos') value = gastos;
+        if (comparativaMetric === 'gananciaNeta') value = gananciaNeta;
+
+        row.push(value.toFixed(2));
+      }
+
+      return row;
+    });
 
     downloadCsv(
-      `comparativa_${compararPor}_${desde}_${hasta}.csv`,
-      ['Entidad', 'Ingresos', 'Gastos', 'GananciaNeta'],
+      `comparativa_${compararPor}_${comparativaGranularidad}_${desde}_${hasta}.csv`,
+      headers,
       rows,
     );
   };
 
+  const operacionCamionesDisponibles = useMemo(() => {
+    const filteredIds = camionIds.length ? new Set(camionIds.map((id) => Number(id))) : null;
+    return camiones.filter((camion) => !filteredIds || filteredIds.has(camion.id));
+  }, [camiones, camionIds]);
+
+  const operacionCamionById = useMemo(() => {
+    const map = new Map<number, Camion>();
+    for (const camion of camiones) {
+      map.set(camion.id, camion);
+    }
+    return map;
+  }, [camiones]);
+
+  const selectedOperacionIdsNum = useMemo(
+    () => selectedOperacionCamionIds.map((id) => Number(id)).filter((id) => Number.isFinite(id)),
+    [selectedOperacionCamionIds],
+  );
+
+  const operacionSeriesPeriods = useMemo(() => {
+    const allPeriods = new Set<string>();
+    for (const camionId of selectedOperacionIdsNum) {
+      const series = operacionCamiones[camionId]?.series || [];
+      for (const item of series) {
+        allPeriods.add(item.periodo);
+      }
+    }
+    return Array.from(allPeriods).sort((a, b) => a.localeCompare(b));
+  }, [operacionCamiones, selectedOperacionIdsNum]);
+
+  const operacionLabelByPeriod = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const camionId of selectedOperacionIdsNum) {
+      const series = operacionCamiones[camionId]?.series || [];
+      for (const item of series) {
+        if (!map.has(item.periodo)) {
+          map.set(item.periodo, item.etiqueta);
+        }
+      }
+    }
+    return map;
+  }, [operacionCamiones, selectedOperacionIdsNum]);
+
   const exportOperacionCsv = () => {
-    const rows = (operacionCamion?.series || []).map((item) => [
-      item.etiqueta,
-      item.kms.toFixed(2),
-      item.toneladas.toFixed(2),
-    ]);
+    const headers = ['Periodo'];
+    const seriesByCamion = new Map<number, Map<string, { kms: number; toneladas: number }>>();
+
+    for (const camionId of selectedOperacionIdsNum) {
+      const camion = operacionCamionById.get(camionId);
+      const camionLabel = camion?.patente || `Camión ${camionId}`;
+      headers.push(`${camionLabel} (KM)`, `${camionLabel} (Ton)`);
+
+      const periodMap = new Map<string, { kms: number; toneladas: number }>();
+      const series = operacionCamiones[camionId]?.series || [];
+      for (const point of series) {
+        periodMap.set(point.periodo, { kms: point.kms, toneladas: point.toneladas });
+      }
+      seriesByCamion.set(camionId, periodMap);
+    }
+
+    const rows = operacionSeriesPeriods.map((period) => {
+      const row: Array<string | number> = [operacionLabelByPeriod.get(period) || period];
+      for (const camionId of selectedOperacionIdsNum) {
+        const value = seriesByCamion.get(camionId)?.get(period);
+        row.push(value ? value.kms.toFixed(2) : '0.00');
+        row.push(value ? value.toneladas.toFixed(2) : '0.00');
+      }
+      return row;
+    });
 
     downloadCsv(
-      `operacion_camion_${camionOperacionId || 'na'}_${desde}_${hasta}.csv`,
-      ['Periodo', 'Kms', 'Toneladas'],
+      `operacion_camiones_${granularidadOperacion}_${desde}_${hasta}.csv`,
+      headers,
       rows,
     );
   };
@@ -443,16 +622,28 @@ const Reportes: React.FC = () => {
     currentY = ((doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY || currentY) + 8;
 
     doc.setFontSize(11);
-    doc.text('Operacion de camion', 14, currentY);
+    doc.text('Operacion de camiones', 14, currentY);
+
+    const operationHead = ['Periodo'];
+    for (const camionId of selectedOperacionIdsNum) {
+      const camion = operacionCamionById.get(camionId);
+      const camionLabel = camion?.patente || `Camión ${camionId}`;
+      operationHead.push(`${camionLabel} KM`, `${camionLabel} Ton`);
+    }
+
+    const operationRows = operacionSeriesPeriods.map((period) => {
+      const row: string[] = [operacionLabelByPeriod.get(period) || period];
+      for (const camionId of selectedOperacionIdsNum) {
+        const point = (operacionCamiones[camionId]?.series || []).find((item) => item.periodo === period);
+        row.push((point?.kms || 0).toFixed(2), (point?.toneladas || 0).toFixed(2));
+      }
+      return row;
+    });
 
     autoTable(doc, {
       startY: currentY + 2,
-      head: [['Periodo', 'KM Recorridos', 'Toneladas']],
-      body: (operacionCamion?.series || []).map((item) => [
-        item.etiqueta,
-        item.kms.toFixed(2),
-        item.toneladas.toFixed(2),
-      ]),
+      head: [operationHead],
+      body: operationRows,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [255, 127, 14] },
     });
@@ -487,45 +678,178 @@ const Reportes: React.FC = () => {
     ],
   };
 
+  const comparativaPeriods = useMemo(() => {
+    const allPeriods = new Set<string>();
+    for (const entity of comparativaFilteredData) {
+      const series = comparativaTimeline[entity.id]?.series || [];
+      for (const point of series) {
+        allPeriods.add(point.periodo);
+      }
+    }
+    return Array.from(allPeriods).sort((a, b) => a.localeCompare(b));
+  }, [comparativaFilteredData, comparativaTimeline]);
+
+  const comparativaLabelByPeriod = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entity of comparativaFilteredData) {
+      const series = comparativaTimeline[entity.id]?.series || [];
+      for (const point of series) {
+        if (!map.has(point.periodo)) {
+          map.set(point.periodo, point.etiqueta);
+        }
+      }
+    }
+    return map;
+  }, [comparativaFilteredData, comparativaTimeline]);
+
   const comparativaChartData = {
-    labels: comparativa?.comparativas.map((item) => item.label) || [],
-    datasets: [
-      {
-        label: 'Ingresos',
-        data: comparativa?.comparativas.map((item) => item.ingresos) || [],
-        backgroundColor: 'rgba(46, 139, 87, 0.7)',
+    labels: comparativaPeriods.map((period) => comparativaLabelByPeriod.get(period) || period),
+    datasets: comparativaFilteredData.map((entity, index) => {
+      const color = OPERATION_COLORS[index % OPERATION_COLORS.length];
+      const series = comparativaTimeline[entity.id]?.series || [];
+      const byPeriod = new Map(series.map((point) => [point.periodo, point]));
+
+      return {
+        label: entity.label,
+        data: comparativaPeriods.map((period) => {
+          const point = byPeriod.get(period);
+          if (!point) return 0;
+
+          if (comparativaMetric === 'ingresos') return point.ingresos;
+          if (comparativaMetric === 'gastos') return point.gastos;
+          if (comparativaMetric === 'gananciaNeta') return point.gananciaNeta;
+
+          return point.ingresos > 0 ? (point.gananciaNeta / point.ingresos) * 100 : 0;
+        }),
+        borderColor: color,
+        backgroundColor: `${color}33`,
+        tension: 0.25,
+      };
+    }),
+  };
+
+  const comparativaChartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        labels: {
+          boxWidth: 24,
+          boxHeight: 10,
+        },
       },
-      {
-        label: 'Gastos',
-        data: comparativa?.comparativas.map((item) => item.gastos) || [],
-        backgroundColor: 'rgba(192, 57, 43, 0.7)',
+    },
+    scales: {
+      x: {
+        ticks: {
+          maxRotation: 24,
+          minRotation: 0,
+        },
       },
-      {
-        label: 'Ganancia Neta',
-        data: comparativa?.comparativas.map((item) => item.gananciaNeta) || [],
-        backgroundColor: 'rgba(155, 89, 182, 0.7)',
+      y: {
+        title: {
+          display: true,
+          text:
+            comparativaMetric === 'rentabilidad'
+              ? 'Rentabilidad %'
+              : comparativaMetric === 'ingresos'
+                ? 'Ingresos'
+                : comparativaMetric === 'gastos'
+                  ? 'Gastos'
+                  : 'Ganancia Neta',
+        },
       },
-    ],
+    },
   };
 
   const operacionChartData = {
-    labels: operacionCamion?.series.map((item) => item.etiqueta) || [],
-    datasets: [
-      {
-        label: 'KM Recorridos',
-        data: operacionCamion?.series.map((item) => item.kms) || [],
-        borderColor: '#1F77B4',
-        backgroundColor: 'rgba(31, 119, 180, 0.15)',
-        tension: 0.25,
+    labels: operacionSeriesPeriods.map((period) => operacionLabelByPeriod.get(period) || period),
+    datasets: selectedOperacionIdsNum.flatMap((camionId, index) => {
+      const series = operacionCamiones[camionId]?.series || [];
+      const byPeriod = new Map(series.map((point) => [point.periodo, point]));
+      const camion = operacionCamionById.get(camionId);
+      const camionLabel = camion?.patente || `Camión ${camionId}`;
+      const color = OPERATION_COLORS[index % OPERATION_COLORS.length];
+
+      const datasets: Array<{
+        label: string;
+        data: number[];
+        borderColor: string;
+        backgroundColor: string;
+        tension: number;
+        yAxisID: 'y' | 'y1';
+        borderDash?: number[];
+      }> = [];
+
+      if (operacionSerieVista === 'ambos' || operacionSerieVista === 'km') {
+        datasets.push({
+          label: `${camionLabel} - KM`,
+          data: operacionSeriesPeriods.map((period) => byPeriod.get(period)?.kms || 0),
+          borderColor: color,
+          backgroundColor: `${color}33`,
+          tension: 0.25,
+          yAxisID: 'y',
+        });
+      }
+
+      if (operacionSerieVista === 'ambos' || operacionSerieVista === 'toneladas') {
+        datasets.push({
+          label: `${camionLabel} - Ton`,
+          data: operacionSeriesPeriods.map((period) => byPeriod.get(period)?.toneladas || 0),
+          borderColor: color,
+          backgroundColor: `${color}26`,
+          borderDash: [7, 5],
+          tension: 0.25,
+          yAxisID: 'y1',
+        });
+      }
+
+      return datasets;
+    }),
+  };
+
+  const operacionChartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    scales: {
+      y: {
+        type: 'linear' as const,
+        position: 'left' as const,
+        title: {
+          display: true,
+          text: 'KM',
+        },
       },
-      {
-        label: 'Toneladas Transportadas',
-        data: operacionCamion?.series.map((item) => item.toneladas) || [],
-        borderColor: '#FF7F0E',
-        backgroundColor: 'rgba(255, 127, 14, 0.15)',
-        tension: 0.25,
+      y1: {
+        type: 'linear' as const,
+        position: 'right' as const,
+        grid: {
+          drawOnChartArea: false,
+        },
+        title: {
+          display: true,
+          text: 'Toneladas',
+        },
       },
-    ],
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        labels: {
+          boxWidth: 28,
+          boxHeight: 12,
+        },
+      },
+    },
   };
 
   return (
@@ -650,7 +974,11 @@ const Reportes: React.FC = () => {
         <button
           className="btn-rapido btn-rapido--accent"
           onClick={exportReportePdf}
-          disabled={!reporte?.series.length && !comparativa?.comparativas.length && !operacionCamion?.series.length}
+          disabled={
+            !reporte?.series.length &&
+            !comparativa?.comparativas.length &&
+            operacionSeriesPeriods.length === 0
+          }
         >
           Exportar PDF
         </button>
@@ -674,7 +1002,7 @@ const Reportes: React.FC = () => {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="reportes-container">
+      <div className="chart-container">
         <div className="section-header-inline">
           <h3>Ingresos vs Gastos por Período</h3>
           <button className="btn-rapido btn-rapido--accent" onClick={exportRentabilidadCsv} disabled={!reporte?.series.length}>
@@ -686,8 +1014,8 @@ const Reportes: React.FC = () => {
 
       <div className="chart-container">
         <div className="section-header-inline">
-          <h3>Comparativa de Rentabilidad</h3>
-          <div className="inline-controls">
+          <h3>Comparativa de Rentabilidad (Timeline)</h3>
+          <div className="inline-controls inline-controls-compact">
             <div className="filtro-item small-inline">
               <label>Comparar por</label>
               <select value={compararPor} onChange={(e) => setCompararPor(e.target.value as 'camion' | 'chofer')}>
@@ -695,44 +1023,134 @@ const Reportes: React.FC = () => {
                 <option value="chofer">Chofer</option>
               </select>
             </div>
-            <button className="btn-rapido btn-rapido--accent" onClick={exportComparativaCsv} disabled={!comparativa?.comparativas.length}>
+            <div className="filtro-item small-inline">
+              <label>Agrupar por</label>
+              <select
+                value={comparativaGranularidad}
+                onChange={(e) => setComparativaGranularidad(e.target.value as 'diaria' | 'semanal' | 'mensual')}
+              >
+                <option value="diaria">Día</option>
+                <option value="semanal">Semana</option>
+                <option value="mensual">Mes</option>
+              </select>
+            </div>
+            <div className="filtro-item small-inline">
+              <label>Métrica</label>
+              <select
+                value={comparativaMetric}
+                onChange={(e) => setComparativaMetric(e.target.value as 'rentabilidad' | 'ingresos' | 'gastos' | 'gananciaNeta')}
+              >
+                <option value="rentabilidad">Rentabilidad %</option>
+                <option value="ingresos">Ingresos</option>
+                <option value="gastos">Gastos</option>
+                <option value="gananciaNeta">Ganancia Neta</option>
+              </select>
+            </div>
+            <div className="filtro-item small-inline">
+              <label>{compararPor === 'camion' ? 'Camiones' : 'Choferes'} en gráfica</label>
+              <select
+                multiple
+                className="multi-select multi-select-compact"
+                value={selectedComparativaEntityIds}
+                onChange={(e) => setSelectedComparativaEntityIds(readMultiSelectValues(e))}
+              >
+                {(comparativa?.comparativas || []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button className="btn-rapido btn-rapido--accent" onClick={exportComparativaCsv} disabled={comparativaPeriods.length === 0}>
               Exportar CSV
             </button>
           </div>
         </div>
-        {loadingComparativa ? <p>Cargando comparativa...</p> : <Bar data={comparativaChartData} />}
+        <div className="operation-selection-actions">
+          <button
+            className="btn-rapido btn-rapido--ghost"
+            onClick={() => setSelectedComparativaEntityIds((comparativa?.comparativas || []).map((item) => String(item.id)))}
+          >
+            Mostrar todos
+          </button>
+          <button
+            className="btn-rapido btn-rapido--ghost"
+            onClick={() => setSelectedComparativaEntityIds([])}
+          >
+            Limpiar selección
+          </button>
+        </div>
+        {loadingComparativa || loadingComparativaTimeline ? <p>Cargando comparativa...</p> : <Line data={comparativaChartData} options={comparativaChartOptions} />}
       </div>
 
       <div className="chart-container">
         <div className="section-header-inline">
-          <h3>Operación de Camión (KM + Toneladas)</h3>
+          <h3>Operación de Camiones (KM + Toneladas)</h3>
           <div className="inline-controls">
             <div className="filtro-item small-inline">
-              <label>Camión</label>
-              <select value={camionOperacionId} onChange={(e) => setCamionOperacionId(e.target.value)}>
-                {camiones.map((camion) => (
+              <label>Agrupar por</label>
+              <select
+                value={granularidadOperacion}
+                onChange={(e) => setGranularidadOperacion(e.target.value as 'diaria' | 'semanal' | 'mensual')}
+              >
+                <option value="diaria">Día</option>
+                <option value="semanal">Semana</option>
+                <option value="mensual">Mes</option>
+              </select>
+            </div>
+            <div className="filtro-item small-inline">
+              <label>Series visibles</label>
+              <select
+                value={operacionSerieVista}
+                onChange={(e) => setOperacionSerieVista(e.target.value as 'ambos' | 'km' | 'toneladas')}
+              >
+                <option value="ambos">KM + Ton</option>
+                <option value="km">Solo KM</option>
+                <option value="toneladas">Solo Toneladas</option>
+              </select>
+            </div>
+            <div className="filtro-item small-inline">
+              <label>Camiones en gráfica</label>
+              <select
+                multiple
+                className="multi-select multi-select-compact"
+                value={selectedOperacionCamionIds}
+                onChange={(e) => setSelectedOperacionCamionIds(readMultiSelectValues(e))}
+              >
+                {operacionCamionesDisponibles.map((camion) => (
                   <option key={camion.id} value={camion.id}>
                     {camion.patente} - {camion.marca}
                   </option>
                 ))}
               </select>
             </div>
-            <div className="filtro-item small-inline">
-              <label>Vista</label>
-              <select value={granularidadOperacion} onChange={(e) => setGranularidadOperacion(e.target.value as 'diaria' | 'semanal')}>
-                <option value="diaria">Diaria</option>
-                <option value="semanal">Semanal</option>
-              </select>
-            </div>
-            <button className="btn-rapido btn-rapido--accent" onClick={exportOperacionCsv} disabled={!operacionCamion?.series.length}>
+            <button className="btn-rapido btn-rapido--accent" onClick={exportOperacionCsv} disabled={operacionSeriesPeriods.length === 0}>
               Exportar CSV
             </button>
           </div>
         </div>
-        {loadingOperacion ? <p>Cargando operación...</p> : <Line data={operacionChartData} />}
+        <div className="operation-selection-actions">
+          <button
+            className="btn-rapido btn-rapido--ghost"
+            onClick={() => setSelectedOperacionCamionIds(operacionCamionesDisponibles.map((camion) => String(camion.id)))}
+          >
+            Mostrar todos
+          </button>
+          <button
+            className="btn-rapido btn-rapido--ghost"
+            onClick={() => setSelectedOperacionCamionIds([])}
+          >
+            Limpiar selección
+          </button>
+        </div>
+        {loadingOperacion ? <p>Cargando operación...</p> : <Line data={operacionChartData} options={operacionChartOptions} />}
         <div className="operacion-resumen">
-          <span>Total KM: {Number(operacionCamion?.resumen.totalKms || 0).toFixed(2)}</span>
-          <span>Total Toneladas: {Number(operacionCamion?.resumen.totalToneladas || 0).toFixed(2)}</span>
+          <span>
+            Total KM: {selectedOperacionIdsNum.reduce((acc, camionId) => acc + Number(operacionCamiones[camionId]?.resumen.totalKms || 0), 0).toFixed(2)}
+          </span>
+          <span>
+            Total Toneladas: {selectedOperacionIdsNum.reduce((acc, camionId) => acc + Number(operacionCamiones[camionId]?.resumen.totalToneladas || 0), 0).toFixed(2)}
+          </span>
         </div>
       </div>
 
