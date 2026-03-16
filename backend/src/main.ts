@@ -30,6 +30,7 @@ async function bootstrap() {
 
   const port = process.env.API_PORT || 3000;
 
+  // Seed user en desarrollo (siempre)
   if (process.env.NODE_ENV !== 'production') {
     const usersService = app.get(UsersService);
     const seededUser = await usersService.ensureDevUser({
@@ -41,6 +42,20 @@ async function bootstrap() {
     });
 
     console.log(`[seed] Development user ready: ${seededUser.email}`);
+  }
+
+  // Seed usuario admin en producción si se proveen las variables ADMIN_EMAIL y ADMIN_PASSWORD
+  // Útil para el primer deploy: luego de crear el usuario se pueden quitar las variables.
+  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+    const usersService = app.get(UsersService);
+    const seededAdmin = await usersService.ensureDevUser({
+      email: process.env.ADMIN_EMAIL,
+      password: process.env.ADMIN_PASSWORD,
+      firstName: process.env.ADMIN_FIRST_NAME || 'Admin',
+      lastName: process.env.ADMIN_LAST_NAME || 'TruckManager',
+      role: 'admin',
+    });
+    console.log(`[seed] Admin user ready: ${seededAdmin.email}`);
   }
 
   await app.listen(port);

@@ -21,9 +21,9 @@ dist/
 build/
 .next/
 
-# Dependencies
-package-lock.json
-yarn.lock
+# Lock files — NO ignorar, son necesarios para builds reproducibles (npm ci en Docker)
+# package-lock.json
+# yarn.lock
 
 # Testing
 coverage/

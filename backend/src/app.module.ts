@@ -24,7 +24,10 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_DATABASE || 'truck_manager',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: process.env.NODE_ENV !== 'production',
+      // synchronize: true crea las tablas automáticamente.
+      // En producción: falso por defecto, pero se puede activar con DB_SYNC=true
+      // SÓLO para el primer deploy (crear tablas). Luego volver a false.
+      synchronize: process.env.DB_SYNC === 'true' || process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
     }),
     AuthModule,
