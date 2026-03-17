@@ -1,0 +1,585 @@
+/* ─── ConfiguracionVehicularTab.css ──────────────────────────────────────── */
+
+.cv-loading,
+.cv-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.cv-empty p {
+  margin-bottom: 1rem;
+}
+
+.cv-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* ── Vista horizontal del tren de vehículos ─────────────────────────────── */
+
+.cv-vista-horizontal {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  overflow-x: auto;
+  padding: 1rem 0 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.cv-conector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #9ca3af;
+  padding: 0 0.25rem;
+  flex-shrink: 0;
+  padding-bottom: 2.8rem; /* alinear con zona de ejes */
+  user-select: none;
+}
+
+/* ── Bloque de sección ──────────────────────────────────────────────────── */
+
+.cv-seccion-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: 280px;
+  flex: 1 1 220px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.cv-seccion-block:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cv-seccion-cabeza {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #f9fafb 100%);
+}
+
+.cv-seccion-trailer {
+  border-color: #6b7280;
+  background: linear-gradient(135deg, #f3f4f6 0%, #f9fafb 100%);
+}
+
+.cv-seccion-tipo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.cv-seccion-icono {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.cv-seccion-nombre {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #374151;
+}
+
+/* Diagrama SVG de ejes */
+.cv-diagrama-wrap {
+  padding: 0.5rem 0.5rem 0;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.cv-diagrama-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Dimensiones */
+.cv-dimensiones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cv-dimensiones span {
+  font-size: 0.75rem;
+  color: #6b7280;
+  background: #e5e7eb;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+
+/* Pesos */
+.cv-pesos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0.75rem;
+}
+
+.cv-peso-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.cv-peso-label {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.cv-peso-valor {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cv-capacidad {
+  color: #059669;
+}
+
+/* Barra vacío/carga */
+.cv-barra-wrap {
+  display: flex;
+  height: 6px;
+  margin: 0.3rem 0.75rem 0.1rem;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.cv-barra-vacio {
+  background: #6b7280;
+  transition: width 0.4s ease;
+}
+
+.cv-barra-carga {
+  background: #10b981;
+  transition: width 0.4s ease;
+}
+
+/* Ejes (legacy – kept for safe removal) */
+.cv-ejes { display: none; }
+.cv-eje { display: none; }
+.cv-rueda { display: none; }
+.cv-ejes-label { display: none; }
+
+/* ── Barra de totales ─────────────────────────────────────────────────────── */
+
+.cv-totales-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.cv-totales-bar--edit {
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.cv-totales-bar--edit span {
+  color: #374151;
+  white-space: nowrap;
+}
+
+.cv-total-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cv-total-label {
+  font-size: 0.72rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cv-total-valor {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.cv-total-cap {
+  color: #059669;
+}
+
+.cv-total-pbv .cv-total-valor {
+  color: #1d4ed8;
+}
+
+/* ── Distribución por sección ─────────────────────────────────────────────── */
+
+.cv-distribucion {
+  margin-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.cv-dist-titulo {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cv-dist-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.cv-dist-label {
+  font-size: 0.8rem;
+  color: #374151;
+  min-width: 110px;
+  white-space: nowrap;
+}
+
+.cv-dist-barra-wrap {
+  flex: 1;
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.cv-dist-nums {
+  font-size: 0.75rem;
+  color: #6b7280;
+  white-space: nowrap;
+  min-width: 120px;
+  text-align: right;
+}
+
+/* ── Vista: cabecera con acciones ─────────────────────────────────────────── */
+
+.cv-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.cv-titulo-combinacion {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem;
+}
+
+.cv-notas-text {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.cv-view-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ── Botones ──────────────────────────────────────────────────────────────── */
+
+.cv-btn-add,
+.cv-btn-save {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.cv-btn-add:hover,
+.cv-btn-save:hover {
+  background: #1d4ed8;
+}
+
+.cv-btn-save:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+.cv-btn-edit {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.cv-btn-edit:hover {
+  background: #e5e7eb;
+}
+
+.cv-btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cv-btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.cv-btn-delete {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.cv-btn-delete:hover {
+  background: #fecaca;
+}
+
+/* ── Formulario de edición ────────────────────────────────────────────────── */
+
+.cv-edit-container {
+  padding: 0.25rem 0;
+}
+
+.cv-edit-header h3 {
+  font-size: 1rem;
+  color: #1f2937;
+  margin: 0 0 1rem;
+}
+
+.cv-combo-selector {
+  margin-bottom: 1.25rem;
+}
+
+.cv-combo-selector > label {
+  display: block;
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cv-combo-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cv-combo-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: #374151;
+  transition: all 0.15s;
+}
+
+.cv-combo-btn:hover {
+  background: #e5e7eb;
+}
+
+.cv-combo-btn.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  font-weight: 600;
+}
+
+.cv-preview-label {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+/* Secciones forms grid */
+.cv-secciones-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cv-seccion-form-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.9rem;
+  background: #f9fafb;
+}
+
+.cv-seccion-form-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.cv-tipo-select {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.cv-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.cv-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cv-form-field label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cv-field-unit {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.cv-form-field input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  color: #374151;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cv-form-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.cv-notas-field {
+  margin-bottom: 1rem;
+  grid-column: 1 / -1;
+}
+
+.cv-notas-field textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  color: #374151;
+  background: #fff;
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.cv-notas-field textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.cv-edit-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.required {
+  color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .cv-vista-horizontal {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cv-conector {
+    transform: rotate(90deg);
+    padding: 0;
+    margin: 0.25rem auto;
+  }
+
+  .cv-seccion-block {
+    max-width: 100%;
+    flex: unset;
+  }
+
+  .cv-totales-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cv-dist-row {
+    flex-wrap: wrap;
+  }
+
+  .cv-dist-nums {
+    min-width: unset;
+    text-align: left;
+  }
+}

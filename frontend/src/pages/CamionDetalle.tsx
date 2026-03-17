@@ -13,6 +13,7 @@ import { RepostadaModal } from '../components/RepostadaModal';
 import { MantenimientoTab } from '../components/MantenimientoTab';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import BackButton from '../components/BackButton';
+import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
 import '../styles/CamionDetalle.css';
 
 const CamionDetalle: React.FC = () => {
@@ -33,6 +34,9 @@ const CamionDetalle: React.FC = () => {
   const [showRepostadaModal, setShowRepostadaModal] = useState(false);
   const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
   const [viewingDocumento, setViewingDocumento] = useState<Documento | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleSection = (key: string) =>
+    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     loadData();
@@ -165,71 +169,122 @@ const CamionDetalle: React.FC = () => {
 
       {/* Información General */}
       <section className="info-section">
-        <h2>📋 Información General</h2>
-        <div className="info-grid">
-          <div className="info-item">
-            <label>Patente</label>
-            <span>{camion.patente}</span>
-          </div>
-          <div className="info-item">
-            <label>Marca</label>
-            <span>{camion.marca}</span>
-          </div>
-          <div className="info-item">
-            <label>Modelo</label>
-            <span>{camion.modelo}</span>
-          </div>
-          <div className="info-item">
-            <label>Año</label>
-            <span>{camion.anio}</span>
-          </div>
-          <div className="info-item">
-            <label>Estado</label>
-            <span className="estado-badge">{camion.estado}</span>
-          </div>
-          <div className="info-item">
-            <label>Odómetro (km)</label>
-            <span>{Number(camion.odometroKm).toLocaleString('es-AR')}</span>
+        <div className="section-header">
+          <div className="section-title-toggle" onClick={() => toggleSection('info')}>
+            <span className={`section-chevron${collapsed['info'] ? ' is-collapsed' : ''}`}>▼</span>
+            <h2>📋 Información General</h2>
           </div>
         </div>
+        {collapsed['info'] ? (
+          <div className="section-summary-line">
+            <span className="summary-badge">{camion.estado}</span>
+            <span className="summary-sep">·</span>
+            <span>Año {camion.anio}</span>
+            <span className="summary-sep">·</span>
+            <span>📍 {Number(camion.odometroKm).toLocaleString('es-AR')} km</span>
+          </div>
+        ) : (
+          <div className="info-grid">
+            <div className="info-item">
+              <label>Patente</label>
+              <span>{camion.patente}</span>
+            </div>
+            <div className="info-item">
+              <label>Marca</label>
+              <span>{camion.marca}</span>
+            </div>
+            <div className="info-item">
+              <label>Modelo</label>
+              <span>{camion.modelo}</span>
+            </div>
+            <div className="info-item">
+              <label>Año</label>
+              <span>{camion.anio}</span>
+            </div>
+            <div className="info-item">
+              <label>Estado</label>
+              <span className="estado-badge">{camion.estado}</span>
+            </div>
+            <div className="info-item">
+              <label>Odómetro (km)</label>
+              <span>{Number(camion.odometroKm).toLocaleString('es-AR')}</span>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Configuración vehicular */}
+      <section className="info-section">
+        <div className="section-header">
+          <div className="section-title-toggle" onClick={() => toggleSection('config-vehicular')}>
+            <span className={`section-chevron${collapsed['config-vehicular'] ? ' is-collapsed' : ''}`}>▼</span>
+            <h2>🚛 Configuración Vehicular</h2>
+          </div>
+        </div>
+        {collapsed['config-vehicular'] ? (
+          <div className="section-summary-line">
+            <span className="summary-empty">Sección contraída — click para expandir</span>
+          </div>
+        ) : (
+          <ConfiguracionVehicularTab camionId={camionId} />
+        )}
       </section>
 
       {/* Último Servicio */}
       {ultimoServicio && (
         <section className="info-section highlight">
-          <h2>🔧 Último Servicio</h2>
-          <div className="info-grid">
-            <div className="info-item">
-              <label>Fecha</label>
-              <span>{new Date(ultimoServicio.fechaServicio).toLocaleDateString('es-AR')}</span>
+          <div className="section-header">
+            <div className="section-title-toggle" onClick={() => toggleSection('ultimo-servicio')}>
+              <span className={`section-chevron${collapsed['ultimo-servicio'] ? ' is-collapsed' : ''}`}>▼</span>
+              <h2>🔧 Último Servicio</h2>
             </div>
-            <div className="info-item">
-              <label>Tipos de Servicio</label>
-              <span className="servicio-tags">
-                {ultimoServicio.tipos.map((tipo) => (
-                  <span key={tipo} className="tag">
-                    {TipoServicioLabels[tipo]}
-                  </span>
-                ))}
-              </span>
-            </div>
-            {ultimoServicio.kilometraje && (
-              <div className="info-item">
-                <label>Kilometraje</label>
-                <span>{ultimoServicio.kilometraje.toLocaleString('es-AR')} km</span>
-              </div>
-            )}
-            {ultimoServicio.costo && (
-              <div className="info-item">
-                <label>Costo</label>
-                <span>${Number(ultimoServicio.costo).toLocaleString('es-AR')}</span>
-              </div>
-            )}
           </div>
-          {ultimoServicio.descripcion && (
-            <div className="descripcion-box">
-              <p>{ultimoServicio.descripcion}</p>
+          {collapsed['ultimo-servicio'] ? (
+            <div className="section-summary-line">
+              <span>{new Date(ultimoServicio.fechaServicio).toLocaleDateString('es-AR')}</span>
+              <span className="summary-sep">·</span>
+              {ultimoServicio.tipos.slice(0, 2).map((t) => (
+                <span key={t} className="summary-tag">{TipoServicioLabels[t]}</span>
+              ))}
+              {ultimoServicio.tipos.length > 2 && <span className="summary-more">+{ultimoServicio.tipos.length - 2}</span>}
+              {ultimoServicio.kilometraje && (<><span className="summary-sep">·</span><span>📍 {ultimoServicio.kilometraje.toLocaleString('es-AR')} km</span></>)}
             </div>
+          ) : (
+            <>
+              <div className="info-grid">
+                <div className="info-item">
+                  <label>Fecha</label>
+                  <span>{new Date(ultimoServicio.fechaServicio).toLocaleDateString('es-AR')}</span>
+                </div>
+                <div className="info-item">
+                  <label>Tipos de Servicio</label>
+                  <span className="servicio-tags">
+                    {ultimoServicio.tipos.map((tipo) => (
+                      <span key={tipo} className="tag">
+                        {TipoServicioLabels[tipo]}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+                {ultimoServicio.kilometraje && (
+                  <div className="info-item">
+                    <label>Kilometraje</label>
+                    <span>{ultimoServicio.kilometraje.toLocaleString('es-AR')} km</span>
+                  </div>
+                )}
+                {ultimoServicio.costo && (
+                  <div className="info-item">
+                    <label>Costo</label>
+                    <span>${Number(ultimoServicio.costo).toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+              </div>
+              {ultimoServicio.descripcion && (
+                <div className="descripcion-box">
+                  <p>{ultimoServicio.descripcion}</p>
+                </div>
+              )}
+            </>
           )}
         </section>
       )}
@@ -237,51 +292,75 @@ const CamionDetalle: React.FC = () => {
       {/* Historial de Servicios */}
       <section className="info-section">
         <div className="section-header">
-          <h2>🛠️ Historial de Servicios</h2>
+          <div className="section-title-toggle" onClick={() => toggleSection('servicios')}>
+            <span className={`section-chevron${collapsed['servicios'] ? ' is-collapsed' : ''}`}>▼</span>
+            <h2>🛠️ Historial de Servicios {servicios.length > 0 && <span className="section-count">{servicios.length}</span>}</h2>
+          </div>
           <button type="button" onClick={() => setShowServicioModal(true)} className="add-button">
             + Agregar Servicio
           </button>
         </div>
 
-        {servicios.length === 0 ? (
-          <div className="empty-message">No hay servicios registrados</div>
+        {collapsed['servicios'] ? (
+          servicios.length === 0 ? (
+            <div className="section-summary-line"><span className="summary-empty">Sin servicios registrados</span></div>
+          ) : (
+            <div className="section-summary-line">
+              <span>Último: {new Date(servicios[0].fechaServicio).toLocaleDateString('es-AR')}</span>
+              <span className="summary-sep">·</span>
+              {servicios[0].tipos.slice(0, 2).map((t) => (
+                <span key={t} className="summary-tag">{TipoServicioLabels[t]}</span>
+              ))}
+              {servicios[0].tipos.length > 2 && <span className="summary-more">+{servicios[0].tipos.length - 2}</span>}
+              {servicios[0].kilometraje && (<><span className="summary-sep">·</span><span>📍 {servicios[0].kilometraje.toLocaleString('es-AR')} km</span></>)}
+            </div>
+          )
         ) : (
-          <div className="servicios-list">
-            {servicios.map((servicio) => (
-              <div key={servicio.id} className="servicio-item">
-                <div className="servicio-header">
-                  <span className="fecha">{new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteServicio(servicio.id)}
-                    className="delete-btn"
-                    title="Eliminar"
-                  >
-                    🗑️
-                  </button>
-                </div>
-                <div className="servicio-tipos">
-                  {servicio.tipos.map((tipo) => (
-                    <span key={tipo} className="tag">
-                      {TipoServicioLabels[tipo]}
-                    </span>
-                  ))}
-                </div>
-                {servicio.descripcion && <p className="descripcion">{servicio.descripcion}</p>}
-                <div className="servicio-footer">
-                  {servicio.kilometraje && <span className="km">km: {servicio.kilometraje.toLocaleString('es-AR')}</span>}
-                  {servicio.costo && <span className="costo">${Number(servicio.costo).toLocaleString('es-AR')}</span>}
-                </div>
+          <>
+            {servicios.length === 0 ? (
+              <div className="empty-message">No hay servicios registrados</div>
+            ) : (
+              <div className="servicios-list">
+                {servicios.map((servicio) => (
+                  <div key={servicio.id} className="servicio-item">
+                    <div className="servicio-header">
+                      <span className="fecha">{new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteServicio(servicio.id)}
+                        className="delete-btn"
+                        title="Eliminar"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                    <div className="servicio-tipos">
+                      {servicio.tipos.map((tipo) => (
+                        <span key={tipo} className="tag">
+                          {TipoServicioLabels[tipo]}
+                        </span>
+                      ))}
+                    </div>
+                    {servicio.descripcion && <p className="descripcion">{servicio.descripcion}</p>}
+                    <div className="servicio-footer">
+                      {servicio.kilometraje && <span className="km">km: {servicio.kilometraje.toLocaleString('es-AR')}</span>}
+                      {servicio.costo && <span className="costo">${Number(servicio.costo).toLocaleString('es-AR')}</span>}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </section>
 
       {/* Documentación */}
       <section className="info-section">
         <div className="section-header">
-          <h2>📄 Documentación</h2>
+          <div className="section-title-toggle" onClick={() => toggleSection('docs')}>
+            <span className={`section-chevron${collapsed['docs'] ? ' is-collapsed' : ''}`}>▼</span>
+            <h2>📄 Documentación {documentos.length > 0 && <span className="section-count">{documentos.length}</span>}</h2>
+          </div>
           <button
             type="button"
             onClick={() => { setEditingDocumento(null); setShowDocumentoModal(true); }}
@@ -291,6 +370,20 @@ const CamionDetalle: React.FC = () => {
           </button>
         </div>
 
+        {collapsed['docs'] ? (
+          <div className="section-summary-line">
+            {documentos.length === 0 ? (
+              <span className="summary-empty">Sin documentos registrados</span>
+            ) : (
+              <>
+                <span>{documentos.length} documento{documentos.length !== 1 ? 's' : ''}</span>
+                {documentosVencidos.length > 0 && (<><span className="summary-sep">·</span><span className="summary-alert-vencido">✕ {documentosVencidos.length} vencido{documentosVencidos.length !== 1 ? 's' : ''}</span></>)}
+                {documentosProximos.length > 0 && (<><span className="summary-sep">·</span><span className="summary-alert-proximo">⚠ {documentosProximos.length} próximo{documentosProximos.length !== 1 ? 's' : ''} a vencer</span></>)}
+              </>
+            )}
+          </div>
+        ) : (
+          <>
         {(documentosVencidos.length > 0 || documentosProximos.length > 0) && (
           <div className="docs-alert-strip">
             {documentosVencidos.length > 0 && (
@@ -383,17 +476,37 @@ const CamionDetalle: React.FC = () => {
               })}
           </div>
         )}
+          </>
+        )}
       </section>
 
       {/* Historial de Repostadas */}
       <section className="info-section">
         <div className="section-header">
-          <h2>⛽ Historial de Repostadas</h2>
+          <div className="section-title-toggle" onClick={() => toggleSection('repostadas')}>
+            <span className={`section-chevron${collapsed['repostadas'] ? ' is-collapsed' : ''}`}>▼</span>
+            <h2>⛽ Historial de Repostadas {repostadas.length > 0 && <span className="section-count">{repostadas.length}</span>}</h2>
+          </div>
           <button type="button" onClick={() => setShowRepostadaModal(true)} className="add-button">
             + Agregar Repostada
           </button>
         </div>
 
+        {collapsed['repostadas'] ? (
+          <div className="section-summary-line">
+            {repostadas.length === 0 ? (
+              <span className="summary-empty">Sin repostadas registradas</span>
+            ) : (
+              <>
+                <span>{repostadas.length} repostadas</span>
+                {estadisticas && estadisticas.totalKm > 0 && (<><span className="summary-sep">·</span><span>📍 {Number(estadisticas.totalKm).toLocaleString('es-AR')} km total</span></>)}
+                {estadisticas && estadisticas.consumoPromedio > 0 && (<><span className="summary-sep">·</span><span>⛽ {Number(estadisticas.consumoPromedio).toFixed(2)} km/L</span></>)}
+                {estadisticas && estadisticas.totalCosto > 0 && (<><span className="summary-sep">·</span><span>💰 ${Number(estadisticas.totalCosto).toLocaleString('es-AR')}</span></>)}
+              </>
+            )}
+          </div>
+        ) : (
+          <>
         {estadisticas && estadisticas.totalRepostadas > 0 && (
           <div className="stats-grid">
             <div className="stat-card">
@@ -467,12 +580,25 @@ const CamionDetalle: React.FC = () => {
             ))}
           </div>
         )}
+          </>
+        )}
       </section>
 
       {/* Mantenimiento */}
       <section className="info-section">
-        <h2>🔧 Gestión de Mantenimiento</h2>
-        <MantenimientoTab camionId={camionId} />
+        <div className="section-header">
+          <div className="section-title-toggle" onClick={() => toggleSection('mantenimiento')}>
+            <span className={`section-chevron${collapsed['mantenimiento'] ? ' is-collapsed' : ''}`}>▼</span>
+            <h2>🔧 Gestión de Mantenimiento</h2>
+          </div>
+        </div>
+        {collapsed['mantenimiento'] ? (
+          <div className="section-summary-line">
+            <span className="summary-empty">Sección contraída — click para expandir</span>
+          </div>
+        ) : (
+          <MantenimientoTab camionId={camionId} />
+        )}
       </section>
 
       {/* Modales */}

@@ -19,12 +19,20 @@ async function bootstrap() {
   }));
 
   // CORS configuration
-  const allowedOrigins = process.env.NODE_ENV === 'production'
-    ? [process.env.FRONTEND_URL]
-    : ['http://localhost:5173', 'http://localhost', 'http://localhost:3000', 'http://127.0.0.1'];
-  
+  const corsOrigin =
+    process.env.NODE_ENV === 'production'
+      ? [process.env.FRONTEND_URL]
+      : (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+          // En desarrollo, permitir cualquier origen localhost o sin origen (same-origin / curl)
+          if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+            cb(null, true);
+          } else {
+            cb(new Error(`CORS: origen no permitido: ${origin}`));
+          }
+        };
+
   app.enableCors({
-    origin: allowedOrigins,
+    origin: corsOrigin,
     credentials: true,
   });
 
