@@ -49,31 +49,59 @@ const WheelSvg: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
 );
 
 function getSvgWidth(tipo: TipoSeccion, ejes: number): number {
-  const extra = Math.max(0, ejes - 2) * 19;
+  const rearExtra = (n: number) => Math.max(0, n - 1) * 20; // gap per extra rear axle
   switch (tipo) {
-    case 'tractora':      return Math.max(165, 145 + extra);
-    case 'camion':        return Math.max(185, 165 + extra);
-    case 'dolly':         return Math.max(115, 82 + ejes * 22);
+    case 'tractora':      return Math.max(165, 148 + rearExtra(Math.max(1, ejes - 1)));
+    case 'camion':        return Math.max(200, 185 + rearExtra(Math.max(1, ejes - 1)));
+    case 'dolly':         return Math.max(118, 80 + ejes * 23);
+    case 'zorra':         return Math.max(215, 195 + rearExtra(Math.max(1, ejes - 1)));
     case 'semirremolque':
-    case 'acoplado':      return Math.max(215, 192 + extra);
-    case 'zorra':
-    default:              return Math.max(200, 178 + extra);
+    case 'acoplado':
+    default:              return Math.max(215, 195 + rearExtra(ejes));
   }
 }
 
 function getAxleXs(tipo: TipoSeccion, ejes: number, W: number): number[] {
-  const GAP = 19;
-  if (tipo === 'tractora' || tipo === 'camion') {
-    const frontX  = tipo === 'tractora' ? 33 : 31;
-    const rearBase = tipo === 'tractora' ? 112 : 130;
-    const rear = Math.max(1, ejes - 1);
-    return [frontX, ...Array.from({ length: rear }, (_, i) => rearBase + i * GAP)];
+  const GAP = 20;
+
+  if (tipo === 'tractora') {
+    // 1 front steering axle + the rest are rear drive
+    const frontX = 33;
+    const rearBase = 115;
+    const rearCount = Math.max(1, ejes - 1);
+    return [frontX, ...Array.from({ length: rearCount }, (_, i) => rearBase + i * GAP)];
   }
+
+  if (tipo === 'camion') {
+    if (ejes <= 1) {
+      // single axle: rear only
+      return [W - 40];
+    }
+    // ejes >= 2: 1 front steering + (ejes-1) rear drive
+    const frontX = 31;
+    const rearBase = W - 40 - (ejes - 2) * GAP;
+    return [frontX, ...Array.from({ length: ejes - 1 }, (_, i) => rearBase + i * GAP)];
+  }
+
+  if (tipo === 'zorra') {
+    if (ejes <= 1) {
+      // single axle: rear only
+      return [W - 30];
+    }
+    // ejes >= 2: 1 front steering + (ejes-1) rear
+    const frontX = 42;
+    const rearBase = W - 30 - (ejes - 2) * GAP;
+    return [frontX, ...Array.from({ length: ejes - 1 }, (_, i) => rearBase + i * GAP)];
+  }
+
   if (tipo === 'dolly') {
-    const lastX = W - 26;
+    // all axles grouped at rear
+    const lastX = W - 28;
     return Array.from({ length: ejes }, (_, i) => lastX - (ejes - 1 - i) * GAP);
   }
-  const lastX = W - 25;
+
+  // semirremolque, acoplado: all axles at rear
+  const lastX = W - 26;
   return Array.from({ length: ejes }, (_, i) => lastX - (ejes - 1 - i) * GAP);
 }
 
@@ -110,23 +138,27 @@ function renderVehicleBody(tipo: TipoSeccion, W: number): JSX.Element {
           {/* Chassis */}
           <rect x="8" y={cy} width={W - 16} height={CHASSIS_H} rx="2" fill="#1e293b" />
           {/* Cab */}
-          <rect x="8" y="12" width="75" height={cy - 12} rx="3" fill="#3b4a6b" />
+          <rect x="8" y="12" width="72" height={cy - 12} rx="3" fill="#3b4a6b" />
           {/* Windshield */}
-          <rect x="11" y="15" width="69" height="20" rx="2" fill="#60a5fa" opacity="0.45" />
+          <rect x="11" y="15" width="66" height="20" rx="2" fill="#60a5fa" opacity="0.45" />
+          {/* Side window */}
+          <rect x="55" y="15" width="20" height="14" rx="1.5" fill="#60a5fa" opacity="0.28" />
           {/* Bumper */}
           <rect x="8" y={cy - 5} width="12" height="9" rx="1.5" fill="#374151" />
           {/* Mirror arm */}
           <rect x="2" y="26" width="8" height="2.5" rx="1" fill="#475569" />
           {/* Mirror */}
           <rect x="0" y="22" width="6" height="7" rx="1" fill="#64748b" />
-          {/* Cargo box */}
-          <rect x="85" y="9" width={W - 98} height={cy - 9} rx="2" fill="#4a5568" />
-          {/* Box panel lines */}
-          {[110, 135, 160].filter(x => x < W - 15).map((x, i) => (
-            <line key={i} x1={x} y1="10" x2={x} y2={cy - 1} stroke="#5a6880" strokeWidth="0.8" />
+          {/* Cargo box — starts at x=82, ends near rear */}
+          <rect x="82" y="9" width={W - 94} height={cy - 9} rx="2" fill="#4a5568" />
+          {/* Box panel lines spaced evenly */}
+          {Array.from({ length: Math.floor((W - 110) / 24) }, (_, i) => 108 + i * 24)
+            .filter(x => x < W - 16)
+            .map((x, i) => (
+              <line key={i} x1={x} y1="10" x2={x} y2={cy - 1} stroke="#5a6880" strokeWidth="0.8" />
           ))}
           {/* Rear door */}
-          <rect x={W - 15} y="10" width="4" height={cy - 10} rx="1" fill="#374151" />
+          <rect x={W - 14} y="10" width="4" height={cy - 10} rx="1" fill="#374151" />
         </g>
       );
     case 'semirremolque':
@@ -177,22 +209,27 @@ function renderVehicleBody(tipo: TipoSeccion, W: number): JSX.Element {
           <rect x="8" y={cy} width={W - 16} height={CHASSIS_H} rx="2" fill="#1e293b" />
           {/* Low flatbed platform */}
           <rect x="8" y={cy - 14} width={W - 16} height="14" rx="1" fill="#4a5568" />
-          {/* Front bulkhead */}
-          <rect x="8" y="16" width="8" height={cy - 8} rx="1.5" fill="#374151" />
+          {/* Front steering-axle housing / neck piece */}
+          <rect x="8" y="25" width="42" height={cy - 25} rx="2" fill="#374151" />
+          {/* Neck highlight */}
+          <rect x="10" y="27" width="38" height={cy - 29} rx="1" fill="#475569" />
+          {/* Kingpin / coupling ring */}
+          <circle cx="18" cy={cy - 6} r="7" fill="#475569" stroke="#64748b" strokeWidth="1.5" />
+          <circle cx="18" cy={cy - 6} r="3" fill="#334155" />
+          {/* Flatbed body starts after steering section */}
+          <rect x="50" y="10" width={W - 62} height={cy - 14} rx="1" fill="#4a5568" />
           {/* Rear stop */}
-          <rect x={W - 18} y="22" width="7" height={cy - 14} rx="1.5" fill="#374151" />
+          <rect x={W - 17} y="14" width="7" height={cy - 16} rx="1.5" fill="#374151" />
           {/* Floor plank lines */}
-          {[32, 57, 82, 107, 132, 157, 178].filter(x => x < W - 22).map((x, i) => (
+          {[68, 90, 112, 134, 156, 178].filter(x => x < W - 20).map((x, i) => (
             <line key={i} x1={x} y1={cy - 13} x2={x} y2={cy - 1} stroke="#5a6880" strokeWidth="0.8" />
           ))}
           {/* Side stakes */}
-          {[32, 66, 100, 134, 165].filter(x => x < W - 22).map((x, i) => (
-            <line key={i} x1={x + 5} y1={cy - 26} x2={x + 5} y2={cy - 14} stroke="#475569" strokeWidth="2" />
+          {[68, 99, 130, 161].filter(x => x < W - 22).map((x, i) => (
+            <line key={i} x1={x} y1={cy - 26} x2={x} y2={cy - 14} stroke="#475569" strokeWidth="2" />
           ))}
           {/* Top rail */}
-          <line x1="16" y1={cy - 26} x2={W - 10} y2={cy - 26} stroke="#64748b" strokeWidth="1.5" />
-          {/* 5th wheel / kingpin coupling */}
-          <ellipse cx="22" cy={cy + 2} rx="11" ry="3" fill="#64748b" />
+          <line x1="50" y1={cy - 26} x2={W - 10} y2={cy - 26} stroke="#64748b" strokeWidth="1.5" />
         </g>
       );
     case 'dolly':
