@@ -20,9 +20,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 900px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 var(--page-gutter);
 }
 
 .navbar-title {
@@ -67,8 +67,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2rem;
-  max-width: 900px;
+  padding: 1.6rem var(--page-gutter) 1rem;
+  max-width: var(--page-max-width);
   margin: 0 auto;
   width: 100%;
 }
@@ -102,12 +102,10 @@
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  max-width: 900px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
   margin-bottom: 2rem;
-  width: calc(100% - 4rem);
-  margin-left: 2rem;
-  margin-right: 2rem;
+  width: 100%;
 }
 
 .form-grid {

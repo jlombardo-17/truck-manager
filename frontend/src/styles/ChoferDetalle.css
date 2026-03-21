@@ -1,7 +1,8 @@
 .chofer-detalle-page {
-  max-width: 1400px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.6rem var(--page-gutter) 2rem;
+  width: 100%;
 }
 
 .page-header {

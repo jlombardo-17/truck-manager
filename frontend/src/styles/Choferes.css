@@ -152,7 +152,7 @@
   padding: 3rem;
   font-size: 1.1rem;
   color: #7f8c8d;
-  max-width: 1400px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
 }
 
