@@ -177,11 +177,10 @@ export class DashboardService {
       gastoDocumentosCamion;
 
     // Camiones activos: usar el estado operativo real del vehículo.
-    const camionesActivos = await this.camionesRepository.count({
-      where: {
-        estado: 'activo',
-      },
-    });
+    const camionesActivos = await this.camionesRepository
+      .createQueryBuilder('camion')
+      .where('LOWER(camion.estado) IN (:...estados)', { estados: ['activo', 'operativo'] })
+      .getCount();
 
     // Documentos por vencer (próximos 30 días)
     const proximosMes = new Date();

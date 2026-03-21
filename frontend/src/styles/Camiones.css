@@ -141,6 +141,50 @@
   margin-bottom: 1rem;
 }
 
+.camiones-toolbar {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.camiones-toolbar .search-bar {
+  flex: 1 1 360px;
+  margin-bottom: 0;
+}
+
+.time-filter-group {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.time-filter-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.time-filter-select {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  font-size: 1rem;
+  background: #ffffff;
+  color: var(--text-primary);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.time-filter-select:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(47, 123, 182, 0.14);
+}
+
 .search-input {
   width: 100%;
   max-width: 560px;
@@ -350,6 +394,14 @@
 
   .camiones-header h1 {
     font-size: 1.5rem;
+  }
+
+  .camiones-toolbar {
+    align-items: stretch;
+  }
+
+  .time-filter-group {
+    width: 100%;
   }
 
   .table-container {

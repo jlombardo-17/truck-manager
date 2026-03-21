@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Camion } from './camion.entity';
 import { CreateCamionDto } from './dto/create-camion.dto';
 import { UpdateCamionDto } from './dto/update-camion.dto';
+import { EstadoCamion, normalizeEstadoCamion } from './camion-status';
 
 @Injectable()
 export class CamionesService {
@@ -25,17 +26,35 @@ export class CamionesService {
   }
 
   create(createCamionDto: CreateCamionDto): Promise<Camion> {
+    const nextEstado =
+      normalizeEstadoCamion(createCamionDto.estado) ?? EstadoCamion.ACTIVO;
+
     const camion = this.camionesRepository.create({
       ...createCamionDto,
       patente: createCamionDto.patente.toUpperCase(),
+      estado: nextEstado,
     });
+
     return this.camionesRepository.save(camion);
   }
 
   async update(id: number, updateCamionDto: UpdateCamionDto): Promise<Camion> {
     const camion = await this.findOne(id);
-    const nextPatente = updateCamionDto.patente ? updateCamionDto.patente.toUpperCase() : camion.patente;
-    Object.assign(camion, { ...updateCamionDto, patente: nextPatente });
+    const nextPatente = updateCamionDto.patente
+      ? updateCamionDto.patente.toUpperCase()
+      : camion.patente;
+
+    const nextEstado =
+      updateCamionDto.estado !== undefined
+        ? normalizeEstadoCamion(updateCamionDto.estado)
+        : undefined;
+
+    Object.assign(camion, {
+      ...updateCamionDto,
+      patente: nextPatente,
+      ...(nextEstado ? { estado: nextEstado } : {}),
+    });
+
     return this.camionesRepository.save(camion);
   }
 

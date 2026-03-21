@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Servicio } from './servicio.entity';
 import { Documento } from './documento.entity';
+import { EstadoCamion } from './camion-status';
 
 @Entity({ name: 'camiones' })
 export class Camion {
@@ -19,8 +20,8 @@ export class Camion {
   @Column({ type: 'int' })
   anio: number;
 
-  @Column({ default: 'activo' })
-  estado: string;
+  @Column({ default: EstadoCamion.ACTIVO })
+  estado: EstadoCamion;
 
   @Column({ name: 'odometro_km', type: 'decimal', precision: 10, scale: 2, default: 0 })
   odometroKm: number;
