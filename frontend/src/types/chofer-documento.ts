@@ -4,6 +4,7 @@ export interface ChoferDocumento {
   tipo: TipoDocumentoChofer;
   nombre?: string;
   rutaArchivo: string;
+  rutasArchivos?: string[];
   descripcion?: string;
   fechaEmision?: string;
   fechaVencimiento?: string;

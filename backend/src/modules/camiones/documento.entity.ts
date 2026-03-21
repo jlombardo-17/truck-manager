@@ -30,6 +30,9 @@ export class Documento {
   @Column({ type: 'longtext' })
   rutaArchivo: string;
 
+  @Column({ type: 'simple-json', nullable: true })
+  rutasArchivos?: string[];
+
   @Column({ nullable: true })
   descripcion: string;
 

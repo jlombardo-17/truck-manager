@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChoferDocumento } from './chofer-documento.entity';
@@ -11,17 +11,47 @@ export class ChoferDocumentosService {
     private documentoRepository: Repository<ChoferDocumento>,
   ) {}
 
+  private normalizeRutas(documento: ChoferDocumento): ChoferDocumento {
+    if (!documento.rutasArchivos || documento.rutasArchivos.length === 0) {
+      documento.rutasArchivos = documento.rutaArchivo ? [documento.rutaArchivo] : [];
+    }
+
+    if (!documento.rutaArchivo && documento.rutasArchivos.length > 0) {
+      documento.rutaArchivo = documento.rutasArchivos[0];
+    }
+
+    return documento;
+  }
+
+  private resolveRutasArchivos(data: { rutaArchivo?: string; rutasArchivos?: string[] }): string[] {
+    const rutas = (data.rutasArchivos || []).filter((ruta) => typeof ruta === 'string' && ruta.trim().length > 0);
+
+    if (rutas.length > 0) {
+      return rutas;
+    }
+
+    if (data.rutaArchivo && data.rutaArchivo.trim().length > 0) {
+      return [data.rutaArchivo];
+    }
+
+    return [];
+  }
+
   async findAll(): Promise<ChoferDocumento[]> {
-    return await this.documentoRepository.find({
+    const documentos = await this.documentoRepository.find({
       order: { createdAt: 'DESC' },
     });
+
+    return documentos.map((documento) => this.normalizeRutas(documento));
   }
 
   async findByChoferId(choferId: number): Promise<ChoferDocumento[]> {
-    return await this.documentoRepository.find({
+    const documentos = await this.documentoRepository.find({
       where: { choferId },
       order: { createdAt: 'DESC' },
     });
+
+    return documentos.map((documento) => this.normalizeRutas(documento));
   }
 
   async findById(id: number): Promise<ChoferDocumento> {
@@ -33,18 +63,41 @@ export class ChoferDocumentosService {
       throw new NotFoundException(`Documento con ID ${id} no encontrado`);
     }
 
-    return documento;
+    return this.normalizeRutas(documento);
   }
 
   async create(createDto: CreateChoferDocumentoDto): Promise<ChoferDocumento> {
+    const rutasArchivos = this.resolveRutasArchivos(createDto);
+    if (rutasArchivos.length === 0) {
+      throw new BadRequestException('Debes enviar al menos un archivo para el documento');
+    }
+
     const documento = this.documentoRepository.create(createDto);
-    return await this.documentoRepository.save(documento);
+    documento.rutasArchivos = rutasArchivos;
+    documento.rutaArchivo = rutasArchivos[0];
+
+    const saved = await this.documentoRepository.save(documento);
+    return this.normalizeRutas(saved);
   }
 
   async update(id: number, updateDto: UpdateChoferDocumentoDto): Promise<ChoferDocumento> {
     const documento = await this.findById(id);
+
+    if (updateDto.rutasArchivos) {
+      const rutasArchivos = this.resolveRutasArchivos(updateDto);
+      if (rutasArchivos.length === 0) {
+        throw new BadRequestException('Debes enviar al menos un archivo para el documento');
+      }
+
+      updateDto.rutasArchivos = rutasArchivos;
+      updateDto.rutaArchivo = rutasArchivos[0];
+    } else if (updateDto.rutaArchivo && updateDto.rutaArchivo.trim().length > 0) {
+      updateDto.rutasArchivos = [updateDto.rutaArchivo];
+    }
+
     Object.assign(documento, updateDto);
-    return await this.documentoRepository.save(documento);
+    const saved = await this.documentoRepository.save(documento);
+    return this.normalizeRutas(saved);
   }
 
   async delete(id: number): Promise<void> {
@@ -67,7 +120,7 @@ export class ChoferDocumentosService {
       .orderBy('documento.fechaVencimiento', 'ASC')
       .getMany();
 
-    return documentos;
+    return documentos.map((documento) => this.normalizeRutas(documento));
   }
 
   /**
@@ -81,7 +134,7 @@ export class ChoferDocumentosService {
       .orderBy('documento.fechaVencimiento', 'DESC')
       .getMany();
 
-    return documentos;
+    return documentos.map((documento) => this.normalizeRutas(documento));
   }
 
   /**

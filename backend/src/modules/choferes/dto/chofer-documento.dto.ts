@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsDateString, IsNumber } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsString, IsDateString, IsNumber } from 'class-validator';
 import { TipoDocumentoChofer } from '../chofer-documento.entity';
 
 export class CreateChoferDocumentoDto {
@@ -13,7 +13,13 @@ export class CreateChoferDocumentoDto {
   nombre?: string;
 
   @IsString()
-  rutaArchivo: string;
+  @IsOptional()
+  rutaArchivo?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  rutasArchivos?: string[];
 
   @IsString()
   @IsOptional()
@@ -44,6 +50,11 @@ export class UpdateChoferDocumentoDto {
   @IsString()
   @IsOptional()
   rutaArchivo?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  rutasArchivos?: string[];
 
   @IsString()
   @IsOptional()

@@ -38,6 +38,13 @@ const CamionDetalle: React.FC = () => {
   const toggleSection = (key: string) =>
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const getDocumentoArchivos = (doc: Documento): string[] => {
+    if (doc.rutasArchivos && doc.rutasArchivos.length > 0) {
+      return doc.rutasArchivos;
+    }
+    return doc.rutaArchivo ? [doc.rutaArchivo] : [];
+  };
+
   useEffect(() => {
     loadData();
   }, [camionId]);
@@ -427,13 +434,13 @@ const CamionDetalle: React.FC = () => {
                       <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />
                     </div>
 
-                    {doc.rutaArchivo ? (
+                    {getDocumentoArchivos(doc).length > 0 ? (
                       <div
                         className="documento-preview clickable"
                         onClick={() => setViewingDocumento(doc)}
                         title="Ver imagen completa"
                       >
-                        <img src={doc.rutaArchivo} alt={doc.nombre || 'Documento'} />
+                        <img src={getDocumentoArchivos(doc)[0]} alt={doc.nombre || 'Documento'} />
                         <div className="preview-overlay">🔍 Ver imagen</div>
                       </div>
                     ) : (
@@ -445,6 +452,9 @@ const CamionDetalle: React.FC = () => {
 
                     <div className="documento-details">
                       {doc.nombre && <h4 className="doc-nombre">{doc.nombre}</h4>}
+                      {getDocumentoArchivos(doc).length > 1 && (
+                        <p className="doc-paginas">📄 {getDocumentoArchivos(doc).length} páginas</p>
+                      )}
                       {doc.descripcion && <p className="doc-descripcion">{doc.descripcion}</p>}
                       {doc.fechaVencimiento && (
                         <p className="doc-vencimiento">
@@ -801,41 +811,113 @@ const DocumentoModal: React.FC<{
       ? documento.fechaVencimiento.split('T')[0]
       : '',
   });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFilesPreview, setSelectedFilesPreview] = useState<string[]>(
+    documento?.rutasArchivos && documento.rutasArchivos.length > 0
+      ? documento.rutasArchivos
+      : documento?.rutaArchivo
+        ? [documento.rutaArchivo]
+        : []
+  );
+  const [paginasAEliminar, setPaginasAEliminar] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setFormData((prev) => ({ ...prev, rutaArchivo: event.target?.result as string }));
-      };
+      reader.onload = (event) => resolve((event.target?.result as string) || '');
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo seleccionado'));
       reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(files);
+
+    if (files.length === 0) {
+      if (!isEditing) {
+        setFormData((prev) => ({ ...prev, rutaArchivo: '' }));
+      }
+      setSelectedFilesPreview([]);
+      return;
+    }
+
+    try {
+      const previews = await Promise.all(files.map((file) => fileToDataUrl(file)));
+      setSelectedFilesPreview(previews);
+
+      if (isEditing) {
+        setFormData((prev) => ({ ...prev, rutaArchivo: previews[0] }));
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al procesar los archivos seleccionados');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isEditing && !formData.rutaArchivo) {
-      setError('Selecciona una imagen del documento');
+    if (!isEditing && selectedFiles.length === 0) {
+      setError('Selecciona al menos una imagen del documento');
       return;
     }
     setIsLoading(true);
     setError(null);
 
     try {
-      const payload = {
-        tipo: formData.tipo,
-        nombre: formData.nombre || undefined,
-        rutaArchivo: formData.rutaArchivo,
-        descripcion: formData.descripcion || undefined,
-        fechaVencimiento: formData.fechaVencimiento || undefined,
-      };
       if (isEditing) {
-        await documentosService.update(documento!.id, camionId, payload);
+        // Modo edición
+        const tieneNuevosArchivos = selectedFiles.length > 0;
+        const tieneEliminaciones = paginasAEliminar.length > 0;
+        
+        if (tieneNuevosArchivos || tieneEliminaciones) {
+          // Combinar páginas existentes (sin eliminar) + nuevas páginas
+          const paginasActuales = selectedFilesPreview.filter((_, idx) => !paginasAEliminar.includes(idx));
+          const nuevasPaginas =
+            tieneNuevosArchivos
+              ? await Promise.all(selectedFiles.map((file) => fileToDataUrl(file)))
+              : [];
+          
+          const rutasFinales = [...paginasActuales, ...nuevasPaginas];
+          
+          if (rutasFinales.length === 0) {
+            setError('Debes mantener al menos una página o agregar nuevas páginas');
+            setIsLoading(false);
+            return;
+          }
+
+          const payload = {
+            tipo: formData.tipo,
+            nombre: formData.nombre || undefined,
+            rutaArchivo: rutasFinales[0],
+            rutasArchivos: rutasFinales,
+            descripcion: formData.descripcion || undefined,
+            fechaVencimiento: formData.fechaVencimiento || undefined,
+          };
+          await documentosService.update(documento!.id, camionId, payload);
+        } else {
+          // No hay cambios de archivos: solo actualizar otros campos
+          const payload = {
+            tipo: formData.tipo,
+            nombre: formData.nombre || undefined,
+            descripcion: formData.descripcion || undefined,
+            fechaVencimiento: formData.fechaVencimiento || undefined,
+          };
+          await documentosService.update(documento!.id, camionId, payload);
+        }
       } else {
-        await documentosService.create(camionId, payload);
+        const archivosBase64 = await Promise.all(
+          selectedFiles.map((file) => fileToDataUrl(file))
+        );
+        await documentosService.create(camionId, {
+          tipo: formData.tipo,
+          nombre: formData.nombre.trim().length > 0 ? formData.nombre.trim() : undefined,
+          rutaArchivo: archivosBase64[0],
+          rutasArchivos: archivosBase64,
+          descripcion: formData.descripcion || undefined,
+          fechaVencimiento: formData.fechaVencimiento || undefined,
+        });
       }
       onSave();
     } catch (err: any) {
@@ -886,20 +968,68 @@ const DocumentoModal: React.FC<{
 
           <div className="form-group">
             <label>
-              Imagen del Documento{isEditing ? ' (dejar vacío para mantener la actual)' : ''}
+              Imagen del Documento
+              {isEditing
+                ? ' (puedes eliminar páginas o agregar nuevas)'
+                : ' (puedes seleccionar varias)'}
             </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              disabled={isLoading}
-              required={!isEditing}
-            />
-            {formData.rutaArchivo && (
-              <div className="image-preview">
-                <img src={formData.rutaArchivo} alt="Preview" />
+            
+            {isEditing && selectedFilesPreview.length > 0 && (
+              <div className="documento-edit-section">
+                <h4>📄 Páginas Actuales ({selectedFilesPreview.length - paginasAEliminar.length} de {selectedFilesPreview.length})</h4>
+                <div className="image-preview-grid">
+                  {selectedFilesPreview.map((preview, index) => (
+                    <div key={`actual-${index}`} className={`image-preview-thumb ${paginasAEliminar.includes(index) ? 'eliminada' : ''}`}>
+                      <img src={preview} alt={`Página ${index + 1}`} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (paginasAEliminar.includes(index)) {
+                            setPaginasAEliminar(paginasAEliminar.filter((i) => i !== index));
+                          } else {
+                            setPaginasAEliminar([...paginasAEliminar, index]);
+                          }
+                        }}
+                        className="delete-page-btn"
+                        title={paginasAEliminar.includes(index) ? 'Restaurar página' : 'Eliminar página'}
+                        disabled={isLoading}
+                      >
+                        {paginasAEliminar.includes(index) ? '↩️' : '🗑️'}
+                      </button>
+                      <span className="page-number">Página {index + 1}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            <div className={isEditing ? 'documento-edit-section' : ''}>
+              {isEditing && selectedFilesPreview.length > 0 && (
+                <h4>➕ Agregar Nuevas Páginas</h4>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                disabled={isLoading}
+                multiple
+                required={!isEditing}
+              />
+              {selectedFiles.length > 0 && (
+                <div className="new-files-info">
+                  <small>✓ {selectedFiles.length} archivo(s) para agregar</small>
+                </div>
+              )}
+              {!isEditing && selectedFilesPreview.length > 0 && (
+                <div className="image-preview-grid">
+                  {selectedFilesPreview.map((preview, index) => (
+                    <div key={`${selectedFiles[index]?.name || 'archivo'}-${index}`} className="image-preview-thumb">
+                      <img src={preview} alt={selectedFiles[index]?.name || `Documento ${index + 1}`} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="form-group">
@@ -941,6 +1071,13 @@ const DocumentoViewModal: React.FC<{
   documento: Documento;
   onClose: () => void;
 }> = ({ documento, onClose }) => {
+  const archivos =
+    documento.rutasArchivos && documento.rutasArchivos.length > 0
+      ? documento.rutasArchivos
+      : documento.rutaArchivo
+        ? [documento.rutaArchivo]
+        : [];
+
   return (
     <div className="modal-overlay doc-view-overlay" onClick={onClose}>
       <div className="doc-view-container" onClick={(e) => e.stopPropagation()}>
@@ -952,9 +1089,14 @@ const DocumentoViewModal: React.FC<{
           <button type="button" onClick={onClose} className="close-btn">✕</button>
         </div>
 
-        {documento.rutaArchivo && (
-          <div className="doc-view-image">
-            <img src={documento.rutaArchivo} alt={documento.nombre || 'Documento'} />
+        {archivos.length > 0 && (
+          <div className="doc-view-gallery">
+            {archivos.map((archivo, index) => (
+              <div key={`${archivo.slice(0, 24)}-${index}`} className="doc-view-image">
+                <img src={archivo} alt={`${documento.nombre || 'Documento'} - página ${index + 1}`} />
+                {archivos.length > 1 && <span className="doc-page-label">Página {index + 1}</span>}
+              </div>
+            ))}
           </div>
         )}
 

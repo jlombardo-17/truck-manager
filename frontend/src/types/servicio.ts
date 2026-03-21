@@ -65,6 +65,7 @@ export interface Documento {
   tipo: TipoDocumento;
   nombre?: string;
   rutaArchivo: string;
+  rutasArchivos?: string[];
   descripcion?: string;
   fechaVencimiento?: string;
   createdAt: string;
@@ -73,6 +74,7 @@ export interface Documento {
 export interface CreateDocumentoDto {
   tipo: TipoDocumento;
   rutaArchivo: string;
+  rutasArchivos?: string[];
   nombre?: string;
   descripcion?: string;
   fechaVencimiento?: string;
