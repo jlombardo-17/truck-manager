@@ -67,6 +67,7 @@ export interface Documento {
   rutaArchivo: string;
   rutasArchivos?: string[];
   descripcion?: string;
+  costo?: number;
   fechaVencimiento?: string;
   createdAt: string;
 }
@@ -77,5 +78,6 @@ export interface CreateDocumentoDto {
   rutasArchivos?: string[];
   nombre?: string;
   descripcion?: string;
+  costo?: number;
   fechaVencimiento?: string;
 }

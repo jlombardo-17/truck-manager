@@ -36,6 +36,9 @@ export class Documento {
   @Column({ nullable: true })
   descripcion: string;
 
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  costo?: number;
+
   @Column({ type: 'date', nullable: true })
   fechaVencimiento: Date;
 

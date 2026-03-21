@@ -16,6 +16,13 @@ import BackButton from '../components/BackButton';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
 import '../styles/CamionDetalle.css';
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2,
+  }).format(value);
+
 const CamionDetalle: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -456,6 +463,9 @@ const CamionDetalle: React.FC = () => {
                         <p className="doc-paginas">📄 {getDocumentoArchivos(doc).length} páginas</p>
                       )}
                       {doc.descripcion && <p className="doc-descripcion">{doc.descripcion}</p>}
+                      {doc.costo != null && (
+                        <p className="doc-costo">💵 Costo: {formatCurrency(Number(doc.costo))}</p>
+                      )}
                       {doc.fechaVencimiento && (
                         <p className="doc-vencimiento">
                           📅 Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
@@ -807,6 +817,7 @@ const DocumentoModal: React.FC<{
     nombre: documento?.nombre ?? '',
     rutaArchivo: documento?.rutaArchivo ?? '',
     descripcion: documento?.descripcion ?? '',
+    costo: documento?.costo != null ? String(documento.costo) : '',
     fechaVencimiento: documento?.fechaVencimiento
       ? documento.fechaVencimiento.split('T')[0]
       : '',
@@ -822,6 +833,19 @@ const DocumentoModal: React.FC<{
   const [paginasAEliminar, setPaginasAEliminar] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const parseCosto = (): number | undefined | null => {
+    if (formData.costo.trim() === '') {
+      return undefined;
+    }
+
+    const parsed = Number(formData.costo);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return null;
+    }
+
+    return parsed;
+  };
 
   const fileToDataUrl = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -862,6 +886,13 @@ const DocumentoModal: React.FC<{
       setError('Selecciona al menos una imagen del documento');
       return;
     }
+
+    const costo = parseCosto();
+    if (costo === null) {
+      setError('Ingresa un costo valido mayor o igual a 0');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -893,6 +924,7 @@ const DocumentoModal: React.FC<{
             rutaArchivo: rutasFinales[0],
             rutasArchivos: rutasFinales,
             descripcion: formData.descripcion || undefined,
+            costo,
             fechaVencimiento: formData.fechaVencimiento || undefined,
           };
           await documentosService.update(documento!.id, camionId, payload);
@@ -902,6 +934,7 @@ const DocumentoModal: React.FC<{
             tipo: formData.tipo,
             nombre: formData.nombre || undefined,
             descripcion: formData.descripcion || undefined,
+            costo,
             fechaVencimiento: formData.fechaVencimiento || undefined,
           };
           await documentosService.update(documento!.id, camionId, payload);
@@ -916,6 +949,7 @@ const DocumentoModal: React.FC<{
           rutaArchivo: archivosBase64[0],
           rutasArchivos: archivosBase64,
           descripcion: formData.descripcion || undefined,
+          costo,
           fechaVencimiento: formData.fechaVencimiento || undefined,
         });
       }
@@ -1043,6 +1077,19 @@ const DocumentoModal: React.FC<{
           </div>
 
           <div className="form-group">
+            <label>Costo Asociado</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.costo}
+              onChange={(e) => setFormData({ ...formData, costo: e.target.value })}
+              disabled={isLoading}
+              placeholder="Ej: 150000"
+            />
+          </div>
+
+          <div className="form-group">
             <label>Fecha de Vencimiento</label>
             <input
               type="date"
@@ -1105,6 +1152,12 @@ const DocumentoViewModal: React.FC<{
             <div className="doc-view-field">
               <label>Descripción</label>
               <span>{documento.descripcion}</span>
+            </div>
+          )}
+          {documento.costo != null && (
+            <div className="doc-view-field">
+              <label>Costo Asociado</label>
+              <span>{formatCurrency(Number(documento.costo))}</span>
             </div>
           )}
           {documento.fechaVencimiento && (

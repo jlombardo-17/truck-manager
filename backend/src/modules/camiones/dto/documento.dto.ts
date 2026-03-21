@@ -1,4 +1,4 @@
-import { IsArray, IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsDate, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { TipoDocumento } from '../documento.entity';
 import { Type } from 'class-transformer';
 
@@ -22,6 +22,12 @@ export class CreateDocumentoDto {
   @IsOptional()
   @IsString()
   descripcion?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  costo?: number;
 
   @IsOptional()
   @Type(() => Date)
@@ -50,6 +56,12 @@ export class UpdateDocumentoDto {
   @IsOptional()
   @IsString()
   descripcion?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  costo?: number;
 
   @IsOptional()
   @Type(() => Date)

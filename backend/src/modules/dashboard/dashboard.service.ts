@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
+import { Documento } from '../camiones/documento.entity';
 import { ChoferDocumento } from '../choferes/chofer-documento.entity';
+import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
 
 export interface DashboardResumen {
   ingresosDelMes: number;
@@ -49,8 +51,12 @@ export class DashboardService {
     private viajesRepository: Repository<Viaje>,
     @InjectRepository(MantenimientoRegistro)
     private mantenimientoRepository: Repository<MantenimientoRegistro>,
+    @InjectRepository(Documento)
+    private documentosCamionRepository: Repository<Documento>,
     @InjectRepository(ChoferDocumento)
     private choferDocumentosRepository: Repository<ChoferDocumento>,
+    @InjectRepository(ChoferSalarioPago)
+    private salarioPagoRepository: Repository<ChoferSalarioPago>,
   ) {}
 
   private toNumber(value: unknown): number {
@@ -66,13 +72,14 @@ export class DashboardService {
       ahora.getMonth() + 1,
       0,
     );
+    ultimoDiaDelMes.setHours(23, 59, 59, 999);
 
     // Viajes completados del mes
     const viajesMes = await this.viajesRepository.find({
       relations: ['camion', 'chofer'],
       where: {
         estado: 'completado' as any,
-        fechaInicio: MoreThanOrEqual(primerDiaDelMes) as any,
+        fechaInicio: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
       },
     });
 
@@ -87,17 +94,10 @@ export class DashboardService {
       0,
     );
 
-    const gastosComisionChofer = viajesMes.reduce(
-      (sum, viaje) =>
-        sum +
-        (this.toNumber(viaje.valorViaje) * this.toNumber(viaje.chofer?.porcentajeComision)) / 100,
-      0,
-    );
-
     const mantenimientoMes = await this.mantenimientoRepository.find({
       relations: ['camion'],
       where: {
-        fechaPrograma: MoreThanOrEqual(primerDiaDelMes) as any,
+        fechaPrograma: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
       },
     });
 
@@ -105,7 +105,35 @@ export class DashboardService {
       (sum, m) => sum + this.toNumber(m.costoReal),
       0,
     );
-    const gastosDelMes = gastosOperativosViajes + gastosComisionChofer + gastoMantenimiento;
+
+    const pagosSueldosMes = await this.salarioPagoRepository.find({
+      where: {
+        fechaPago: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
+      },
+    });
+
+    const gastoSueldos = pagosSueldosMes.reduce(
+      (sum, pago) => sum + this.toNumber(pago.monto),
+      0,
+    );
+
+    const documentosCamionMes = await this.documentosCamionRepository
+      .createQueryBuilder('documento')
+      .where('documento.created_at >= :desde', { desde: primerDiaDelMes })
+      .andWhere('documento.created_at <= :hasta', { hasta: ultimoDiaDelMes })
+      .andWhere('documento.costo IS NOT NULL')
+      .getMany();
+
+    const gastoDocumentosCamion = documentosCamionMes.reduce(
+      (sum, documento) => sum + this.toNumber(documento.costo),
+      0,
+    );
+
+    const gastosDelMes =
+      gastosOperativosViajes +
+      gastoSueldos +
+      gastoMantenimiento +
+      gastoDocumentosCamion;
 
     // Camiones activos hoy (viajes completados o en progreso hoy)
     const hoy = new Date();
@@ -115,7 +143,7 @@ export class DashboardService {
 
     const viajesHoy = await this.viajesRepository.find({
       where: {
-        fechaInicio: MoreThanOrEqual(hoy) as any,
+        fechaInicio: Between(hoy, mananaInicio) as any,
       },
     });
     const camionesActivosHoy = new Set(viajesHoy.map((v) => v.camionId)).size;
@@ -158,6 +186,7 @@ export class DashboardService {
   async getDesempenoCamiones(): Promise<DesempenoCamion[]> {
     const ahora = new Date();
     const primerDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const ultimoDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
 
     // Obtener viajes del mes por camión
     const viajesPorCamion = await this.viajesRepository
@@ -165,6 +194,7 @@ export class DashboardService {
       .leftJoinAndSelect('v.camion', 'camion')
       .where('v.estado = :estado', { estado: 'completado' })
       .andWhere('v.fechaInicio >= :desde', { desde: primerDiaDelMes })
+      .andWhere('v.fechaInicio <= :hasta', { hasta: ultimoDiaDelMes })
       .getMany();
 
     // Agrupar por camión
@@ -186,8 +216,7 @@ export class DashboardService {
       camion.ingresos += this.toNumber(viaje.valorViaje);
       camion.gastosViaje +=
         this.toNumber(viaje.costoCombustible) +
-        this.toNumber(viaje.otrosGastos) +
-        (this.toNumber(viaje.valorViaje) * this.toNumber(viaje.chofer?.porcentajeComision)) / 100;
+        this.toNumber(viaje.otrosGastos);
       camion.kmRecorridos += this.toNumber(viaje.kmRecorridos);
       camion.viajesCompletos += 1;
     }
@@ -195,7 +224,7 @@ export class DashboardService {
     const mantenimientos = await this.mantenimientoRepository.find({
       relations: ['camion'],
       where: {
-        fechaPrograma: MoreThanOrEqual(primerDiaDelMes) as any,
+        fechaPrograma: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
       },
     });
 
@@ -209,6 +238,19 @@ export class DashboardService {
         camionId,
         gastosMap.get(camionId) + this.toNumber(m.costoReal),
       );
+    });
+
+    const documentosCamionMes = await this.documentosCamionRepository
+      .createQueryBuilder('documento')
+      .where('documento.created_at >= :desde', { desde: primerDiaDelMes })
+      .andWhere('documento.created_at <= :hasta', { hasta: ultimoDiaDelMes })
+      .andWhere('documento.costo IS NOT NULL')
+      .getMany();
+
+    documentosCamionMes.forEach((documento) => {
+      const camionId = documento.camionId;
+      if (!gastosMap.has(camionId)) gastosMap.set(camionId, 0);
+      gastosMap.set(camionId, gastosMap.get(camionId) + this.toNumber(documento.costo));
     });
 
     // Calcular eficiencia
