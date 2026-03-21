@@ -165,9 +165,12 @@ export const formatPeriodo = (mes: number, anio: number): string => {
   return `${formatMes(mes)} ${anio}`;
 };
 
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount: number | string | null | undefined): string => {
+  const parsedAmount = Number(amount ?? 0);
+  const safeAmount = Number.isFinite(parsedAmount) ? parsedAmount : 0;
+
   return new Intl.NumberFormat('es-CL', {
     style: 'currency',
     currency: 'CLP',
-  }).format(amount);
+  }).format(safeAmount);
 };

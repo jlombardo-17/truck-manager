@@ -92,7 +92,7 @@ export class SalariosService {
     choferId: number,
     mes: number,
     anio: number,
-  ): Promise<{ viajes: Viaje[]; totalComisiones: number }> {
+  ): Promise<{ viajes: any[]; totalComisiones: number }> {
     // Calcular rango de fechas del mes
     const fechaInicio = new Date(anio, mes - 1, 1);
     const fechaFin = new Date(anio, mes, 0, 23, 59, 59);
@@ -109,19 +109,42 @@ export class SalariosService {
 
     let totalComisiones = 0;
 
-    // Calcular total de comisiones del chofer
-    viajes.forEach((viaje) => {
-      if (viaje.comisiones && viaje.comisiones.length > 0) {
-        viaje.comisiones.forEach((comision) => {
-          // Solo contar comisiones del chofer (por ejemplo, tipo 'contratista' o beneficiario)
-          if (comision.beneficiario === `chofer_${choferId}` || comision.tipo === 'chofer') {
-            totalComisiones += parseFloat(comision.montoTotal.toString());
-          }
-        });
-      }
+    const viajesConTotales = viajes.map((viaje) => {
+      const comisionesChofer = (viaje.comisiones || []).filter(
+        (comision) => comision.beneficiario === `chofer_${choferId}` || comision.tipo === 'chofer',
+      );
+
+      const totalComisionViaje = comisionesChofer.reduce(
+        (acc, comision) => acc + this.toNumber(comision.montoTotal),
+        0,
+      );
+
+      totalComisiones += totalComisionViaje;
+
+      return {
+        id: viaje.id,
+        numeroViaje: viaje.numeroViaje,
+        fechaInicio: viaje.fechaInicio,
+        fechaFin: viaje.fechaFin,
+        origen: viaje.origen,
+        destino: viaje.destino,
+        valorViaje: this.toNumber(viaje.valorViaje),
+        totalComision: totalComisionViaje,
+        comisiones: comisionesChofer.map((comision) => ({
+          id: comision.id,
+          tipo: comision.tipo,
+          concepto: comision.concepto,
+          montoBase: this.toNumber(comision.montoBase),
+          porcentaje: this.toNumber(comision.porcentaje),
+          montoFijo: this.toNumber(comision.montoFijo),
+          montoTotal: this.toNumber(comision.montoTotal),
+          beneficiario: comision.beneficiario,
+          estado: comision.estado,
+        })),
+      };
     });
 
-    return { viajes, totalComisiones };
+    return { viajes: viajesConTotales, totalComisiones };
   }
 
   /**
