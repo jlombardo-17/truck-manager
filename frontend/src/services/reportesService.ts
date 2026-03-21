@@ -15,6 +15,7 @@ export interface RentabilidadPoint {
     comisionChofer: number;
     sueldoChofer: number;
     mantenimiento: number;
+    documentosFijos: number;
   };
 }
 
@@ -106,6 +107,32 @@ export interface GastosMantenimientoResponse {
     }>;
     totalGastos: number;
     cantidadRegistros: number;
+  }>;
+}
+
+export interface GastosDocumentalesResponse {
+  filtrosAplicados: {
+    desde: string;
+    hasta: string;
+    camionIds?: number[];
+  };
+  resumenTotalActual: number;
+  resumenTotalProyectado: number;
+  gastos: Array<{
+    camionId: number;
+    patente: string;
+    cantidadDocumentos: number;
+    totalCostoActual: number;
+    totalCostoProyectado: number;
+    documentos: Array<{
+      documentoId: number;
+      tipo: string;
+      nombre: string;
+      costoActual: number;
+      coberturaDias: number;
+      costoProyectado: number;
+      fechaVencimiento?: string;
+    }>;
   }>;
 }
 
@@ -231,6 +258,21 @@ class ReportesService {
     camionIds?: number[];
   }): Promise<GastosMantenimientoResponse> {
     const response = await this.api.get<GastosMantenimientoResponse>('/reportes/gastos-mantenimiento', {
+      params: {
+        ...(filters.desde ? { desde: filters.desde } : {}),
+        ...(filters.hasta ? { hasta: filters.hasta } : {}),
+        ...(filters.camionIds?.length ? { camionIds: filters.camionIds.join(',') } : {}),
+      },
+    });
+    return response.data;
+  }
+
+  async getGastosDocumentales(filters: {
+    desde?: string;
+    hasta?: string;
+    camionIds?: number[];
+  }): Promise<GastosDocumentalesResponse> {
+    const response = await this.api.get<GastosDocumentalesResponse>('/reportes/gastos-documentales', {
       params: {
         ...(filters.desde ? { desde: filters.desde } : {}),
         ...(filters.hasta ? { hasta: filters.hasta } : {}),

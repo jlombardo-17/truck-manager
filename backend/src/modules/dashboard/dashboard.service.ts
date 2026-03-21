@@ -84,6 +84,36 @@ export class DashboardService {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }
 
+  private getDocumentoCoverageDays(documento: Documento): number {
+    if (!documento.fechaVencimiento || !documento.createdAt) {
+      return 365;
+    }
+
+    const start = new Date(documento.createdAt);
+    const end = new Date(documento.fechaVencimiento);
+    const days = this.getDaysInclusive(start, end);
+    return days > 0 ? days : 365;
+  }
+
+  private getDaysInclusive(start: Date, end: Date): number {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    const diff = endDate.getTime() - startDate.getTime();
+    return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)) + 1);
+  }
+
+  private getProjectedDocumentCostForPeriod(documento: Documento, start: Date, end: Date): number {
+    const costo = this.toNumber(documento.costo);
+    if (costo <= 0) {
+      return 0;
+    }
+
+    const projectionDays = this.getDaysInclusive(start, end);
+    return (costo / this.getDocumentoCoverageDays(documento)) * projectionDays;
+  }
+
   private async getTableColumns(tableName: string): Promise<Set<string>> {
     if (!this.tableColumnsCache.has(tableName)) {
       this.tableColumnsCache.set(
@@ -158,15 +188,10 @@ export class DashboardService {
       0,
     );
 
-    const documentosCamionMes = await this.documentosCamionRepository
-      .createQueryBuilder('documento')
-      .where('documento.created_at >= :desde', { desde: primerDiaDelMes })
-      .andWhere('documento.created_at <= :hasta', { hasta: ultimoDiaDelMes })
-      .andWhere('documento.costo IS NOT NULL')
-      .getMany();
+    const documentosCamion = await this.documentosCamionRepository.find();
 
-    const gastoDocumentosCamion = documentosCamionMes.reduce(
-      (sum, documento) => sum + this.toNumber(documento.costo),
+    const gastoDocumentosCamion = documentosCamion.reduce(
+      (sum, documento) => sum + this.getProjectedDocumentCostForPeriod(documento, primerDiaDelMes, ultimoDiaDelMes),
       0,
     );
 
@@ -314,17 +339,15 @@ export class DashboardService {
       );
     });
 
-    const documentosCamionMes = await this.documentosCamionRepository
-      .createQueryBuilder('documento')
-      .where('documento.created_at >= :desde', { desde: primerDiaDelMes })
-      .andWhere('documento.created_at <= :hasta', { hasta: ultimoDiaDelMes })
-      .andWhere('documento.costo IS NOT NULL')
-      .getMany();
+    const documentosCamion = await this.documentosCamionRepository.find();
 
-    documentosCamionMes.forEach((documento) => {
+    documentosCamion.forEach((documento) => {
       const camionId = documento.camionId;
       if (!gastosMap.has(camionId)) gastosMap.set(camionId, 0);
-      gastosMap.set(camionId, gastosMap.get(camionId) + this.toNumber(documento.costo));
+      gastosMap.set(
+        camionId,
+        gastosMap.get(camionId) + this.getProjectedDocumentCostForPeriod(documento, primerDiaDelMes, ultimoDiaDelMes),
+      );
     });
 
     // Calcular eficiencia

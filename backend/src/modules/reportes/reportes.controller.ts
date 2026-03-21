@@ -105,6 +105,19 @@ export class ReportesController {
     });
   }
 
+  @Get('gastos-documentales')
+  async getGastosDocumentales(
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('camionIds') camionIds?: string,
+  ) {
+    return this.reportesService.getGastosDocumentales({
+      desde: desde ? new Date(desde) : undefined,
+      hasta: hasta ? new Date(hasta) : undefined,
+      camionIds: parseIds(camionIds),
+    });
+  }
+
   @Get('ingresos-mensuales')
   async getIngresosMS(
     @Query('desde') desde?: string,

@@ -16,6 +16,8 @@ import BackButton from '../components/BackButton';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
 import '../styles/CamionDetalle.css';
 
+type DocumentCostProjectionWindow = '1y' | '5y';
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('es-AR', {
     style: 'currency',
@@ -41,6 +43,7 @@ const CamionDetalle: React.FC = () => {
   const [showRepostadaModal, setShowRepostadaModal] = useState(false);
   const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
   const [viewingDocumento, setViewingDocumento] = useState<Documento | null>(null);
+  const [costProjectionWindow, setCostProjectionWindow] = useState<DocumentCostProjectionWindow>('1y');
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleSection = (key: string) =>
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -156,6 +159,239 @@ const CamionDetalle: React.FC = () => {
     return dias >= 0 && dias <= 30;
   });
 
+  const projectionWindowDays = costProjectionWindow === '5y' ? 365 * 5 : 365;
+  const projectionWindowLabel = costProjectionWindow === '5y' ? '5 años' : '1 año';
+  const documentosConCosto = documentos.filter((doc) => Number(doc.costo || 0) > 0);
+
+  const getDocumentCoverageDays = (documento: Documento) => {
+    if (!documento.fechaVencimiento || !documento.createdAt) {
+      return 365;
+    }
+
+    const createdAt = new Date(documento.createdAt);
+    const fechaVencimiento = new Date(documento.fechaVencimiento);
+    const diffDays = Math.ceil(
+      (fechaVencimiento.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    return diffDays > 0 ? diffDays : 365;
+  };
+
+  const getProjectedDocumentCost = (documento: Documento) => {
+    const costo = Number(documento.costo || 0);
+    const coverageDays = getDocumentCoverageDays(documento);
+    return costo * (projectionWindowDays / coverageDays);
+  };
+
+  const totalCostoFijoActual = documentosConCosto.reduce(
+    (sum, documento) => sum + Number(documento.costo || 0),
+    0,
+  );
+
+  const totalCostoFijoProyectado = documentosConCosto.reduce(
+    (sum, documento) => sum + getProjectedDocumentCost(documento),
+    0,
+  );
+
+  const renderDocumentacionSection = () => (
+    <section className="info-section">
+      <div className="section-header">
+        <div className="section-title-toggle" onClick={() => toggleSection('docs')}>
+          <span className={`section-chevron${collapsed['docs'] ? ' is-collapsed' : ''}`}>▼</span>
+          <h2>📄 Documentación {documentos.length > 0 && <span className="section-count">{documentos.length}</span>}</h2>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setEditingDocumento(null); setShowDocumentoModal(true); }}
+          className="add-button"
+        >
+          + Agregar Documento
+        </button>
+      </div>
+
+      {collapsed['docs'] ? (
+        <div className="section-summary-line">
+          {documentos.length === 0 ? (
+            <span className="summary-empty">Sin documentos registrados</span>
+          ) : (
+            <>
+              <span>{documentos.length} documento{documentos.length !== 1 ? 's' : ''}</span>
+              {documentosVencidos.length > 0 && (<><span className="summary-sep">·</span><span className="summary-alert-vencido">✕ {documentosVencidos.length} vencido{documentosVencidos.length !== 1 ? 's' : ''}</span></>)}
+              {documentosProximos.length > 0 && (<><span className="summary-sep">·</span><span className="summary-alert-proximo">⚠ {documentosProximos.length} próximo{documentosProximos.length !== 1 ? 's' : ''} a vencer</span></>)}
+              {documentosConCosto.length > 0 && (<><span className="summary-sep">·</span><span>💰 {formatCurrency(totalCostoFijoProyectado)} proyectado / {projectionWindowLabel}</span></>)}
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          {(documentosVencidos.length > 0 || documentosProximos.length > 0) && (
+            <div className="docs-alert-strip">
+              {documentosVencidos.length > 0 && (
+                <span className="docs-alert-item docs-alert-vencido">
+                  ✕ {documentosVencidos.length} documento{documentosVencidos.length > 1 ? 's' : ''} vencido{documentosVencidos.length > 1 ? 's' : ''}
+                </span>
+              )}
+              {documentosProximos.length > 0 && (
+                <span className="docs-alert-item docs-alert-proximo">
+                  ⚠ {documentosProximos.length} próximo{documentosProximos.length > 1 ? 's' : ''} a vencer
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="docs-costs-panel">
+            <div className="docs-costs-header">
+              <div>
+                <h3>Costos Fijos Asociados</h3>
+                <p>Proyección presupuestaria basada en documentos con costo cargado y su vigencia estimada.</p>
+              </div>
+              <div className="docs-costs-controls">
+                <label htmlFor="docs-cost-window">Proyectar a</label>
+                <select
+                  id="docs-cost-window"
+                  value={costProjectionWindow}
+                  onChange={(e) => setCostProjectionWindow(e.target.value as DocumentCostProjectionWindow)}
+                >
+                  <option value="1y">1 año</option>
+                  <option value="5y">5 años</option>
+                </select>
+              </div>
+            </div>
+
+            {documentosConCosto.length === 0 ? (
+              <div className="docs-costs-empty">
+                No hay documentos con costo cargado para proyectar gastos fijos todavía.
+              </div>
+            ) : (
+              <>
+                <div className="docs-costs-summary-grid">
+                  <div className="docs-cost-card">
+                    <span className="docs-cost-card-label">Documentos con costo</span>
+                    <strong>{documentosConCosto.length}</strong>
+                  </div>
+                  <div className="docs-cost-card">
+                    <span className="docs-cost-card-label">Costo actual cargado</span>
+                    <strong>{formatCurrency(totalCostoFijoActual)}</strong>
+                  </div>
+                  <div className="docs-cost-card docs-cost-card-accent">
+                    <span className="docs-cost-card-label">Proyección a {projectionWindowLabel}</span>
+                    <strong>{formatCurrency(totalCostoFijoProyectado)}</strong>
+                  </div>
+                </div>
+
+                <div className="docs-fixed-costs-list">
+                  {documentosConCosto.map((doc) => {
+                    const coverageDays = getDocumentCoverageDays(doc);
+                    const projectedCost = getProjectedDocumentCost(doc);
+
+                    return (
+                      <div key={`cost-${doc.id}`} className="docs-fixed-cost-item">
+                        <div className="docs-fixed-cost-main">
+                          <span className="docs-fixed-cost-type">{TipoDocumentoLabels[doc.tipo]}</span>
+                          <strong>{doc.nombre || 'Documento sin nombre'}</strong>
+                        </div>
+                        <div className="docs-fixed-cost-metrics">
+                          <span>Costo cargado: {formatCurrency(Number(doc.costo || 0))}</span>
+                          <span>Cobertura estimada: {coverageDays} días</span>
+                          <span>Vence: {doc.fechaVencimiento ? new Date(doc.fechaVencimiento).toLocaleDateString('es-AR') : 'Sin fecha'}</span>
+                          <span>Proyección {projectionWindowLabel}: {formatCurrency(projectedCost)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {documentos.length === 0 ? (
+            <div className="empty-message">No hay documentos registrados</div>
+          ) : (
+            <div className="documentos-grid">
+              {[...documentos]
+                .sort((a, b) => {
+                  const getOrder = (doc: Documento) => {
+                    if (!doc.fechaVencimiento) return 3;
+                    const dias = Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000);
+                    if (dias < 0) return 0;
+                    if (dias <= 30) return 1;
+                    return 2;
+                  };
+                  return getOrder(a) - getOrder(b);
+                })
+                .map((doc) => {
+                  const dias = doc.fechaVencimiento
+                    ? Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000)
+                    : null;
+                  const cardStatus =
+                    dias === null ? 'sin-fecha' : dias < 0 ? 'vencido' : dias <= 30 ? 'proximo' : 'vigente';
+                  return (
+                    <div key={doc.id} className={`documento-card documento-card-${cardStatus}`}>
+                      <div className="documento-card-header">
+                        <span className="documento-tipo">{TipoDocumentoLabels[doc.tipo]}</span>
+                        <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />
+                      </div>
+
+                      {getDocumentoArchivos(doc).length > 0 ? (
+                        <div
+                          className="documento-preview clickable"
+                          onClick={() => setViewingDocumento(doc)}
+                          title="Ver imagen completa"
+                        >
+                          <img src={getDocumentoArchivos(doc)[0]} alt={doc.nombre || 'Documento'} />
+                          <div className="preview-overlay">🔍 Ver imagen</div>
+                        </div>
+                      ) : (
+                        <div className="documento-no-imagen">
+                          <span>📄</span>
+                          <small>Sin imagen</small>
+                        </div>
+                      )}
+
+                      <div className="documento-details">
+                        {doc.nombre && <h4 className="doc-nombre">{doc.nombre}</h4>}
+                        {getDocumentoArchivos(doc).length > 1 && (
+                          <p className="doc-paginas">📄 {getDocumentoArchivos(doc).length} páginas</p>
+                        )}
+                        {doc.descripcion && <p className="doc-descripcion">{doc.descripcion}</p>}
+                        {doc.costo != null && (
+                          <p className="doc-costo">💵 Costo: {formatCurrency(Number(doc.costo))}</p>
+                        )}
+                        {doc.fechaVencimiento && (
+                          <p className="doc-vencimiento">
+                            📅 Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="doc-card-actions">
+                        <button
+                          type="button"
+                          onClick={() => handleEditDocumento(doc)}
+                          className="doc-action-btn doc-edit-btn"
+                          title="Editar documento"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDocumento(doc.id)}
+                          className="doc-action-btn doc-delete-btn"
+                          title="Eliminar documento"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+
   return (
     <div className="detalle-container">
       {/* Navbar */}
@@ -243,6 +479,8 @@ const CamionDetalle: React.FC = () => {
           <ConfiguracionVehicularTab camionId={camionId} />
         )}
       </section>
+
+      {renderDocumentacionSection()}
 
       {/* Último Servicio */}
       {ultimoServicio && (
@@ -364,138 +602,6 @@ const CamionDetalle: React.FC = () => {
                 ))}
               </div>
             )}
-          </>
-        )}
-      </section>
-
-      {/* Documentación */}
-      <section className="info-section">
-        <div className="section-header">
-          <div className="section-title-toggle" onClick={() => toggleSection('docs')}>
-            <span className={`section-chevron${collapsed['docs'] ? ' is-collapsed' : ''}`}>▼</span>
-            <h2>📄 Documentación {documentos.length > 0 && <span className="section-count">{documentos.length}</span>}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={() => { setEditingDocumento(null); setShowDocumentoModal(true); }}
-            className="add-button"
-          >
-            + Agregar Documento
-          </button>
-        </div>
-
-        {collapsed['docs'] ? (
-          <div className="section-summary-line">
-            {documentos.length === 0 ? (
-              <span className="summary-empty">Sin documentos registrados</span>
-            ) : (
-              <>
-                <span>{documentos.length} documento{documentos.length !== 1 ? 's' : ''}</span>
-                {documentosVencidos.length > 0 && (<><span className="summary-sep">·</span><span className="summary-alert-vencido">✕ {documentosVencidos.length} vencido{documentosVencidos.length !== 1 ? 's' : ''}</span></>)}
-                {documentosProximos.length > 0 && (<><span className="summary-sep">·</span><span className="summary-alert-proximo">⚠ {documentosProximos.length} próximo{documentosProximos.length !== 1 ? 's' : ''} a vencer</span></>)}
-              </>
-            )}
-          </div>
-        ) : (
-          <>
-        {(documentosVencidos.length > 0 || documentosProximos.length > 0) && (
-          <div className="docs-alert-strip">
-            {documentosVencidos.length > 0 && (
-              <span className="docs-alert-item docs-alert-vencido">
-                ✕ {documentosVencidos.length} documento{documentosVencidos.length > 1 ? 's' : ''} vencido{documentosVencidos.length > 1 ? 's' : ''}
-              </span>
-            )}
-            {documentosProximos.length > 0 && (
-              <span className="docs-alert-item docs-alert-proximo">
-                ⚠ {documentosProximos.length} próximo{documentosProximos.length > 1 ? 's' : ''} a vencer
-              </span>
-            )}
-          </div>
-        )}
-
-        {documentos.length === 0 ? (
-          <div className="empty-message">No hay documentos registrados</div>
-        ) : (
-          <div className="documentos-grid">
-            {[...documentos]
-              .sort((a, b) => {
-                const getOrder = (doc: Documento) => {
-                  if (!doc.fechaVencimiento) return 3;
-                  const dias = Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000);
-                  if (dias < 0) return 0;
-                  if (dias <= 30) return 1;
-                  return 2;
-                };
-                return getOrder(a) - getOrder(b);
-              })
-              .map((doc) => {
-                const dias = doc.fechaVencimiento
-                  ? Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000)
-                  : null;
-                const cardStatus =
-                  dias === null ? 'sin-fecha' : dias < 0 ? 'vencido' : dias <= 30 ? 'proximo' : 'vigente';
-                return (
-                  <div key={doc.id} className={`documento-card documento-card-${cardStatus}`}>
-                    <div className="documento-card-header">
-                      <span className="documento-tipo">{TipoDocumentoLabels[doc.tipo]}</span>
-                      <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />
-                    </div>
-
-                    {getDocumentoArchivos(doc).length > 0 ? (
-                      <div
-                        className="documento-preview clickable"
-                        onClick={() => setViewingDocumento(doc)}
-                        title="Ver imagen completa"
-                      >
-                        <img src={getDocumentoArchivos(doc)[0]} alt={doc.nombre || 'Documento'} />
-                        <div className="preview-overlay">🔍 Ver imagen</div>
-                      </div>
-                    ) : (
-                      <div className="documento-no-imagen">
-                        <span>📄</span>
-                        <small>Sin imagen</small>
-                      </div>
-                    )}
-
-                    <div className="documento-details">
-                      {doc.nombre && <h4 className="doc-nombre">{doc.nombre}</h4>}
-                      {getDocumentoArchivos(doc).length > 1 && (
-                        <p className="doc-paginas">📄 {getDocumentoArchivos(doc).length} páginas</p>
-                      )}
-                      {doc.descripcion && <p className="doc-descripcion">{doc.descripcion}</p>}
-                      {doc.costo != null && (
-                        <p className="doc-costo">💵 Costo: {formatCurrency(Number(doc.costo))}</p>
-                      )}
-                      {doc.fechaVencimiento && (
-                        <p className="doc-vencimiento">
-                          📅 Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="doc-card-actions">
-                      <button
-                        type="button"
-                        onClick={() => handleEditDocumento(doc)}
-                        className="doc-action-btn doc-edit-btn"
-                        title="Editar documento"
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteDocumento(doc.id)}
-                        className="doc-action-btn doc-delete-btn"
-                        title="Eliminar documento"
-                      >
-                        🗑️ Eliminar
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        )}
           </>
         )}
       </section>

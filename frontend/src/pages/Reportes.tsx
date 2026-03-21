@@ -19,6 +19,7 @@ import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import {
   DesempenoChoferesResponse,
+  GastosDocumentalesResponse,
   GastosMantenimientoResponse,
   IngresosMensualesResponse,
   OperacionCamionResponse,
@@ -42,6 +43,7 @@ type RentabilidadExportColumnKey =
   | 'gananciaNeta'
   | 'kmRecorridos'
   | 'gastosOperativos'
+  | 'documentosFijos'
   | 'mantenimiento'
   | 'sueldoChofer'
   | 'comisionChofer';
@@ -53,6 +55,7 @@ const RENTABILIDAD_EXPORT_COLUMNS: Array<{ key: RentabilidadExportColumnKey; lab
   { key: 'gananciaNeta', label: 'Ganancia Neta' },
   { key: 'kmRecorridos', label: 'KM Recorridos' },
   { key: 'gastosOperativos', label: 'Gastos Operativos' },
+  { key: 'documentosFijos', label: 'Documentos Fijos' },
   { key: 'mantenimiento', label: 'Mantenimiento' },
   { key: 'sueldoChofer', label: 'Sueldo Chofer' },
   { key: 'comisionChofer', label: 'Comisión Chofer' },
@@ -65,6 +68,7 @@ const DEFAULT_RENTABILIDAD_EXPORT_COLUMNS: Record<RentabilidadExportColumnKey, b
   gananciaNeta: true,
   kmRecorridos: true,
   gastosOperativos: true,
+  documentosFijos: true,
   mantenimiento: true,
   sueldoChofer: true,
   comisionChofer: true,
@@ -116,6 +120,7 @@ const Reportes: React.FC = () => {
   const [operacionCamiones, setOperacionCamiones] = useState<Record<number, OperacionCamionResponse>>({});
   const [desempenoChoferes, setDesempenoChoferes] = useState<DesempenoChoferesResponse | null>(null);
   const [gastosMantenimiento, setGastosMantenimiento] = useState<GastosMantenimientoResponse | null>(null);
+  const [gastosDocumentales, setGastosDocumentales] = useState<GastosDocumentalesResponse | null>(null);
   const [ingresosMensuales, setIngresosMensuales] = useState<IngresosMensualesResponse | null>(null);
 
   const [granularidadIngresos, setGranularidadIngresos] = useState<'diaria' | 'semanal' | 'mensual'>('diaria');
@@ -409,13 +414,18 @@ const Reportes: React.FC = () => {
   const fetchReportesAdicionales = async () => {
     try {
       setLoadingAdicionales(true);
-      const [desempenoData, gastosData, ingresosData] = await Promise.all([
+      const [desempenoData, gastosData, gastosDocumentalesData, ingresosData] = await Promise.all([
         reportesService.getDesempenoChoferes({
           desde,
           hasta,
           choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
         }),
         reportesService.getGastosMantenimiento({
+          desde,
+          hasta,
+          camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
+        }),
+        reportesService.getGastosDocumentales({
           desde,
           hasta,
           camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
@@ -430,6 +440,7 @@ const Reportes: React.FC = () => {
 
       setDesempenoChoferes(desempenoData);
       setGastosMantenimiento(gastosData);
+  setGastosDocumentales(gastosDocumentalesData);
       setIngresosMensuales(ingresosData);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'No se pudieron cargar los reportes adicionales');
@@ -481,6 +492,7 @@ const Reportes: React.FC = () => {
       gananciaNeta: point.gananciaNeta.toFixed(2),
       kmRecorridos: point.kmRecorridos.toFixed(2),
       gastosOperativos: point.detalleGastos.operativosViaje.toFixed(2),
+      documentosFijos: point.detalleGastos.documentosFijos.toFixed(2),
       mantenimiento: point.detalleGastos.mantenimiento.toFixed(2),
       sueldoChofer: point.detalleGastos.sueldoChofer.toFixed(2),
       comisionChofer: point.detalleGastos.comisionChofer.toFixed(2),
@@ -669,6 +681,21 @@ const Reportes: React.FC = () => {
     downloadCsv(
       `gastos_mantenimiento_${desde}_${hasta}.csv`,
       ['Patente', 'Registros', 'TotalGastos'],
+      rows,
+    );
+  };
+
+  const exportGastosDocumentalesCsv = () => {
+    const rows = (gastosDocumentales?.gastos || []).map((item) => [
+      item.patente || `Camion ${item.camionId}`,
+      item.cantidadDocumentos,
+      item.totalCostoActual.toFixed(2),
+      item.totalCostoProyectado.toFixed(2),
+    ]);
+
+    downloadCsv(
+      `gastos_documentales_${desde}_${hasta}.csv`,
+      ['Patente', 'Documentos', 'CostoActual', 'CostoProyectado'],
       rows,
     );
   };
@@ -1481,6 +1508,7 @@ const Reportes: React.FC = () => {
               <th>Gastos</th>
               <th>Ganancia Neta</th>
               <th>KM Recorridos</th>
+              <th>Documentos Fijos</th>
               <th>Mantenimiento</th>
               <th>Sueldo Chofer</th>
               <th>Comisión Chofer</th>
@@ -1494,6 +1522,7 @@ const Reportes: React.FC = () => {
                 <td>${point.gastos.toFixed(2)}</td>
                 <td>${point.gananciaNeta.toFixed(2)}</td>
                 <td>{point.kmRecorridos.toFixed(2)} km</td>
+                <td>${point.detalleGastos.documentosFijos.toFixed(2)}</td>
                 <td>${point.detalleGastos.mantenimiento.toFixed(2)}</td>
                 <td>${point.detalleGastos.sueldoChofer.toFixed(2)}</td>
                 <td>${point.detalleGastos.comisionChofer.toFixed(2)}</td>
@@ -1501,7 +1530,7 @@ const Reportes: React.FC = () => {
             ))}
             {(reporte?.series || []).length === 0 && (
               <tr>
-                <td colSpan={8}>No hay datos para el filtro seleccionado.</td>
+                <td colSpan={9}>No hay datos para el filtro seleccionado.</td>
               </tr>
             )}
           </tbody>
@@ -1549,6 +1578,54 @@ const Reportes: React.FC = () => {
               )}
             </tbody>
           </table>
+        )}
+      </div>
+
+      <div className="tabla-container">
+        <div className="section-header-inline">
+          <h3>Gastos Documentales Fijos</h3>
+          <button
+            className="btn-rapido btn-rapido--accent"
+            onClick={exportGastosDocumentalesCsv}
+            disabled={loadingAdicionales || !(gastosDocumentales?.gastos || []).length}
+          >
+            Exportar CSV
+          </button>
+        </div>
+        {loadingAdicionales ? (
+          <p>Cargando gastos documentales...</p>
+        ) : (
+          <>
+            <div className="operacion-resumen reportes-resumen-doble">
+              <span>Costo actual cargado: ${Number(gastosDocumentales?.resumenTotalActual || 0).toFixed(2)}</span>
+              <span>Costo proyectado: ${Number(gastosDocumentales?.resumenTotalProyectado || 0).toFixed(2)}</span>
+            </div>
+            <table className="reportes-table">
+              <thead>
+                <tr>
+                  <th>Patente</th>
+                  <th>Documentos</th>
+                  <th>Costo Actual</th>
+                  <th>Costo Proyectado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(gastosDocumentales?.gastos || []).map((item) => (
+                  <tr key={item.camionId}>
+                    <td>{item.patente || `Camión ${item.camionId}`}</td>
+                    <td>{item.cantidadDocumentos}</td>
+                    <td>${item.totalCostoActual.toFixed(2)}</td>
+                    <td>${item.totalCostoProyectado.toFixed(2)}</td>
+                  </tr>
+                ))}
+                {(gastosDocumentales?.gastos || []).length === 0 && (
+                  <tr>
+                    <td colSpan={4}>No hay gastos documentales para el filtro seleccionado.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 

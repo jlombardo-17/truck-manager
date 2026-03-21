@@ -5,6 +5,7 @@ import { Viaje } from '../viajes/viaje.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
 import { Chofer } from '../choferes/chofer.entity';
 import { Camion } from '../camiones/camion.entity';
+import { Documento } from '../camiones/documento.entity';
 
 type Granularidad = 'diaria' | 'semanal' | 'mensual';
 type GranularidadOperacion = 'diaria' | 'semanal' | 'mensual';
@@ -23,6 +24,7 @@ interface BucketAccumulator {
   gastosComisionChofer: number;
   gastosSueldoChofer: number;
   gastosMantenimiento: number;
+  gastosDocumentosFijos: number;
   kmRecorridos: number;
   choferIds: Set<number>;
 }
@@ -43,6 +45,8 @@ export class ReportesService {
     private readonly choferRepository: Repository<Chofer>,
     @InjectRepository(Camion)
     private readonly camionRepository: Repository<Camion>,
+    @InjectRepository(Documento)
+    private readonly documentoRepository: Repository<Documento>,
   ) {}
 
   async getRentabilidad(filters: Partial<RentabilidadFilters>) {
@@ -91,6 +95,7 @@ export class ReportesService {
 
     await this.addSueldoToBuckets(buckets, choferesById, granularidad);
     await this.addMantenimientoToBuckets(buckets, parsedFilters);
+    await this.addDocumentosFijosToBuckets(buckets, parsedFilters);
 
     const series = Array.from(buckets.entries())
       .sort(([a], [b]) => a.localeCompare(b))
@@ -99,7 +104,8 @@ export class ReportesService {
           bucket.gastosOperativos +
           bucket.gastosComisionChofer +
           bucket.gastosSueldoChofer +
-          bucket.gastosMantenimiento;
+          bucket.gastosMantenimiento +
+          bucket.gastosDocumentosFijos;
         const gananciaNeta = bucket.ingresos - gastosTotales;
 
         return {
@@ -114,6 +120,7 @@ export class ReportesService {
             comisionChofer: this.round2(bucket.gastosComisionChofer),
             sueldoChofer: this.round2(bucket.gastosSueldoChofer),
             mantenimiento: this.round2(bucket.gastosMantenimiento),
+            documentosFijos: this.round2(bucket.gastosDocumentosFijos),
           },
         };
       });
@@ -224,6 +231,7 @@ export class ReportesService {
     }
 
     const mantenimientoByCamion = new Map<number, number>();
+    const documentosFijosByCamion = new Map<number, number>();
     if (filters.compararPor === 'camion') {
       const camionIds = Array.from(buckets.values()).map((bucket) => bucket.id);
       if (camionIds.length > 0) {
@@ -250,6 +258,22 @@ export class ReportesService {
           const current = mantenimientoByCamion.get(mantenimiento.camionId) || 0;
           mantenimientoByCamion.set(mantenimiento.camionId, current + costo);
         }
+
+        const documentos = await this.documentoRepository.find({
+          where: { camionId: In(camionIds) },
+        });
+
+        const projectionDays = this.getDaysInclusive(desde, hasta);
+        for (const documento of documentos) {
+          const costo = this.toNumber(documento.costo);
+          if (costo <= 0) {
+            continue;
+          }
+
+          const projectedCost = (costo / this.getDocumentoCoverageDays(documento)) * projectionDays;
+          const current = documentosFijosByCamion.get(documento.camionId) || 0;
+          documentosFijosByCamion.set(documento.camionId, current + projectedCost);
+        }
       }
     }
 
@@ -263,7 +287,10 @@ export class ReportesService {
         const gastosMantenimiento = filters.compararPor === 'camion'
           ? this.toNumber(mantenimientoByCamion.get(bucket.id))
           : 0;
-        const gastos = bucket.gastosOperativos + bucket.gastosComisionChofer + gastosSueldo + gastosMantenimiento;
+        const gastosDocumentales = filters.compararPor === 'camion'
+          ? this.toNumber(documentosFijosByCamion.get(bucket.id))
+          : 0;
+        const gastos = bucket.gastosOperativos + bucket.gastosComisionChofer + gastosSueldo + gastosMantenimiento + gastosDocumentales;
 
         return {
           id: bucket.id,
@@ -442,6 +469,46 @@ export class ReportesService {
     }
   }
 
+  private async addDocumentosFijosToBuckets(
+    buckets: Map<string, BucketAccumulator>,
+    filters: RentabilidadFilters,
+  ) {
+    const hasChoferFilter = Boolean(filters.choferIds && filters.choferIds.length > 0);
+    const hasCamionFilter = Boolean(filters.camionIds && filters.camionIds.length > 0);
+    const includeDocumentos = !hasChoferFilter || hasCamionFilter;
+    if (!includeDocumentos || buckets.size === 0) {
+      return;
+    }
+
+    const where: any = {};
+    if (hasCamionFilter) {
+      where.camionId = In(filters.camionIds!);
+    }
+
+    const documentos = await this.documentoRepository.find({ where });
+    const bucketKeys = Array.from(buckets.keys());
+
+    for (const documento of documentos) {
+      const costo = this.toNumber(documento.costo);
+      if (costo <= 0) {
+        continue;
+      }
+
+      const dailyRate = costo / this.getDocumentoCoverageDays(documento);
+
+      for (const key of bucketKeys) {
+        const { start, end } = this.getBucketDateRange(key, filters.granularidad);
+        const overlapDays = this.getOverlapDays(start, end, filters.desde, filters.hasta);
+        if (overlapDays <= 0) {
+          continue;
+        }
+
+        const bucket = this.ensureBucket(buckets, key);
+        bucket.gastosDocumentosFijos += dailyRate * overlapDays;
+      }
+    }
+  }
+
   private async addSueldoToBuckets(
     buckets: Map<string, BucketAccumulator>,
     choferesById: Map<number, Chofer>,
@@ -555,6 +622,7 @@ export class ReportesService {
         gastosComisionChofer: 0,
         gastosSueldoChofer: 0,
         gastosMantenimiento: 0,
+        gastosDocumentosFijos: 0,
         kmRecorridos: 0,
         choferIds: new Set<number>(),
       });
@@ -570,6 +638,59 @@ export class ReportesService {
 
   private round2(value: number): number {
     return Math.round(value * 100) / 100;
+  }
+
+  private getDocumentoCoverageDays(documento: Documento): number {
+    if (!documento.fechaVencimiento || !documento.createdAt) {
+      return 365;
+    }
+
+    const start = new Date(documento.createdAt);
+    const end = new Date(documento.fechaVencimiento);
+    const days = this.getDaysInclusive(start, end);
+    return days > 0 ? days : 365;
+  }
+
+  private getDaysInclusive(start: Date, end: Date): number {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    const diff = endDate.getTime() - startDate.getTime();
+    return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)) + 1);
+  }
+
+  private getBucketDateRange(key: string, granularidad: Granularidad): { start: Date; end: Date } {
+    if (granularidad === 'mensual') {
+      const [year, month] = key.split('-').map((v) => Number(v));
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    const [year, month, day] = key.split('-').map((v) => Number(v));
+    const start = new Date(year, month - 1, day);
+    if (granularidad === 'semanal') {
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  private getOverlapDays(periodStart: Date, periodEnd: Date, filterStart: Date, filterEnd: Date): number {
+    const start = new Date(Math.max(periodStart.getTime(), filterStart.getTime()));
+    const end = new Date(Math.min(periodEnd.getTime(), filterEnd.getTime()));
+    if (start > end) {
+      return 0;
+    }
+
+    return this.getDaysInclusive(start, end);
   }
 
   // Reportes adicionales
@@ -705,6 +826,92 @@ export class ReportesService {
         camionIds: filters.camionIds,
       },
       resumenTotal,
+      gastos,
+    };
+  }
+
+  async getGastosDocumentales(filters: {
+    desde?: Date;
+    hasta?: Date;
+    camionIds?: number[];
+  }) {
+    const hasta = filters.hasta || new Date();
+    const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const where: any = {};
+    if (filters.camionIds && filters.camionIds.length > 0) {
+      where.camionId = In(filters.camionIds);
+    }
+
+    const documentos = await this.documentoRepository.find({ where });
+    const projectionDays = this.getDaysInclusive(desde, hasta);
+    const gastosPorCamion = new Map<number, {
+      camionId: number;
+      patente: string;
+      documentos: Array<{
+        documentoId: number;
+        tipo: string;
+        nombre: string;
+        costoActual: number;
+        coberturaDias: number;
+        costoProyectado: number;
+        fechaVencimiento?: Date;
+      }>;
+    }>();
+
+    const camionIds = [...new Set(documentos.map((documento) => documento.camionId).filter(Boolean))];
+    const camiones = camionIds.length > 0
+      ? await this.camionRepository.find({ where: { id: In(camionIds) } })
+      : [];
+    const camionPatenteById = new Map(camiones.map((camion) => [camion.id, camion.patente]));
+
+    for (const documento of documentos) {
+      const costoActual = this.toNumber(documento.costo);
+      if (costoActual <= 0) {
+        continue;
+      }
+
+      const coberturaDias = this.getDocumentoCoverageDays(documento);
+      const costoProyectado = (costoActual / coberturaDias) * projectionDays;
+
+      if (!gastosPorCamion.has(documento.camionId)) {
+        gastosPorCamion.set(documento.camionId, {
+          camionId: documento.camionId,
+          patente: camionPatenteById.get(documento.camionId) || '',
+          documentos: [],
+        });
+      }
+
+      gastosPorCamion.get(documento.camionId)!.documentos.push({
+        documentoId: documento.id,
+        tipo: documento.tipo,
+        nombre: documento.nombre || 'Documento sin nombre',
+        costoActual: this.round2(costoActual),
+        coberturaDias,
+        costoProyectado: this.round2(costoProyectado),
+        fechaVencimiento: documento.fechaVencimiento,
+      });
+    }
+
+    const gastos = Array.from(gastosPorCamion.values())
+      .map((item) => ({
+        camionId: item.camionId,
+        patente: item.patente,
+        cantidadDocumentos: item.documentos.length,
+        totalCostoActual: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoActual, 0)),
+        totalCostoProyectado: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoProyectado, 0)),
+        documentos: item.documentos.sort((a, b) => b.costoProyectado - a.costoProyectado),
+      }))
+      .sort((a, b) => b.totalCostoProyectado - a.totalCostoProyectado);
+
+    return {
+      filtrosAplicados: {
+        desde: desde.toISOString().split('T')[0],
+        hasta: hasta.toISOString().split('T')[0],
+        camionIds: filters.camionIds,
+      },
+      resumenTotalActual: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoActual, 0)),
+      resumenTotalProyectado: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoProyectado, 0)),
       gastos,
     };
   }

@@ -914,6 +914,142 @@
 
 /* ===== Documento section redesign ===== */
 
+.docs-costs-panel {
+  margin-bottom: 1.5rem;
+  padding: 1.2rem;
+  border: 1px solid #e3e8f5;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfcff 0%, #f5f8ff 100%);
+}
+
+.docs-costs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.docs-costs-header h3 {
+  margin: 0;
+  color: #24324a;
+  font-size: 1.05rem;
+}
+
+.docs-costs-header p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.docs-costs-controls {
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.docs-costs-controls label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.docs-costs-controls select {
+  padding: 0.72rem 0.85rem;
+  border: 1px solid #d6deee;
+  border-radius: 10px;
+  background: #fff;
+  color: #1f2937;
+}
+
+.docs-costs-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.docs-cost-card {
+  padding: 0.95rem 1rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e5ebf7;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.docs-cost-card strong {
+  color: #1e293b;
+  font-size: 1.15rem;
+}
+
+.docs-cost-card-accent {
+  background: linear-gradient(135deg, #ecf3ff 0%, #eef2ff 100%);
+  border-color: #c9d8ff;
+}
+
+.docs-cost-card-label {
+  font-size: 0.84rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.docs-costs-empty {
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px dashed #cdd8ea;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.docs-fixed-costs-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.docs-fixed-cost-item {
+  background: #fff;
+  border: 1px solid #e5ebf7;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.docs-fixed-cost-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+}
+
+.docs-fixed-cost-main strong {
+  color: #24324a;
+}
+
+.docs-fixed-cost-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.docs-fixed-cost-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem 1rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
 /* Alert strip */
 .docs-alert-strip {
   display: flex;
@@ -1197,4 +1333,14 @@
 .doc-view-field span {
   color: #333;
   font-size: 0.975rem;
+}
+
+@media (max-width: 768px) {
+  .docs-costs-header {
+    flex-direction: column;
+  }
+
+  .docs-costs-controls {
+    width: 100%;
+  }
 }
