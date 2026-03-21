@@ -141,8 +141,8 @@ const ChoferForm: React.FC = () => {
       </nav>
 
       <div className="page-header">
-        <h1>➕ Nuevo Chofer</h1>
         <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
+        <h1>➕ Nuevo Chofer</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="chofer-form">

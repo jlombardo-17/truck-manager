@@ -75,12 +75,22 @@
 }
 
 /* Page Header */
-.page-header {
+.form-container .form-content .page-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
-.page-header h1 {
-  margin: 1rem 0 0 0;
+.form-container .form-content .page-header > :first-child {
+  justify-self: start;
+}
+
+.form-container .form-content .page-header h1 {
+  grid-column: 2;
+  text-align: center;
+  margin: 0;
   color: #333;
   font-size: 1.75rem;
 }
