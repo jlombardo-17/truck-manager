@@ -415,11 +415,18 @@
 }
 
 .documento-tipo {
-  font-size: 0.75rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: #1e40af;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
   text-transform: uppercase;
-  color: #6c757d;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+  box-shadow: 0 8px 18px rgba(30, 64, 175, 0.18);
 }
 
 .documento-preview {

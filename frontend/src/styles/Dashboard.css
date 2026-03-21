@@ -123,12 +123,13 @@
 
 .role-badge {
   display: inline-block;
-  background: linear-gradient(120deg, var(--brand-700) 0%, var(--teal-600) 100%);
+  background: var(--brand-700);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 600;
+  box-shadow: 0 6px 14px rgba(30, 58, 138, 0.18);
 }
 
 .features-grid {
