@@ -1,0 +1,205 @@
+.salarios-tab-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.salarios-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+.salarios-summary-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.salarios-summary-card span {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.salarios-summary-card strong {
+  color: #1f2937;
+  font-size: 1.2rem;
+}
+
+.salarios-summary-card.paid {
+  border-left: 4px solid #22c55e;
+}
+
+.salarios-summary-card.pending {
+  border-left: 4px solid #f59e0b;
+}
+
+.salarios-summary-card.movements {
+  border-left: 4px solid #3b82f6;
+}
+
+.salarios-tab-block {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.salarios-tab-block h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.15rem;
+}
+
+.salarios-tab-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.salarios-tab-badge {
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.salarios-tab-badge.warning {
+  color: #7a4b00;
+  background: #fff4d4;
+  border: 1px solid #fed58a;
+}
+
+.salarios-tab-badge.success {
+  color: #106b34;
+  background: #e9f9ef;
+  border: 1px solid #b8eac8;
+}
+
+.salarios-tab-empty {
+  color: #64748b;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px dashed #d1d5db;
+  background: #f8fafc;
+}
+
+.salarios-tab-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.salarios-tab-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.salarios-tab-item.stacked {
+  align-items: flex-start;
+}
+
+.salarios-tab-item h4 {
+  margin: 0 0 0.2rem;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
+.salarios-tab-item p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.salarios-tab-action,
+.salarios-tab-link {
+  border: 1px solid #bfd6fb;
+  color: #0f4ea8;
+  background: #edf4ff;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.salarios-tab-action:hover,
+.salarios-tab-link:hover {
+  background: #dceaff;
+}
+
+.salarios-tab-amount {
+  color: #0f4ea8;
+  font-size: 1rem;
+}
+
+.salarios-tab-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+.salarios-tab-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.salarios-tab-table th,
+.salarios-tab-table td {
+  padding: 0.65rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.salarios-tab-table th {
+  color: #334155;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.salarios-tab-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.salarios-tab-loading,
+.salarios-tab-error {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.salarios-tab-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+@media (max-width: 768px) {
+  .salarios-tab-block-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .salarios-tab-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { Chofer, EstadoChofer, estadoChoferLabels } from '../types/chofer';
 import { ChoferDocumento, TipoDocumentoChofer, TipoDocumentoChoferLabels } from '../types/chofer-documento';
 import choferesService from '../services/choferesService';
 import choferDocumentosService from '../services/choferDocumentosService';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import BackButton from '../components/BackButton';
+import SalariosTab from '../components/SalariosTab';
 import '../styles/ChoferDetalle.css';
 
 interface ChoferEditFormData {
@@ -22,7 +23,6 @@ interface ChoferEditFormData {
 }
 
 const ChoferDetalle: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { id } = useParams<{ id: string }>();
@@ -34,7 +34,7 @@ const ChoferDetalle: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSavingChofer, setIsSavingChofer] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'documentos'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'documentos' | 'salarios'>('info');
   const [isEditMode, setIsEditMode] = useState(false);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [editFormData, setEditFormData] = useState<ChoferEditFormData>({
@@ -276,7 +276,6 @@ const ChoferDetalle: React.FC = () => {
             descripcion: nuevoDocumento.descripcion,
             fechaEmision: nuevoDocumento.fechaEmision,
             fechaVencimiento: nuevoDocumento.fechaVencimiento,
-            choferId,
             rutasArchivos: rutasFinales,
             rutaArchivo: rutasFinales[0],
           } as ChoferDocumento);
@@ -299,7 +298,6 @@ const ChoferDetalle: React.FC = () => {
             descripcion: nuevoDocumento.descripcion,
             fechaEmision: nuevoDocumento.fechaEmision,
             fechaVencimiento: nuevoDocumento.fechaVencimiento,
-            choferId,
           };
 
           // Solo actualizar rutasArchivos si se eliminaron páginas
@@ -449,23 +447,6 @@ const ChoferDetalle: React.FC = () => {
       <div className="page-header">
         <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
         <h1>📋 Detalle del Chofer</h1>
-        <button 
-                    type="button"
-                    className="btn-salarios"
-                    onClick={() => navigate(`/choferes/${choferId}/salarios`)}
-                  >
-                    💰 Ver Salarios
-                  </button>
-                  <button 
-          type="button"
-          className="btn-edit"
-          onClick={() => {
-            setActiveTab('info');
-            setIsEditMode((prev) => !prev);
-          }}
-        >
-          {isEditMode ? '👁️ Ver' : '✏️ Editar'}
-        </button>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -496,6 +477,13 @@ const ChoferDetalle: React.FC = () => {
           onClick={() => setActiveTab('documentos')}
         >
           📎 Documentos ({documentos.length})
+        </button>
+        <button
+          type="button"
+          className={`tab ${activeTab === 'salarios' ? 'active' : ''}`}
+          onClick={() => setActiveTab('salarios')}
+        >
+          💰 Salarios y Pagos
         </button>
       </div>
 
@@ -741,7 +729,7 @@ const ChoferDetalle: React.FC = () => {
                     />
                   </div>
 
-                  <div className="form-group">
+                  <div className="form-group full-width">
                     <label>Archivo del Documento {!editingDocumento && '*'}</label>
                     
                     {editingDocumento && (nuevoDocumento.rutasArchivos || [getDocumentoArchivos(editingDocumento)[0]]).length > 0 && (
@@ -960,6 +948,15 @@ const ChoferDetalle: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'salarios' && (
+          <div className="documentos-section">
+            <div className="section-header section-header-inline">
+              <h3>💰 Salarios y Pagos del Chofer</h3>
+            </div>
+            <SalariosTab choferId={choferId} />
           </div>
         )}
       </div>

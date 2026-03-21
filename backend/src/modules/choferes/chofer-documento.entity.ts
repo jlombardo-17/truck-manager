@@ -32,7 +32,17 @@ export class ChoferDocumento {
   @Column({ type: 'longtext' })
   rutaArchivo: string;
 
-  @Column({ type: 'simple-json', nullable: true })
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    transformer: {
+      to: (value: string[] | null) => (value ? JSON.stringify(value) : null),
+      from: (value: string | null) => {
+        if (!value) return [];
+        try { return JSON.parse(value); } catch { return []; }
+      },
+    },
+  })
   rutasArchivos?: string[];
 
   @Column({ nullable: true })
