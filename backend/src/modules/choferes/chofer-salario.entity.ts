@@ -4,10 +4,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Chofer } from './chofer.entity';
+import { ChoferSalarioPago } from './chofer-salario-pago.entity';
 
 export enum EstadoSalario {
   PENDIENTE = 'pendiente',
@@ -78,6 +80,12 @@ export class ChoferSalario {
   // Comprobante de pago (número de transferencia, cheque, recibo)
   @Column({ nullable: true })
   comprobante: string;
+
+  @OneToMany(() => ChoferSalarioPago, (pago) => pago.salario, {
+    cascade: false,
+    eager: false,
+  })
+  pagos: ChoferSalarioPago[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

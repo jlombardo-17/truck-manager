@@ -23,6 +23,16 @@
   color: #6c757d;
 }
 
+.inline-error {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #f5c2c7;
+  background: #f8d7da;
+  color: #842029;
+  font-size: 14px;
+}
+
 .btn-back {
   padding: 10px 20px;
   background-color: #6c757d;
@@ -85,6 +95,343 @@
 .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.btn-success {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.35);
+}
+
+/* Registro de pagos */
+.pagos-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 18px;
+  margin-bottom: 24px;
+}
+
+.pagos-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.pagos-section-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 20px;
+}
+
+.pendientes-badge {
+  background: #fff4d6;
+  color: #7a5b00;
+  border: 1px solid #f7d27e;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pagos-empty {
+  background: #f8f9fa;
+  border: 1px dashed #ced4da;
+  border-radius: 10px;
+  padding: 14px;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.pagos-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pago-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fcfdff;
+}
+
+.pago-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #495057;
+}
+
+.btn-registrar-pago {
+  padding: 8px 12px;
+  background: #218838;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-registrar-pago:hover {
+  background: #1b6f2e;
+}
+
+.btn-registrar-inline {
+  border: 1px solid #b8e3c1;
+  background: #eaf8ee;
+  color: #1b6f2e;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-registrar-inline:hover {
+  background: #d8f0df;
+}
+
+.btn-icon-pay {
+  border-color: #b8e3c1;
+  background: #eaf8ee;
+}
+
+/* Historial de pagos */
+.historial-pagos-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 18px;
+  margin-bottom: 24px;
+}
+
+.pagados-badge {
+  background: #eaf8ee;
+  color: #1b6f2e;
+  border: 1px solid #b8e3c1;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.historial-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.historial-item {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fcfdff;
+  display: grid;
+  gap: 8px;
+}
+
+.historial-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #495057;
+}
+
+.historial-monto {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.historial-meta {
+  display: grid;
+  gap: 3px;
+  color: #6c757d;
+  font-size: 13px;
+}
+
+.btn-historial-detalle {
+  justify-self: flex-start;
+  background: #f8f9fa;
+  border: 1px solid #d4dbe2;
+  border-radius: 8px;
+  padding: 7px 11px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-historial-detalle:hover {
+  background: #edf2f7;
+}
+
+.historial-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-historial-edit,
+.btn-historial-delete {
+  border: 1px solid #d4dbe2;
+  border-radius: 8px;
+  padding: 7px 11px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn-historial-edit {
+  background: #e8f1ff;
+  color: #0f4ea8;
+  border-color: #b8d3ff;
+}
+
+.btn-historial-edit:hover {
+  background: #dceaff;
+}
+
+.btn-historial-delete {
+  background: #ffe8ea;
+  color: #a12636;
+  border-color: #f7c1c8;
+}
+
+.btn-historial-delete:hover {
+  background: #ffdce0;
+}
+
+/* Modal de pago */
+.pago-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.pago-modal {
+  width: 100%;
+  max-width: 460px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+  padding: 18px;
+}
+
+.pago-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.pago-modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.pago-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: #6c757d;
+}
+
+.pago-modal-periodo {
+  margin: 0 0 14px;
+  color: #495057;
+  font-size: 14px;
+}
+
+.pago-modal-resumen {
+  margin: -4px 0 12px;
+  color: #2f4858;
+  font-size: 13px;
+  background: #f1f8ff;
+  border: 1px solid #d0e7ff;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.pago-modal-form {
+  display: grid;
+  gap: 12px;
+}
+
+.pago-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pago-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pago-form-group label {
+  font-size: 13px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.pago-form-group input,
+.pago-form-group select {
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+}
+
+.pago-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.btn-cancel,
+.btn-confirm {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.btn-confirm {
+  background: #1976d2;
+  color: white;
+}
+
+.btn-confirm:disabled,
+.btn-cancel:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Tabla */
@@ -271,6 +618,27 @@
   .filters-section {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .pago-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pagos-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .pago-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .historial-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 
   .table-container {

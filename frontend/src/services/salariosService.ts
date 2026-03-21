@@ -6,6 +6,8 @@ import {
   GenerarSalariosDto,
   GenerarSalariosResponse,
   ViajeConComision,
+  RegistrarPagoSalarioDto,
+  SalarioPago,
 } from '../types/salario';
 import authService from './authService';
 
@@ -123,6 +125,41 @@ class SalariosService {
       },
     );
     return response.data;
+  }
+
+  /**
+   * Registrar pago parcial (adelanto/liquidación) para un salario
+   */
+  async registrarPago(id: number, dto: RegistrarPagoSalarioDto): Promise<ChoferSalario> {
+    const response = await this.api.post(`/salarios/${id}/pagos`, dto);
+    return response.data;
+  }
+
+  /**
+   * Obtener pagos de un salario específico
+   */
+  async getPagosBySalario(id: number): Promise<SalarioPago[]> {
+    const response = await this.api.get(`/salarios/${id}/pagos`);
+    return response.data;
+  }
+
+  /**
+   * Editar un pago de salario
+   */
+  async updatePago(
+    salarioId: number,
+    pagoId: number,
+    dto: RegistrarPagoSalarioDto,
+  ): Promise<ChoferSalario> {
+    const response = await this.api.put(`/salarios/${salarioId}/pagos/${pagoId}`, dto);
+    return response.data;
+  }
+
+  /**
+   * Eliminar un pago de salario
+   */
+  async deletePago(salarioId: number, pagoId: number): Promise<void> {
+    await this.api.delete(`/salarios/${salarioId}/pagos/${pagoId}`);
   }
 
   /**

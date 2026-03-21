@@ -13,8 +13,15 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SalariosService } from './salarios.service';
-import { CreateSalarioDto, UpdateSalarioDto, GenerarSalariosDto } from './dto/salario.dto';
+import {
+  CreateSalarioDto,
+  UpdateSalarioDto,
+  GenerarSalariosDto,
+  RegistrarPagoSalarioDto,
+  UpdatePagoSalarioDto,
+} from './dto/salario.dto';
 import { ChoferSalario } from './chofer-salario.entity';
+import { ChoferSalarioPago } from './chofer-salario-pago.entity';
 
 @Controller('salarios')
 @UseGuards(JwtAuthGuard)
@@ -118,6 +125,51 @@ export class SalariosController {
       body.metodoPago,
       body.comprobante,
     );
+  }
+
+  /**
+   * Obtener pagos (adelantos/liquidaciones) de un salario
+   */
+  @Get(':id/pagos')
+  async getPagosBySalario(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<ChoferSalarioPago[]> {
+    return await this.salariosService.getPagosBySalario(id);
+  }
+
+  /**
+   * Registrar pago parcial o liquidación para un salario
+   */
+  @Post(':id/pagos')
+  async registrarPago(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RegistrarPagoSalarioDto,
+  ): Promise<ChoferSalario> {
+    return await this.salariosService.registrarPago(id, dto);
+  }
+
+  /**
+   * Editar un pago de salario
+   */
+  @Put(':id/pagos/:pagoId')
+  async updatePago(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('pagoId', ParseIntPipe) pagoId: number,
+    @Body() dto: UpdatePagoSalarioDto,
+  ): Promise<ChoferSalario> {
+    return await this.salariosService.updatePago(id, pagoId, dto);
+  }
+
+  /**
+   * Eliminar un pago de salario
+   */
+  @Delete(':id/pagos/:pagoId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deletePago(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('pagoId', ParseIntPipe) pagoId: number,
+  ): Promise<void> {
+    await this.salariosService.deletePago(id, pagoId);
   }
 
   /**

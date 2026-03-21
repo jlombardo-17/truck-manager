@@ -13,6 +13,7 @@ export interface ChoferSalario {
   observaciones?: string;
   metodoPago?: string;
   comprobante?: string;
+  pagos?: SalarioPago[];
   createdAt: string;
   updatedAt: string;
   chofer?: {
@@ -21,6 +22,23 @@ export interface ChoferSalario {
     apellido: string;
     rut: string;
   };
+}
+
+export enum TipoPagoSalario {
+  ADELANTO = 'adelanto',
+  LIQUIDACION = 'liquidacion',
+}
+
+export interface SalarioPago {
+  id: number;
+  salarioId: number;
+  monto: number;
+  fechaPago: string;
+  metodoPago: string;
+  tipo: TipoPagoSalario;
+  comprobante?: string;
+  observaciones?: string;
+  createdAt: string;
 }
 
 export enum EstadoSalario {
@@ -59,6 +77,15 @@ export interface UpdateSalarioDto {
 export interface GenerarSalariosDto {
   mes: number;
   anio: number;
+}
+
+export interface RegistrarPagoSalarioDto {
+  monto: number;
+  fechaPago: string;
+  metodoPago: string;
+  tipo?: TipoPagoSalario;
+  comprobante?: string;
+  observaciones?: string;
 }
 
 export interface GenerarSalariosResponse {

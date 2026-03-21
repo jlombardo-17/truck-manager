@@ -2,21 +2,56 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { ChoferSalario, EstadoSalario } from './chofer-salario.entity';
+import { ChoferSalarioPago, TipoPagoSalario } from './chofer-salario-pago.entity';
 import { Chofer } from './chofer.entity';
 import { Viaje } from '../viajes/viaje.entity';
 import { ViajComision } from '../viajes/viaje-comision.entity';
-import { CreateSalarioDto, UpdateSalarioDto, GenerarSalariosDto } from './dto/salario.dto';
+import {
+  CreateSalarioDto,
+  UpdateSalarioDto,
+  GenerarSalariosDto,
+  RegistrarPagoSalarioDto,
+  UpdatePagoSalarioDto,
+} from './dto/salario.dto';
 
 @Injectable()
 export class SalariosService {
   constructor(
     @InjectRepository(ChoferSalario)
     private readonly salarioRepository: Repository<ChoferSalario>,
+    @InjectRepository(ChoferSalarioPago)
+    private readonly salarioPagoRepository: Repository<ChoferSalarioPago>,
     @InjectRepository(Chofer)
     private readonly choferRepository: Repository<Chofer>,
     @InjectRepository(Viaje)
     private readonly viajeRepository: Repository<Viaje>,
   ) {}
+
+  private toNumber(value: any): number {
+    return parseFloat((value ?? 0).toString()) || 0;
+  }
+
+  private async sumarPagos(salarioId: number): Promise<number> {
+    const pagos = await this.salarioPagoRepository.find({ where: { salarioId } });
+    return pagos.reduce((acc, pago) => acc + this.toNumber(pago.monto), 0);
+  }
+
+  private async actualizarEstadoSegunPagos(salario: ChoferSalario): Promise<ChoferSalario> {
+    if (salario.estado === EstadoSalario.CANCELADO) {
+      return salario;
+    }
+
+    const totalPagado = await this.sumarPagos(salario.id);
+    const salarioNeto = this.toNumber(salario.salarioNeto);
+
+    if (totalPagado >= salarioNeto && salarioNeto > 0) {
+      salario.estado = EstadoSalario.PAGADO;
+    } else {
+      salario.estado = EstadoSalario.PENDIENTE;
+    }
+
+    return await this.salarioRepository.save(salario);
+  }
 
   /**
    * Obtener todos los salarios de un chofer
@@ -30,7 +65,7 @@ export class SalariosService {
     return await this.salarioRepository.find({
       where: { choferId },
       order: { anio: 'DESC', mes: 'DESC' },
-      relations: ['chofer'],
+      relations: ['chofer', 'pagos'],
     });
   }
 
@@ -40,7 +75,7 @@ export class SalariosService {
   async getSalarioByPeriodo(choferId: number, mes: number, anio: number): Promise<ChoferSalario> {
     const salario = await this.salarioRepository.findOne({
       where: { choferId, mes, anio },
-      relations: ['chofer'],
+      relations: ['chofer', 'pagos'],
     });
 
     if (!salario) {
@@ -150,8 +185,28 @@ export class SalariosService {
       deducciones,
       salarioNeto,
     });
+    const saved = await this.salarioRepository.save(nuevoSalario);
 
-    return await this.salarioRepository.save(nuevoSalario);
+    // Si se crea directamente como pagado, registrar movimiento de pago total.
+    if (dto.estado === EstadoSalario.PAGADO) {
+      await this.salarioPagoRepository.save(
+        this.salarioPagoRepository.create({
+          salarioId: saved.id,
+          monto: this.toNumber(saved.salarioNeto),
+          fechaPago: dto.fechaPago ? new Date(dto.fechaPago) : new Date(),
+          metodoPago: dto.metodoPago || 'manual',
+          tipo: TipoPagoSalario.LIQUIDACION,
+          comprobante: dto.comprobante,
+          observaciones: dto.observaciones,
+        }),
+      );
+    }
+
+    const actualizado = await this.actualizarEstadoSegunPagos(saved);
+    return await this.salarioRepository.findOne({
+      where: { id: actualizado.id },
+      relations: ['chofer', 'pagos'],
+    });
   }
 
   /**
@@ -173,7 +228,12 @@ export class SalariosService {
       parseFloat(salario.bonos.toString()) -
       parseFloat(salario.deducciones.toString());
 
-    return await this.salarioRepository.save(salario);
+    const saved = await this.salarioRepository.save(salario);
+    await this.actualizarEstadoSegunPagos(saved);
+    return await this.salarioRepository.findOne({
+      where: { id: saved.id },
+      relations: ['chofer', 'pagos'],
+    });
   }
 
   /**
@@ -185,14 +245,135 @@ export class SalariosService {
       throw new NotFoundException(`Salario con ID ${id} no encontrado`);
     }
 
-    salario.estado = EstadoSalario.PAGADO;
+    const totalPagado = await this.sumarPagos(id);
+    const faltante = this.toNumber(salario.salarioNeto) - totalPagado;
+
+    if (faltante <= 0) {
+      salario.estado = EstadoSalario.PAGADO;
+      return await this.salarioRepository.save(salario);
+    }
+
+    await this.salarioPagoRepository.save(
+      this.salarioPagoRepository.create({
+        salarioId: id,
+        monto: faltante,
+        fechaPago,
+        metodoPago,
+        tipo: TipoPagoSalario.LIQUIDACION,
+        comprobante,
+      }),
+    );
+
     salario.fechaPago = fechaPago;
     salario.metodoPago = metodoPago;
     if (comprobante) {
       salario.comprobante = comprobante;
     }
 
-    return await this.salarioRepository.save(salario);
+    const saved = await this.salarioRepository.save(salario);
+    const actualizado = await this.actualizarEstadoSegunPagos(saved);
+    return await this.salarioRepository.findOne({
+      where: { id: actualizado.id },
+      relations: ['chofer', 'pagos'],
+    });
+  }
+
+  async getPagosBySalario(salarioId: number): Promise<ChoferSalarioPago[]> {
+    const salario = await this.salarioRepository.findOne({ where: { id: salarioId } });
+    if (!salario) {
+      throw new NotFoundException(`Salario con ID ${salarioId} no encontrado`);
+    }
+
+    return await this.salarioPagoRepository.find({
+      where: { salarioId },
+      order: { fechaPago: 'DESC', id: 'DESC' },
+    });
+  }
+
+  async registrarPago(id: number, dto: RegistrarPagoSalarioDto): Promise<ChoferSalario> {
+    const salario = await this.salarioRepository.findOne({ where: { id } });
+    if (!salario) {
+      throw new NotFoundException(`Salario con ID ${id} no encontrado`);
+    }
+
+    const monto = this.toNumber(dto.monto);
+    if (monto <= 0) {
+      throw new BadRequestException('El monto debe ser mayor a 0');
+    }
+
+    await this.salarioPagoRepository.save(
+      this.salarioPagoRepository.create({
+        salarioId: id,
+        monto,
+        fechaPago: new Date(dto.fechaPago),
+        metodoPago: dto.metodoPago,
+        tipo: dto.tipo || TipoPagoSalario.ADELANTO,
+        comprobante: dto.comprobante,
+        observaciones: dto.observaciones,
+      }),
+    );
+
+    salario.fechaPago = new Date(dto.fechaPago);
+    salario.metodoPago = dto.metodoPago;
+    if (dto.comprobante) {
+      salario.comprobante = dto.comprobante;
+    }
+
+    const saved = await this.salarioRepository.save(salario);
+    const actualizado = await this.actualizarEstadoSegunPagos(saved);
+    return await this.salarioRepository.findOne({
+      where: { id: actualizado.id },
+      relations: ['chofer', 'pagos'],
+    });
+  }
+
+  async updatePago(salarioId: number, pagoId: number, dto: UpdatePagoSalarioDto): Promise<ChoferSalario> {
+    const salario = await this.salarioRepository.findOne({ where: { id: salarioId } });
+    if (!salario) {
+      throw new NotFoundException(`Salario con ID ${salarioId} no encontrado`);
+    }
+
+    const pago = await this.salarioPagoRepository.findOne({ where: { id: pagoId, salarioId } });
+    if (!pago) {
+      throw new NotFoundException(`Pago con ID ${pagoId} no encontrado para el salario ${salarioId}`);
+    }
+
+    pago.monto = this.toNumber(dto.monto);
+    pago.fechaPago = new Date(dto.fechaPago);
+    pago.metodoPago = dto.metodoPago;
+    pago.tipo = dto.tipo || pago.tipo;
+    pago.comprobante = dto.comprobante;
+    pago.observaciones = dto.observaciones;
+
+    await this.salarioPagoRepository.save(pago);
+
+    salario.fechaPago = pago.fechaPago;
+    salario.metodoPago = pago.metodoPago;
+    if (pago.comprobante) {
+      salario.comprobante = pago.comprobante;
+    }
+
+    const saved = await this.salarioRepository.save(salario);
+    const actualizado = await this.actualizarEstadoSegunPagos(saved);
+    return await this.salarioRepository.findOne({
+      where: { id: actualizado.id },
+      relations: ['chofer', 'pagos'],
+    });
+  }
+
+  async deletePago(salarioId: number, pagoId: number): Promise<void> {
+    const salario = await this.salarioRepository.findOne({ where: { id: salarioId } });
+    if (!salario) {
+      throw new NotFoundException(`Salario con ID ${salarioId} no encontrado`);
+    }
+
+    const pago = await this.salarioPagoRepository.findOne({ where: { id: pagoId, salarioId } });
+    if (!pago) {
+      throw new NotFoundException(`Pago con ID ${pagoId} no encontrado para el salario ${salarioId}`);
+    }
+
+    await this.salarioPagoRepository.remove(pago);
+    await this.actualizarEstadoSegunPagos(salario);
   }
 
   /**
@@ -264,7 +445,7 @@ export class SalariosService {
    */
   async getAll(): Promise<ChoferSalario[]> {
     return await this.salarioRepository.find({
-      relations: ['chofer'],
+      relations: ['chofer', 'pagos'],
       order: { anio: 'DESC', mes: 'DESC' },
     });
   }
@@ -275,7 +456,7 @@ export class SalariosService {
   async getSalariosPorPeriodo(mes: number, anio: number): Promise<ChoferSalario[]> {
     return await this.salarioRepository.find({
       where: { mes, anio },
-      relations: ['chofer'],
+      relations: ['chofer', 'pagos'],
       order: { salarioNeto: 'DESC' },
     });
   }

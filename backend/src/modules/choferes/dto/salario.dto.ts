@@ -1,6 +1,7 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString, IsEnum, IsDateString, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EstadoSalario } from '../chofer-salario.entity';
+import { TipoPagoSalario } from '../chofer-salario-pago.entity';
 
 export class CreateSalarioDto {
   @IsNotEmpty({ message: 'El ID del chofer es requerido' })
@@ -112,4 +113,60 @@ export class GenerarSalariosDto {
   @IsNumber({}, { message: 'El año debe ser un número' })
   @Min(2020, { message: 'El año debe ser 2020 o posterior' })
   anio: number;
+}
+
+export class RegistrarPagoSalarioDto {
+  @IsNotEmpty({ message: 'El monto es requerido' })
+  @IsNumber({}, { message: 'El monto debe ser un número' })
+  @Type(() => Number)
+  @Min(0.01, { message: 'El monto debe ser mayor a 0' })
+  monto: number;
+
+  @IsNotEmpty({ message: 'La fecha de pago es requerida' })
+  @IsDateString({}, { message: 'La fecha de pago debe ser una fecha válida' })
+  fechaPago: string;
+
+  @IsNotEmpty({ message: 'El método de pago es requerido' })
+  @IsString({ message: 'El método de pago debe ser texto' })
+  metodoPago: string;
+
+  @IsOptional()
+  @IsEnum(TipoPagoSalario, { message: 'El tipo debe ser adelanto o liquidacion' })
+  tipo?: TipoPagoSalario;
+
+  @IsOptional()
+  @IsString({ message: 'El comprobante debe ser texto' })
+  comprobante?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Las observaciones deben ser texto' })
+  observaciones?: string;
+}
+
+export class UpdatePagoSalarioDto {
+  @IsNotEmpty({ message: 'El monto es requerido' })
+  @IsNumber({}, { message: 'El monto debe ser un número' })
+  @Type(() => Number)
+  @Min(0.01, { message: 'El monto debe ser mayor a 0' })
+  monto: number;
+
+  @IsNotEmpty({ message: 'La fecha de pago es requerida' })
+  @IsDateString({}, { message: 'La fecha de pago debe ser una fecha válida' })
+  fechaPago: string;
+
+  @IsNotEmpty({ message: 'El método de pago es requerido' })
+  @IsString({ message: 'El método de pago debe ser texto' })
+  metodoPago: string;
+
+  @IsOptional()
+  @IsEnum(TipoPagoSalario, { message: 'El tipo debe ser adelanto o liquidacion' })
+  tipo?: TipoPagoSalario;
+
+  @IsOptional()
+  @IsString({ message: 'El comprobante debe ser texto' })
+  comprobante?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Las observaciones deben ser texto' })
+  observaciones?: string;
 }
