@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, RelationId } from 'typeorm';
 import { Viaje } from './viaje.entity';
 
 @Entity({ name: 'viajes_rutas' })
@@ -10,7 +10,7 @@ export class ViajRuta {
   @JoinColumn({ name: 'viaje_id' })
   viaje: Viaje;
 
-  @Column()
+  @RelationId((ruta: ViajRuta) => ruta.viaje)
   viajeId: number;
 
   @Column()
@@ -28,7 +28,7 @@ export class ViajRuta {
   @Column({ type: 'datetime', nullable: true })
   tiempo: Date;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  @Column({ name: 'odometro_km', type: 'decimal', precision: 12, scale: 2, nullable: true })
   odometroKm: number;
 
   @Column({ nullable: true })

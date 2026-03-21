@@ -69,7 +69,7 @@ export class ViajsService {
     if (createViajDTO.rutas && createViajDTO.rutas.length > 0) {
       const rutas = createViajDTO.rutas.map((rutaDTO) =>
         this.viajRutaRepository.create({
-          viajeId: savedViaje.id,
+          viaje: { id: savedViaje.id } as Viaje,
           ...rutaDTO,
         }),
       );
@@ -178,10 +178,16 @@ export class ViajsService {
 
     // Eliminar y recrear rutas si se proporcionan
     if (rutas) {
-      await this.viajRutaRepository.delete({ viajeId: id });
+      await this.viajRutaRepository
+        .createQueryBuilder()
+        .delete()
+        .from(ViajRuta)
+        .where('viaje_id = :viajeId', { viajeId: id })
+        .execute();
+
       const rutasToSave = rutas.map((rutaDTO) =>
         this.viajRutaRepository.create({
-          viajeId: id,
+          viaje: { id } as Viaje,
           ...rutaDTO,
         }),
       );
@@ -348,7 +354,11 @@ export class ViajsService {
   /**
    * Guardar/actualizar las rutas de un viaje
    */
-  async saveRoutes(viajeId: number, rutasDTO: any[]): Promise<ViajRuta[]> {
+  async saveRoutes(
+    viajeId: number,
+    rutasDTO: any[],
+    kmRecorridosManual?: number,
+  ): Promise<ViajRuta[]> {
     // Verificar que el viaje existe
     const viaje = await this.findOne(viajeId);
     if (!viaje) {
@@ -356,7 +366,12 @@ export class ViajsService {
     }
 
     // Eliminar rutas existentes
-    await this.viajRutaRepository.delete({ viajeId });
+    await this.viajRutaRepository
+      .createQueryBuilder()
+      .delete()
+      .from(ViajRuta)
+      .where('viaje_id = :viajeId', { viajeId })
+      .execute();
 
     // Mejor ruta por carretera (OSRM); si falla, usa Haversine como fallback
     const optimizedRoute = await this.getBestRoadRoute(rutasDTO);
@@ -364,7 +379,7 @@ export class ViajsService {
     // Crear y guardar las nuevas rutas
     const rutas = optimizedRoute.points.map((rutaDTO, index) =>
       this.viajRutaRepository.create({
-        viajeId,
+        viaje: { id: viajeId } as Viaje,
         orden: index + 1,
         latitud: rutaDTO.latitud,
         longitud: rutaDTO.longitud,
@@ -376,12 +391,17 @@ export class ViajsService {
 
     await this.viajRutaRepository.save(rutas);
 
-    // Actualizar km recorridos con distancia real por carretera
+    // Actualizar km recorridos, priorizando el valor manual enviado desde el formulario.
     const distanciaTotal = optimizedRoute.distanceKm;
-    if (distanciaTotal > 0) {
+    const kmRecorridos =
+      kmRecorridosManual !== undefined
+        ? Math.round(kmRecorridosManual * 100) / 100
+        : Math.round(distanciaTotal * 100) / 100;
+
+    if (kmRecorridosManual !== undefined || distanciaTotal > 0) {
       await this.viajRepository.update(
         { id: viajeId },
-        { kmRecorridos: Math.round(distanciaTotal * 100) / 100 },
+        { kmRecorridos },
       );
     }
 

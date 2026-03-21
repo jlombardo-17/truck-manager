@@ -80,7 +80,11 @@ export class ViajsController {
     @Param('id') id: string,
     @Body() saveViajRutasDTO: SaveViajRutasDTO,
   ) {
-    return this.viajsService.saveRoutes(parseInt(id), saveViajRutasDTO.rutas);
+    return this.viajsService.saveRoutes(
+      parseInt(id),
+      saveViajRutasDTO.rutas,
+      saveViajRutasDTO.kmRecorridos,
+    );
   }
 
   /**

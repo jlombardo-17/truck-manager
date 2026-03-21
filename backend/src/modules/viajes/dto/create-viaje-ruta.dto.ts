@@ -29,4 +29,8 @@ export class SaveViajRutasDTO {
   @ValidateNested({ each: true })
   @Type(() => CreateViajRutaDTO)
   rutas: CreateViajRutaDTO[];
+
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @IsOptional()
+  kmRecorridos?: number;
 }

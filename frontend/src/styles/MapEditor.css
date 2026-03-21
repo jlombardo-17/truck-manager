@@ -135,6 +135,40 @@
   border-radius: 4px;
 }
 
+.route-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.route-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.route-edit-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.route-coordinate-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid #d0d7e2;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.route-coordinate-input:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.12);
+}
+
 .btn-delete {
   margin-left: auto;
   padding: 4px 8px;
@@ -202,6 +236,19 @@
   font-size: 16px;
 }
 
+.map-editor-help {
+  padding: 12px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
+.map-editor-help p {
+  margin: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .map-header {
@@ -221,5 +268,9 @@
 
   .routes-list {
     max-height: 300px;
+  }
+
+  .route-edit-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -258,7 +258,7 @@ const ViajeForm: React.FC = () => {
 
       // Guardar las rutas si existen
       if (rutas.length > 0) {
-        await viajsService.saveRoutes(viajeId, rutas);
+        await viajsService.saveRoutes(viajeId, rutas, dataToSend.kmRecorridos);
         setSuccess(
           (prev) =>
             prev +
@@ -570,6 +570,9 @@ const ViajeForm: React.FC = () => {
                 step="0.01"
                 className="form-input"
               />
+              <small className="field-hint">
+                Si defines este valor manualmente, tendrá prioridad sobre la distancia sugerida por la ruta del mapa.
+              </small>
             </div>
 
             <div className="form-field">

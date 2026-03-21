@@ -327,7 +327,11 @@ export const viajsService = {
   /**
    * Guardar/actualizar las rutas de un viaje
    */
-  saveRoutes: async (viajeId: number, rutas: ViajRuta[]): Promise<ViajRuta[]> => {
+  saveRoutes: async (
+    viajeId: number,
+    rutas: ViajRuta[],
+    kmRecorridos?: number,
+  ): Promise<ViajRuta[]> => {
     try {
       const sanitizedRutas = rutas.map((ruta, index) => ({
         orden: Number(ruta.orden) || index + 1,
@@ -340,7 +344,10 @@ export const viajsService = {
 
       const response = await axios.post<ViajRuta[]>(
         `${API_BASE_URL}/viajes/${viajeId}/rutas`,
-        { rutas: sanitizedRutas },
+        {
+          rutas: sanitizedRutas,
+          kmRecorridos: toNumberOrUndefined(kmRecorridos),
+        },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`,

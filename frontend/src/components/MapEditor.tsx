@@ -29,29 +29,42 @@ const MapEditor: React.FC<MapEditorProps> = ({
   title = 'Editor de Ruta',
 }) => {
   const [routes, setRoutes] = useState<ViajRuta[]>(initialRoutes);
-  const [selectedPoint, setSelectedPoint] = useState<string | number | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<string | null>(null);
   const [totalDistance, setTotalDistance] = useState<number>(0);
   const [roadDistance, setRoadDistance] = useState<number | null>(null);
   const [loadingDistance, setLoadingDistance] = useState(false);
   const [roadGeometry, setRoadGeometry] = useState<[number, number][]>([]);
   const mapRef = useRef(null);
 
+  const getRouteKey = (route: ViajRuta, index: number) =>
+    route.id != null ? `route-${route.id}` : `temp-${index}`;
+
   // Sincronizar rutas iniciales cuando llegan de forma asíncrona (modo edición)
   useEffect(() => {
     setRoutes(initialRoutes || []);
   }, [initialRoutes]);
 
+  useEffect(() => {
+    if (selectedPoint && !routes.some((route, index) => getRouteKey(route, index) === selectedPoint)) {
+      setSelectedPoint(null);
+    }
+  }, [routes, selectedPoint]);
+
   // Componente interno para capturar clics en el mapa
   const MapClickHandler = () => {
     useMapEvents({
       click: (e) => {
-        const newPoint: ViajRuta = {
-          id: Date.now(),
-          orden: routes.length + 1,
-          latitud: e.latlng.lat,
-          longitud: e.latlng.lng,
-        };
-        setRoutes([...routes, newPoint]);
+        setRoutes((prev) => {
+          const newPoint: ViajRuta = {
+            id: Date.now(),
+            orden: prev.length + 1,
+            latitud: e.latlng.lat,
+            longitud: e.latlng.lng,
+          };
+          const updated = [...prev, newPoint];
+          onRoutesChange(updated);
+          return updated;
+        });
       },
     });
     return null;
@@ -186,26 +199,61 @@ const MapEditor: React.FC<MapEditorProps> = ({
     }
   };
 
-  // Notificar al componente padre cuando cambien las rutas
-  useEffect(() => {
-    onRoutesChange(routes);
-  }, [routes, onRoutesChange]);
-
-  // Eliminar un punto
-  const deletePoint = (id: number | undefined) => {
-    if (!id) return;
-    const updated = routes
-      .filter((r) => r.id !== id)
-      .map((r, idx) => ({ ...r, orden: idx + 1 }));
-    setRoutes(updated);
+  const deletePointByKey = (pointKey: string) => {
+    setRoutes((prev) => {
+      const updated = prev
+        .filter((route, index) => getRouteKey(route, index) !== pointKey)
+        .map((route, idx) => ({ ...route, orden: idx + 1 }));
+      onRoutesChange(updated);
+      return updated;
+    });
+    setSelectedPoint((current) => (current === pointKey ? null : current));
   };
 
-  // Actualizar notas de un punto
-  const updatePointNotes = (id: number | undefined, notas: string) => {
-    if (!id) return;
-    setRoutes(
-      routes.map((r) => (r.id === id ? { ...r, notas } : r)),
-    );
+  const updatePointNotesByKey = (pointKey: string, notas: string) => {
+    setRoutes((prev) => {
+      const updated = prev.map((route, index) =>
+        getRouteKey(route, index) === pointKey ? { ...route, notas } : route,
+      );
+      onRoutesChange(updated);
+      return updated;
+    });
+  };
+
+  const updatePointCoordinatesByKey = (
+    pointKey: string,
+    nextCoordinates: { latitud?: number; longitud?: number },
+  ) => {
+    setRoutes((prev) => {
+      const updated = prev.map((route, index) =>
+        getRouteKey(route, index) === pointKey
+          ? {
+              ...route,
+              latitud: nextCoordinates.latitud ?? route.latitud,
+              longitud: nextCoordinates.longitud ?? route.longitud,
+            }
+          : route,
+      );
+      onRoutesChange(updated);
+      return updated;
+    });
+  };
+
+  const handleCoordinateInputChange = (
+    pointKey: string,
+    field: 'latitud' | 'longitud',
+    rawValue: string,
+  ) => {
+    if (rawValue.trim() === '' || rawValue === '-' || rawValue === '.' || rawValue === '-.') {
+      return;
+    }
+
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+
+    updatePointCoordinatesByKey(pointKey, { [field]: parsed });
   };
 
   // Coordenadas para la polyline
@@ -266,10 +314,22 @@ const MapEditor: React.FC<MapEditorProps> = ({
           {/* Marcadores para cada punto */}
           {routes.map((route, idx) => (
             <Marker
-              key={route.id || idx}
+              key={getRouteKey(route, idx)}
               position={[route.latitud, route.longitud]}
+              draggable={true}
+              eventHandlers={{
+                dragstart: () => setSelectedPoint(getRouteKey(route, idx)),
+                dragend: (event) => {
+                  const latLng = event.target.getLatLng();
+                  updatePointCoordinatesByKey(getRouteKey(route, idx), {
+                    latitud: latLng.lat,
+                    longitud: latLng.lng,
+                  });
+                },
+                click: () => setSelectedPoint(getRouteKey(route, idx)),
+              }}
               icon={
-                selectedPoint === route.id
+                selectedPoint === getRouteKey(route, idx)
                   ? L.icon({
                       iconUrl:
                         'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -316,10 +376,13 @@ const MapEditor: React.FC<MapEditorProps> = ({
           <h4>Puntos de Ruta ({routes.length})</h4>
           <div className="routes-list">
             {routes.map((route, idx) => (
+              (() => {
+                const pointKey = getRouteKey(route, idx);
+                return (
               <div
-                key={route.id || idx}
-                className={`route-item ${selectedPoint === route.id ? 'active' : ''}`}
-                onClick={() => route.id && setSelectedPoint(route.id)}
+                key={pointKey}
+                className={`route-item ${selectedPoint === pointKey ? 'active' : ''}`}
+                onClick={() => setSelectedPoint(pointKey)}
               >
                 <div className="route-item-header">
                   <span className="route-number">#{route.orden}</span>
@@ -337,17 +400,51 @@ const MapEditor: React.FC<MapEditorProps> = ({
                       km
                     </span>
                   )}
-                  <button type="button" className="btn-delete" onClick={() => deletePoint(route.id)}>
+                  <button
+                    type="button"
+                    className="btn-delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePointByKey(pointKey);
+                    }}
+                  >
                     ✕
                   </button>
+                </div>
+                <div className="route-edit-grid">
+                  <div className="route-edit-field">
+                    <label>Latitud</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={route.latitud}
+                      onChange={(e) => handleCoordinateInputChange(pointKey, 'latitud', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="route-coordinate-input"
+                    />
+                  </div>
+                  <div className="route-edit-field">
+                    <label>Longitud</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={route.longitud}
+                      onChange={(e) => handleCoordinateInputChange(pointKey, 'longitud', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="route-coordinate-input"
+                    />
+                  </div>
                 </div>
                 <textarea
                   placeholder="Notas para este punto..."
                   value={route.notas || ''}
-                  onChange={(e) => updatePointNotes(route.id, e.target.value)}
+                  onChange={(e) => updatePointNotesByKey(pointKey, e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
                   className="route-notes"
                 />
               </div>
+                );
+              })()
             ))}
           </div>
         </div>
@@ -356,6 +453,12 @@ const MapEditor: React.FC<MapEditorProps> = ({
       {routes.length === 0 && (
         <div className="empty-state">
           <p>💡 Haz clic en el mapa para agregar puntos de ruta</p>
+        </div>
+      )}
+
+      {routes.length > 0 && (
+        <div className="map-editor-help">
+          <p>Arrastra los marcadores en el mapa o ajusta latitud y longitud manualmente para editar cada punto.</p>
         </div>
       )}
     </div>
