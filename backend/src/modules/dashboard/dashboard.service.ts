@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
+import { Camion } from '../camiones/camion.entity';
+import { Chofer } from '../choferes/chofer.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
 import { Documento } from '../camiones/documento.entity';
 import { ChoferDocumento } from '../choferes/chofer-documento.entity';
@@ -46,9 +48,15 @@ export interface DesempenoChofer {
 
 @Injectable()
 export class DashboardService {
+  private tableColumnsCache = new Map<string, Promise<Set<string>>>();
+
   constructor(
     @InjectRepository(Viaje)
     private viajesRepository: Repository<Viaje>,
+    @InjectRepository(Camion)
+    private camionesRepository: Repository<Camion>,
+    @InjectRepository(Chofer)
+    private choferesRepository: Repository<Chofer>,
     @InjectRepository(MantenimientoRegistro)
     private mantenimientoRepository: Repository<MantenimientoRegistro>,
     @InjectRepository(Documento)
@@ -62,6 +70,39 @@ export class DashboardService {
   private toNumber(value: unknown): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private formatChoferNombre(chofer?: Chofer): string {
+    const nombreCompleto = `${chofer?.nombre || ''} ${chofer?.apellido || ''}`
+      .replace(/\s+/g, ' ')
+      .trim();
+    return nombreCompleto;
+  }
+
+  private toId(value: unknown): number | null {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  private async getTableColumns(tableName: string): Promise<Set<string>> {
+    if (!this.tableColumnsCache.has(tableName)) {
+      this.tableColumnsCache.set(
+        tableName,
+        this.viajesRepository
+          .query(`SHOW COLUMNS FROM ${tableName}`)
+          .then((columns: Array<{ Field: string }>) => new Set(columns.map((column) => column.Field))),
+      );
+    }
+
+    return this.tableColumnsCache.get(tableName)!;
+  }
+
+  private pickColumn(columns: Set<string>, candidates: string[]): string {
+    const match = candidates.find((candidate) => columns.has(candidate));
+    if (!match) {
+      throw new Error(`No se encontró ninguna de las columnas esperadas: ${candidates.join(', ')}`);
+    }
+    return match;
   }
 
   async getResumen(): Promise<DashboardResumen> {
@@ -135,18 +176,12 @@ export class DashboardService {
       gastoMantenimiento +
       gastoDocumentosCamion;
 
-    // Camiones activos hoy (viajes completados o en progreso hoy)
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const mananaInicio = new Date(hoy);
-    mananaInicio.setDate(mananaInicio.getDate() + 1);
-
-    const viajesHoy = await this.viajesRepository.find({
+    // Camiones activos: usar el estado operativo real del vehículo.
+    const camionesActivos = await this.camionesRepository.count({
       where: {
-        fechaInicio: Between(hoy, mananaInicio) as any,
+        estado: 'activo',
       },
     });
-    const camionesActivosHoy = new Set(viajesHoy.map((v) => v.camionId)).size;
 
     // Documentos por vencer (próximos 30 días)
     const proximosMes = new Date();
@@ -176,7 +211,7 @@ export class DashboardService {
       ingresosDelMes,
       gastosDelMes,
       gananciaNetaDelMes: ingresosDelMes - gastosDelMes,
-      camionesActivos: camionesActivosHoy,
+      camionesActivos,
       viajesCompletados: viajesMes.length,
       mantenimientoPendiente: [],
       documentosPorVencer: documentosFormato,
@@ -187,24 +222,64 @@ export class DashboardService {
     const ahora = new Date();
     const primerDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
     const ultimoDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+    const viajeColumns = await this.getTableColumns('viajes');
+    const camionIdColumn = this.pickColumn(viajeColumns, ['camion_id', 'camionId']);
+    const valorViajeColumn = this.pickColumn(viajeColumns, ['valorViaje', 'valor_viaje']);
+    const costoCombustibleColumn = this.pickColumn(viajeColumns, ['costoCombustible', 'costo_combustible']);
+    const otrosGastosColumn = this.pickColumn(viajeColumns, ['otrosGastos', 'otros_gastos']);
+    const kmRecorridosColumn = this.pickColumn(viajeColumns, ['kmRecorridos', 'kms_recorridos', 'km_recorridos']);
+    const estadoColumn = this.pickColumn(viajeColumns, ['estado']);
+    const fechaInicioColumn = this.pickColumn(viajeColumns, ['fechaInicio', 'fecha_inicio']);
 
-    // Obtener viajes del mes por camión
-    const viajesPorCamion = await this.viajesRepository
-      .createQueryBuilder('v')
-      .leftJoinAndSelect('v.camion', 'camion')
-      .where('v.estado = :estado', { estado: 'completado' })
-      .andWhere('v.fechaInicio >= :desde', { desde: primerDiaDelMes })
-      .andWhere('v.fechaInicio <= :hasta', { hasta: ultimoDiaDelMes })
-      .getMany();
+    const viajesPorCamion = await this.viajesRepository.query(
+      `
+        SELECT
+          ${camionIdColumn} AS camionId,
+          ${valorViajeColumn} AS valorViaje,
+          ${costoCombustibleColumn} AS costoCombustible,
+          ${otrosGastosColumn} AS otrosGastos,
+          ${kmRecorridosColumn} AS kmRecorridos
+        FROM viajes
+        WHERE ${estadoColumn} = ?
+          AND ${fechaInicioColumn} >= ?
+          AND ${fechaInicioColumn} <= ?
+      `,
+      ['completado', primerDiaDelMes, ultimoDiaDelMes],
+    );
+
+    const camionIds = [
+      ...new Set(
+        viajesPorCamion
+          .map((viaje) => this.toId(viaje.camionId))
+          .filter((camionId): camionId is number => camionId !== null),
+      ),
+    ];
+    const fallbackCamiones = camionIds.length === 0 && viajesPorCamion.length > 0
+      ? await this.camionesRepository.find()
+      : [];
+    const camiones = camionIds.length > 0
+      ? await this.camionesRepository.findBy({ id: In(camionIds) })
+      : fallbackCamiones.length === 1
+        ? fallbackCamiones
+      : [];
+    const camionesById = new Map(camiones.map((camion) => [camion.id, camion]));
+    const fallbackCamion = camiones.length === 1 ? camiones[0] : undefined;
 
     // Agrupar por camión
     const camionesMap = new Map<number, any>();
 
     for (const viaje of viajesPorCamion) {
-      if (!camionesMap.has(viaje.camionId)) {
-        camionesMap.set(viaje.camionId, {
-          id: viaje.camionId,
-          patente: viaje.camion?.patente || '',
+      const camionId = this.toId(viaje.camionId) ?? fallbackCamion?.id ?? null;
+      if (camionId === null) {
+        continue;
+      }
+
+      const camionInfo = camionesById.get(camionId);
+
+      if (!camionesMap.has(camionId)) {
+        camionesMap.set(camionId, {
+          id: camionId,
+          patente: camionInfo?.patente || `Camión #${camionId}`,
           ingresos: 0,
           gastosViaje: 0,
           kmRecorridos: 0,
@@ -212,7 +287,7 @@ export class DashboardService {
         });
       }
 
-      const camion = camionesMap.get(viaje.camionId);
+      const camion = camionesMap.get(camionId);
       camion.ingresos += this.toNumber(viaje.valorViaje);
       camion.gastosViaje +=
         this.toNumber(viaje.costoCombustible) +
@@ -275,23 +350,67 @@ export class DashboardService {
   async getDesempenoChoferes(): Promise<DesempenoChofer[]> {
     const ahora = new Date();
     const primerDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const ultimoDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+    const viajeColumns = await this.getTableColumns('viajes');
+    const comisionColumns = await this.getTableColumns('viajes_comisiones');
+    const viajeIdColumn = this.pickColumn(viajeColumns, ['id']);
+    const choferIdColumn = this.pickColumn(viajeColumns, ['chofer_id', 'choferId']);
+    const valorViajeColumn = this.pickColumn(viajeColumns, ['valorViaje', 'valor_viaje']);
+    const estadoColumn = this.pickColumn(viajeColumns, ['estado']);
+    const fechaInicioColumn = this.pickColumn(viajeColumns, ['fechaInicio', 'fecha_inicio']);
+    const comisionViajeIdColumn = this.pickColumn(comisionColumns, ['viaje_id', 'viajeId']);
+    const montoTotalColumn = this.pickColumn(comisionColumns, ['montoTotal', 'monto_total']);
 
-    const viajes = await this.viajesRepository
-      .createQueryBuilder('v')
-      .leftJoinAndSelect('v.chofer', 'chofer')
-      .leftJoinAndSelect('v.comisiones', 'comisiones')
-      .where('v.estado = :estado', { estado: 'completado' })
-      .andWhere('v.fechaInicio >= :desde', { desde: primerDiaDelMes })
-      .getMany();
+    const viajes = await this.viajesRepository.query(
+      `
+        SELECT
+          v.${choferIdColumn} AS choferId,
+          v.${valorViajeColumn} AS valorViaje,
+          COALESCE(SUM(c.${montoTotalColumn}), 0) AS comisionesTotal
+        FROM viajes v
+        LEFT JOIN viajes_comisiones c ON c.${comisionViajeIdColumn} = v.${viajeIdColumn}
+        WHERE v.${estadoColumn} = ?
+          AND v.${fechaInicioColumn} >= ?
+          AND v.${fechaInicioColumn} <= ?
+        GROUP BY v.${viajeIdColumn}, v.${choferIdColumn}, v.${valorViajeColumn}
+      `,
+      ['completado', primerDiaDelMes, ultimoDiaDelMes],
+    );
+
+    const choferIds = [
+      ...new Set(
+        viajes
+          .map((viaje) => this.toId(viaje.choferId))
+          .filter((choferId): choferId is number => choferId !== null),
+      ),
+    ];
+    const fallbackChoferes = choferIds.length === 0 && viajes.length > 0
+      ? await this.choferesRepository.find()
+      : [];
+    const choferes = choferIds.length > 0
+      ? await this.choferesRepository.findBy({ id: In(choferIds) })
+      : fallbackChoferes.length === 1
+        ? fallbackChoferes
+      : [];
+    const choferesById = new Map(choferes.map((chofer) => [chofer.id, chofer]));
+    const fallbackChofer = choferes.length === 1 ? choferes[0] : undefined;
 
     // Agrupar por chofer
     const choferesMap = new Map<number, any>();
 
     for (const viaje of viajes) {
-      if (!choferesMap.has(viaje.choferId)) {
-        choferesMap.set(viaje.choferId, {
-          id: viaje.choferId,
-          nombre: viaje.chofer?.nombre || '',
+      const choferId = this.toId(viaje.choferId) ?? fallbackChofer?.id ?? null;
+      if (choferId === null) {
+        continue;
+      }
+
+      const choferInfo = choferesById.get(choferId);
+
+      if (!choferesMap.has(choferId)) {
+        const nombreCompleto = this.formatChoferNombre(choferInfo);
+        choferesMap.set(choferId, {
+          id: choferId,
+          nombre: nombreCompleto || `Chofer #${choferId}`,
           viajesCompletos: 0,
           ingresos: 0,
           comisiones: 0,
@@ -299,15 +418,10 @@ export class DashboardService {
         });
       }
 
-      const chofer = choferesMap.get(viaje.choferId);
+      const chofer = choferesMap.get(choferId);
       chofer.viajesCompletos += 1;
-      chofer.ingresos += parseFloat((viaje.valorViaje || 0).toString());
-      const comisionTotal =
-        viaje.comisiones?.reduce(
-          (sum, c) => sum + parseFloat((c.montoTotal || 0).toString()),
-          0,
-        ) || 0;
-      chofer.comisiones += comisionTotal;
+      chofer.ingresos += this.toNumber(viaje.valorViaje);
+      chofer.comisiones += this.toNumber(viaje.comisionesTotal);
     }
 
     return Array.from(choferesMap.values()).sort(

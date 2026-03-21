@@ -23,7 +23,7 @@ export interface DashboardResumen {
 
 export interface DesempenoCamion {
   id: number;
-  placa: string;
+  patente: string;
   ingresos: number;
   gastos: number;
   eficiencia: number;

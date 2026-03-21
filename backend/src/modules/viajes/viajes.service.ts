@@ -7,6 +7,8 @@ import { ViajComision } from './viaje-comision.entity';
 import { CreateViajDTO } from './dto/create-viaje.dto';
 import { UpdateViajDTO } from './dto/update-viaje.dto';
 import { CamionesService } from '../camiones/camiones.service';
+import { Camion } from '../camiones/camion.entity';
+import { Chofer } from '../choferes/chofer.entity';
 
 type RoutePointInput = {
   orden?: number;
@@ -42,8 +44,8 @@ export class ViajsService {
     // Crear el viaje
     const viaje = this.viajRepository.create({
       numeroViaje: createViajDTO.numeroViaje,
-      camionId: createViajDTO.camionId,
-      choferId: createViajDTO.choferId,
+      camion: { id: createViajDTO.camionId } as Camion,
+      chofer: { id: createViajDTO.choferId } as Chofer,
       fechaInicio: new Date(createViajDTO.fechaInicio),
       fechaFin: createViajDTO.fechaFin ? new Date(createViajDTO.fechaFin) : null,
       origen: createViajDTO.origen,
@@ -111,11 +113,11 @@ export class ViajsService {
     }
 
     if (filters?.camionId) {
-      query = query.andWhere('viaje.camionId = :camionId', { camionId: filters.camionId });
+      query = query.andWhere('viaje.camion_id = :camionId', { camionId: filters.camionId });
     }
 
     if (filters?.choferId) {
-      query = query.andWhere('viaje.choferId = :choferId', { choferId: filters.choferId });
+      query = query.andWhere('viaje.chofer_id = :choferId', { choferId: filters.choferId });
     }
 
     if (filters?.fechaInicio) {
@@ -164,12 +166,16 @@ export class ViajsService {
     const {
       rutas,
       comisiones,
+      camionId,
+      choferId,
       ...viajeChanges
     } = updateViajDTO;
 
     // Actualizar campos
     Object.assign(viaje, {
       ...viajeChanges,
+      ...(camionId ? { camion: { id: camionId } as Camion } : {}),
+      ...(choferId ? { chofer: { id: choferId } as Chofer } : {}),
       fechaInicio: viajeChanges.fechaInicio ? new Date(viajeChanges.fechaInicio) : viaje.fechaInicio,
       fechaFin: viajeChanges.fechaFin ? new Date(viajeChanges.fechaFin) : viaje.fechaFin,
     });
@@ -220,9 +226,10 @@ export class ViajsService {
 
     // Si se completa el viaje, actualizar el odómetro del camión
     if (estado === 'completado' && viaje.kmRecorridos > 0) {
-      const camion = await this.camionesService.findOne(viaje.camionId);
+      const camionId = viaje.camion?.id || viaje.camionId;
+      const camion = await this.camionesService.findOne(camionId);
       const nuevoOdometro = Number(camion.odometroKm) + Number(viaje.kmRecorridos);
-      await this.camionesService.updateOdometro(viaje.camionId, nuevoOdometro);
+      await this.camionesService.updateOdometro(camionId, nuevoOdometro);
     }
 
     await this.viajRepository.save(viaje);

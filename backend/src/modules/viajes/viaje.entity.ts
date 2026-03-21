@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, RelationId, UpdateDateColumn } from 'typeorm';
 import { Camion } from '../camiones/camion.entity';
 import { Chofer } from '../choferes/chofer.entity';
 import { ViajRuta } from './viaje-ruta.entity';
@@ -17,14 +17,14 @@ export class Viaje {
   @JoinColumn({ name: 'camion_id' })
   camion: Camion;
 
-  @Column()
+  @RelationId((viaje: Viaje) => viaje.camion)
   camionId: number;
 
   @ManyToOne(() => Chofer, { cascade: false, eager: true })
   @JoinColumn({ name: 'chofer_id' })
   chofer: Chofer;
 
-  @Column()
+  @RelationId((viaje: Viaje) => viaje.chofer)
   choferId: number;
 
   // Fechas

@@ -183,7 +183,7 @@ const Dashboard: React.FC = () => {
                   <tbody>
                     {desempenoCamiones.slice(0, 5).map((camion) => (
                       <tr key={camion.id}>
-                        <td className="bold">{camion.placa}</td>
+                        <td className="bold">{camion.patente}</td>
                         <td>{camion.viajesCompletos}</td>
                         <td>{formatCurrency(camion.ingresos)}</td>
                         <td>{formatCurrency(camion.gastos)}</td>
