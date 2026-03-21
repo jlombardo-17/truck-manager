@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import salariosService from '../services/salariosService';
 import {
   ChoferSalario,
   EstadoSalario,
   SalarioPago,
+  TipoPagoSalario,
   formatCurrency,
   formatPeriodo,
   getEstadoSalarioColor,
@@ -22,26 +22,38 @@ interface SalariosTabProps {
 }
 
 const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
-  const navigate = useNavigate();
   const [salarios, setSalarios] = useState<ChoferSalario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showPagoModal, setShowPagoModal] = useState(false);
+  const [salarioSeleccionado, setSalarioSeleccionado] = useState<ChoferSalario | null>(null);
+  const [guardandoPago, setGuardandoPago] = useState(false);
+  const [pagoError, setPagoError] = useState<string | null>(null);
+  const [pagoForm, setPagoForm] = useState({
+    monto: '',
+    fechaPago: new Date().toISOString().split('T')[0],
+    metodoPago: 'transferencia',
+    tipo: TipoPagoSalario.ADELANTO,
+    comprobante: '',
+    observaciones: '',
+  });
+  const metodosPago = ['transferencia', 'efectivo', 'cheque', 'otro'];
+
+  const loadSalarios = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await salariosService.getByChofer(choferId);
+      setSalarios(data);
+    } catch (err: any) {
+      console.error('Error al cargar salarios del chofer:', err);
+      setError(err?.response?.data?.message || 'No se pudieron cargar los salarios');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadSalarios = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await salariosService.getByChofer(choferId);
-        setSalarios(data);
-      } catch (err: any) {
-        console.error('Error al cargar salarios del chofer:', err);
-        setError(err?.response?.data?.message || 'No se pudieron cargar los salarios');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadSalarios();
   }, [choferId]);
 
@@ -100,6 +112,63 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
     [salarios],
   );
 
+  const handleAbrirPagoModal = (salario: ChoferSalario) => {
+    const saldo = getSaldoPendiente(salario);
+
+    setSalarioSeleccionado(salario);
+    setPagoError(null);
+    setPagoForm({
+      monto: saldo > 0 ? saldo.toFixed(2) : '',
+      fechaPago: new Date().toISOString().split('T')[0],
+      metodoPago: 'transferencia',
+      tipo: TipoPagoSalario.ADELANTO,
+      comprobante: salario.comprobante || '',
+      observaciones: '',
+    });
+    setShowPagoModal(true);
+  };
+
+  const handleCerrarPagoModal = () => {
+    setShowPagoModal(false);
+    setSalarioSeleccionado(null);
+    setGuardandoPago(false);
+    setPagoError(null);
+  };
+
+  const handleRegistrarPago = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!salarioSeleccionado) {
+      return;
+    }
+
+    if (!pagoForm.fechaPago || !pagoForm.metodoPago || Number(pagoForm.monto) <= 0) {
+      setPagoError('Debes completar monto, fecha y método de pago');
+      return;
+    }
+
+    try {
+      setGuardandoPago(true);
+      setPagoError(null);
+
+      await salariosService.registrarPago(salarioSeleccionado.id, {
+        monto: Number(pagoForm.monto),
+        fechaPago: pagoForm.fechaPago,
+        metodoPago: pagoForm.metodoPago,
+        tipo: pagoForm.tipo,
+        comprobante: pagoForm.comprobante.trim() || undefined,
+        observaciones: pagoForm.observaciones.trim() || undefined,
+      });
+
+      await loadSalarios();
+      handleCerrarPagoModal();
+    } catch (err: any) {
+      console.error('Error al registrar pago:', err);
+      setPagoError(err?.response?.data?.message || 'No se pudo registrar el pago');
+      setGuardandoPago(false);
+    }
+  };
+
   if (loading) {
     return <div className="salarios-tab-loading">Cargando salarios...</div>;
   }
@@ -132,7 +201,18 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
       <div className="salarios-tab-block">
         <div className="salarios-tab-block-header">
           <h3>Registro de Pagos Pendientes</h3>
-          <span className="salarios-tab-badge warning">Pendientes: {salariosPendientes.length}</span>
+          <div className="salarios-tab-block-header-actions">
+            {salarios.length > 0 && (
+              <button
+                type="button"
+                className="salarios-tab-action primary"
+                onClick={() => handleAbrirPagoModal(salariosPendientes[0] || salarios[0])}
+              >
+                Agregar pago
+              </button>
+            )}
+            <span className="salarios-tab-badge warning">Pendientes: {salariosPendientes.length}</span>
+          </div>
         </div>
 
         {salariosPendientes.length === 0 ? (
@@ -147,13 +227,15 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                     Saldo pendiente: <strong>{formatCurrency(getSaldoPendiente(salario))}</strong>
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="salarios-tab-action"
-                  onClick={() => navigate(`/choferes/${choferId}/salarios/${salario.id}`)}
-                >
-                  Ver detalle
-                </button>
+                <div className="salarios-tab-actions">
+                  <button
+                    type="button"
+                    className="salarios-tab-action primary"
+                    onClick={() => handleAbrirPagoModal(salario)}
+                  >
+                    Agregar pago
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -218,13 +300,17 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="salarios-tab-link"
-                        onClick={() => navigate(`/choferes/${choferId}/salarios/${salario.id}`)}
-                      >
-                        Ver detalle
-                      </button>
+                      <div className="salarios-tab-actions compact">
+                        {salario.estado !== EstadoSalario.CANCELADO && (
+                          <button
+                            type="button"
+                            className="salarios-tab-link primary"
+                            onClick={() => handleAbrirPagoModal(salario)}
+                          >
+                            Agregar pago
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -233,6 +319,127 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
           </div>
         )}
       </div>
+
+      {showPagoModal && salarioSeleccionado && (
+        <div className="salarios-tab-modal-overlay" onClick={handleCerrarPagoModal}>
+          <div className="salarios-tab-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="salarios-tab-modal-header">
+              <h3>Registrar pago</h3>
+              <button type="button" className="salarios-tab-modal-close" onClick={handleCerrarPagoModal}>
+                ✕
+              </button>
+            </div>
+
+            <p className="salarios-tab-modal-periodo">
+              {formatPeriodo(salarioSeleccionado.mes, salarioSeleccionado.anio)} - {formatCurrency(salarioSeleccionado.salarioNeto)}
+            </p>
+
+            <p className="salarios-tab-modal-resumen">
+              Pagado acumulado: {formatCurrency(getTotalPagado(salarioSeleccionado))} | Saldo: {formatCurrency(getSaldoPendiente(salarioSeleccionado))}
+            </p>
+
+            {pagoError && <div className="salarios-tab-modal-error">{pagoError}</div>}
+
+            <form onSubmit={handleRegistrarPago} className="salarios-tab-modal-form">
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-monto">Monto a pagar</label>
+                  <input
+                    id="salarios-tab-monto"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={pagoForm.monto}
+                    onChange={(event) => setPagoForm((prev) => ({ ...prev, monto: event.target.value }))}
+                    required
+                    disabled={guardandoPago}
+                  />
+                </div>
+
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-fecha">Fecha de pago</label>
+                  <input
+                    id="salarios-tab-fecha"
+                    type="date"
+                    value={pagoForm.fechaPago}
+                    onChange={(event) => setPagoForm((prev) => ({ ...prev, fechaPago: event.target.value }))}
+                    required
+                    disabled={guardandoPago}
+                  />
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-metodo">Método de pago</label>
+                  <select
+                    id="salarios-tab-metodo"
+                    value={pagoForm.metodoPago}
+                    onChange={(event) => setPagoForm((prev) => ({ ...prev, metodoPago: event.target.value }))}
+                    required
+                    disabled={guardandoPago}
+                  >
+                    {metodosPago.map((metodo) => (
+                      <option key={metodo} value={metodo}>
+                        {metodo.charAt(0).toUpperCase() + metodo.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-tipo">Tipo de pago</label>
+                  <select
+                    id="salarios-tab-tipo"
+                    value={pagoForm.tipo}
+                    onChange={(event) =>
+                      setPagoForm((prev) => ({ ...prev, tipo: event.target.value as TipoPagoSalario }))
+                    }
+                    required
+                    disabled={guardandoPago}
+                  >
+                    <option value={TipoPagoSalario.ADELANTO}>Adelanto</option>
+                    <option value={TipoPagoSalario.LIQUIDACION}>Liquidación</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="salarios-tab-comprobante">Comprobante</label>
+                <input
+                  id="salarios-tab-comprobante"
+                  type="text"
+                  placeholder="Nro transferencia, referencia, etc."
+                  value={pagoForm.comprobante}
+                  onChange={(event) => setPagoForm((prev) => ({ ...prev, comprobante: event.target.value }))}
+                  disabled={guardandoPago}
+                />
+              </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="salarios-tab-observaciones">Observaciones</label>
+                <textarea
+                  id="salarios-tab-observaciones"
+                  rows={3}
+                  placeholder="Comentario interno del pago"
+                  value={pagoForm.observaciones}
+                  onChange={(event) => setPagoForm((prev) => ({ ...prev, observaciones: event.target.value }))}
+                  disabled={guardandoPago}
+                />
+              </div>
+
+              <div className="salarios-tab-modal-actions">
+                <button type="button" className="salarios-tab-modal-button secondary" onClick={handleCerrarPagoModal}>
+                  Cancelar
+                </button>
+                <button type="submit" className="salarios-tab-modal-button primary" disabled={guardandoPago}>
+                  {guardandoPago ? 'Guardando...' : 'Guardar pago'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

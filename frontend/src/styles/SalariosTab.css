@@ -62,6 +62,14 @@
   margin-bottom: 0.75rem;
 }
 
+.salarios-tab-block-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .salarios-tab-badge {
   border-radius: 999px;
   padding: 0.2rem 0.65rem;
@@ -121,6 +129,18 @@
   font-size: 0.88rem;
 }
 
+.salarios-tab-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.salarios-tab-actions.compact {
+  justify-content: flex-start;
+}
+
 .salarios-tab-action,
 .salarios-tab-link {
   border: 1px solid #bfd6fb;
@@ -136,6 +156,19 @@
 .salarios-tab-action:hover,
 .salarios-tab-link:hover {
   background: #dceaff;
+}
+
+.salarios-tab-action.primary,
+.salarios-tab-link.primary {
+  background: #1e40af;
+  border-color: #1e40af;
+  color: #ffffff;
+}
+
+.salarios-tab-action.primary:hover,
+.salarios-tab-link.primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
 }
 
 .salarios-tab-amount {
@@ -192,10 +225,180 @@
   border-color: #fecaca;
 }
 
+.salarios-tab-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.56);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.salarios-tab-modal {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+  padding: 1.1rem;
+}
+
+.salarios-tab-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.salarios-tab-modal-header h3 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.salarios-tab-modal-close {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.salarios-tab-modal-periodo {
+  margin: 0 0 0.8rem;
+  color: #475569;
+  font-size: 0.92rem;
+}
+
+.salarios-tab-modal-resumen {
+  margin: 0 0 0.9rem;
+  padding: 0.75rem 0.8rem;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.salarios-tab-modal-error {
+  margin-bottom: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 0.88rem;
+}
+
+.salarios-tab-modal-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.salarios-tab-modal-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.salarios-tab-modal-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.salarios-tab-modal-group label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.salarios-tab-modal-group input,
+.salarios-tab-modal-group select,
+.salarios-tab-modal-group textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.92rem;
+  color: #1f2937;
+  background: #ffffff;
+}
+
+.salarios-tab-modal-group input:focus,
+.salarios-tab-modal-group select:focus,
+.salarios-tab-modal-group textarea:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+
+.salarios-tab-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.3rem;
+}
+
+.salarios-tab-modal-button {
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.salarios-tab-modal-button.secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.salarios-tab-modal-button.primary {
+  background: #1e40af;
+  color: #ffffff;
+}
+
+.salarios-tab-modal-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .salarios-tab-block-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .salarios-tab-block-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .salarios-tab-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .salarios-tab-actions,
+  .salarios-tab-actions.compact {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .salarios-tab-modal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .salarios-tab-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .salarios-tab-modal-button {
+    width: 100%;
   }
 
   .salarios-tab-item {
