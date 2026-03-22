@@ -263,14 +263,12 @@ export class ReportesService {
           where: { camionId: In(camionIds) },
         });
 
-        const projectionDays = this.getDaysInclusive(desde, hasta);
         for (const documento of documentos) {
-          const costo = this.toNumber(documento.costo);
-          if (costo <= 0) {
+          const projectedCost = this.getDocumentoProjectedCostForPeriod(documento, desde, hasta);
+          if (projectedCost <= 0) {
             continue;
           }
 
-          const projectedCost = (costo / this.getDocumentoCoverageDays(documento)) * projectionDays;
           const current = documentosFijosByCamion.get(documento.camionId) || 0;
           documentosFijosByCamion.set(documento.camionId, current + projectedCost);
         }
@@ -489,22 +487,21 @@ export class ReportesService {
     const bucketKeys = Array.from(buckets.keys());
 
     for (const documento of documentos) {
-      const costo = this.toNumber(documento.costo);
-      if (costo <= 0) {
-        continue;
-      }
-
-      const dailyRate = costo / this.getDocumentoCoverageDays(documento);
-
       for (const key of bucketKeys) {
         const { start, end } = this.getBucketDateRange(key, filters.granularidad);
-        const overlapDays = this.getOverlapDays(start, end, filters.desde, filters.hasta);
-        if (overlapDays <= 0) {
+        const periodStart = new Date(Math.max(start.getTime(), filters.desde.getTime()));
+        const periodEnd = new Date(Math.min(end.getTime(), filters.hasta.getTime()));
+        if (periodStart > periodEnd) {
+          continue;
+        }
+
+        const projectedCost = this.getDocumentoProjectedCostForPeriod(documento, periodStart, periodEnd);
+        if (projectedCost <= 0) {
           continue;
         }
 
         const bucket = this.ensureBucket(buckets, key);
-        bucket.gastosDocumentosFijos += dailyRate * overlapDays;
+        bucket.gastosDocumentosFijos += projectedCost;
       }
     }
   }
@@ -640,15 +637,53 @@ export class ReportesService {
     return Math.round(value * 100) / 100;
   }
 
-  private getDocumentoCoverageDays(documento: Documento): number {
-    if (!documento.fechaVencimiento || !documento.createdAt) {
-      return 365;
+  private getDocumentoCoverageRange(documento: Documento): { start: Date; end: Date } {
+    const rawStart = documento.createdAt ? new Date(documento.createdAt) : new Date();
+    const start = Number.isNaN(rawStart.getTime()) ? new Date() : rawStart;
+    start.setHours(0, 0, 0, 0);
+
+    const rawEnd = documento.fechaVencimiento ? new Date(documento.fechaVencimiento) : null;
+    const hasValidEnd = rawEnd && !Number.isNaN(rawEnd.getTime());
+    const end = hasValidEnd ? new Date(rawEnd) : new Date(start);
+
+    if (!hasValidEnd || end < start) {
+      end.setDate(start.getDate() + 364);
     }
 
-    const start = new Date(documento.createdAt);
-    const end = new Date(documento.fechaVencimiento);
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
+  }
+
+  private getDocumentoCoverageDays(documento: Documento): number {
+    const { start, end } = this.getDocumentoCoverageRange(documento);
     const days = this.getDaysInclusive(start, end);
     return days > 0 ? days : 365;
+  }
+
+  private getDocumentoWeeklyCost(documento: Documento): number {
+    const costo = this.toNumber(documento.costo);
+    if (costo <= 0) {
+      return 0;
+    }
+
+    const coberturaDias = this.getDocumentoCoverageDays(documento);
+    return (costo / coberturaDias) * 7;
+  }
+
+  private getDocumentoProjectedCostForPeriod(documento: Documento, periodStart: Date, periodEnd: Date): number {
+    const weeklyCost = this.getDocumentoWeeklyCost(documento);
+    if (weeklyCost <= 0) {
+      return 0;
+    }
+
+    const { start, end } = this.getDocumentoCoverageRange(documento);
+    const overlapDays = this.getOverlapDays(start, end, periodStart, periodEnd);
+    if (overlapDays <= 0) {
+      return 0;
+    }
+
+    return weeklyCost * (overlapDays / 7);
   }
 
   private getDaysInclusive(start: Date, end: Date): number {
@@ -844,7 +879,6 @@ export class ReportesService {
     }
 
     const documentos = await this.documentoRepository.find({ where });
-    const projectionDays = this.getDaysInclusive(desde, hasta);
     const gastosPorCamion = new Map<number, {
       camionId: number;
       patente: string;
@@ -852,6 +886,9 @@ export class ReportesService {
         documentoId: number;
         tipo: string;
         nombre: string;
+        fechaInicio: Date;
+        fechaFin: Date;
+        costoSemanal: number;
         costoActual: number;
         coberturaDias: number;
         costoProyectado: number;
@@ -871,8 +908,14 @@ export class ReportesService {
         continue;
       }
 
+      const { start: fechaInicio, end: fechaFin } = this.getDocumentoCoverageRange(documento);
+      const costoSemanal = this.getDocumentoWeeklyCost(documento);
+      const costoProyectado = this.getDocumentoProjectedCostForPeriod(documento, desde, hasta);
+      if (costoProyectado <= 0) {
+        continue;
+      }
+
       const coberturaDias = this.getDocumentoCoverageDays(documento);
-      const costoProyectado = (costoActual / coberturaDias) * projectionDays;
 
       if (!gastosPorCamion.has(documento.camionId)) {
         gastosPorCamion.set(documento.camionId, {
@@ -886,6 +929,9 @@ export class ReportesService {
         documentoId: documento.id,
         tipo: documento.tipo,
         nombre: documento.nombre || 'Documento sin nombre',
+        fechaInicio,
+        fechaFin,
+        costoSemanal: this.round2(costoSemanal),
         costoActual: this.round2(costoActual),
         coberturaDias,
         costoProyectado: this.round2(costoProyectado),
@@ -898,6 +944,7 @@ export class ReportesService {
         camionId: item.camionId,
         patente: item.patente,
         cantidadDocumentos: item.documentos.length,
+        totalCostoSemanal: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoSemanal, 0)),
         totalCostoActual: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoActual, 0)),
         totalCostoProyectado: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoProyectado, 0)),
         documentos: item.documentos.sort((a, b) => b.costoProyectado - a.costoProyectado),
@@ -910,6 +957,7 @@ export class ReportesService {
         hasta: hasta.toISOString().split('T')[0],
         camionIds: filters.camionIds,
       },
+      resumenTotalSemanal: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoSemanal, 0)),
       resumenTotalActual: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoActual, 0)),
       resumenTotalProyectado: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoProyectado, 0)),
       gastos,

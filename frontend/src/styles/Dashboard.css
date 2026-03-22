@@ -283,6 +283,54 @@
   border-bottom: 1px solid var(--border-soft);
 }
 
+.cost-breakdown-section {
+  background: linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.cost-breakdown-section h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.cost-breakdown-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.cost-breakdown-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.cost-breakdown-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.cost-breakdown-value {
+  margin: 0.35rem 0 0;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.cost-breakdown-share {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
 .alerts-section h3 {
   margin-top: 0;
   color: #333;

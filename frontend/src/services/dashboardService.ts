@@ -9,6 +9,12 @@ export interface DashboardResumen {
   gananciaNetaDelMes: number;
   camionesActivos: number;
   viajesCompletados: number;
+  detalleGastosDelMes: {
+    operativosViaje: number;
+    sueldos: number;
+    mantenimiento: number;
+    documentosFijos: number;
+  };
   mantenimientoPendiente: Array<{
     camionPlaca: string;
     tipo: string;

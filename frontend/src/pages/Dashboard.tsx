@@ -49,6 +49,13 @@ const Dashboard: React.FC = () => {
     }).format(value);
   };
 
+  const formatPercentage = (value: number, total: number) => {
+    if (!total || total <= 0) {
+      return '0.0%';
+    }
+    return `${((value / total) * 100).toFixed(1)}%`;
+  };
+
   return (
     <div className="dashboard-container">
       {/* Navbar */}
@@ -144,6 +151,45 @@ const Dashboard: React.FC = () => {
               <div className="kpi-card primary">
                 <h4>Viajes Completados</h4>
                 <p className="kpi-value">{resumen.viajesCompletados}</p>
+              </div>
+            </div>
+          )}
+
+          {!loading && resumen && (
+            <div className="cost-breakdown-section">
+              <h3>Desglose de Gastos del Mes</h3>
+              <div className="cost-breakdown-grid">
+                <article className="cost-breakdown-card">
+                  <p className="cost-breakdown-label">Operativos de Viaje</p>
+                  <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.operativosViaje || 0)}</p>
+                  <span className="cost-breakdown-share">
+                    {formatPercentage(resumen.detalleGastosDelMes?.operativosViaje || 0, resumen.gastosDelMes || 0)} del total
+                  </span>
+                </article>
+
+                <article className="cost-breakdown-card">
+                  <p className="cost-breakdown-label">Sueldos</p>
+                  <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.sueldos || 0)}</p>
+                  <span className="cost-breakdown-share">
+                    {formatPercentage(resumen.detalleGastosDelMes?.sueldos || 0, resumen.gastosDelMes || 0)} del total
+                  </span>
+                </article>
+
+                <article className="cost-breakdown-card">
+                  <p className="cost-breakdown-label">Mantenimiento</p>
+                  <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.mantenimiento || 0)}</p>
+                  <span className="cost-breakdown-share">
+                    {formatPercentage(resumen.detalleGastosDelMes?.mantenimiento || 0, resumen.gastosDelMes || 0)} del total
+                  </span>
+                </article>
+
+                <article className="cost-breakdown-card">
+                  <p className="cost-breakdown-label">Gastos Fijos</p>
+                  <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.documentosFijos || 0)}</p>
+                  <span className="cost-breakdown-share">
+                    {formatPercentage(resumen.detalleGastosDelMes?.documentosFijos || 0, resumen.gastosDelMes || 0)} del total
+                  </span>
+                </article>
               </div>
             </div>
           )}

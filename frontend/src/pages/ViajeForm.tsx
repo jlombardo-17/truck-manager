@@ -142,6 +142,8 @@ const ViajeForm: React.FC = () => {
 
         const normalizedViaje: Viaje = {
           ...viaje,
+          camionId: toNumberOrZero(viaje.camionId),
+          choferId: toNumberOrZero(viaje.choferId),
           fechaInicio: toDateInputValue(viaje.fechaInicio),
           fechaFin: toDateInputValue(viaje.fechaFin),
           valorViaje: toNumberOrZero(viaje.valorViaje),

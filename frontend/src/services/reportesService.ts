@@ -116,18 +116,23 @@ export interface GastosDocumentalesResponse {
     hasta: string;
     camionIds?: number[];
   };
+  resumenTotalSemanal: number;
   resumenTotalActual: number;
   resumenTotalProyectado: number;
   gastos: Array<{
     camionId: number;
     patente: string;
     cantidadDocumentos: number;
+    totalCostoSemanal: number;
     totalCostoActual: number;
     totalCostoProyectado: number;
     documentos: Array<{
       documentoId: number;
       tipo: string;
       nombre: string;
+      fechaInicio: string;
+      fechaFin: string;
+      costoSemanal: number;
       costoActual: number;
       coberturaDias: number;
       costoProyectado: number;

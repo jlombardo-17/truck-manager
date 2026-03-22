@@ -15,6 +15,12 @@ export interface DashboardResumen {
   gananciaNetaDelMes: number;
   camionesActivos: number;
   viajesCompletados: number;
+  detalleGastosDelMes: {
+    operativosViaje: number;
+    sueldos: number;
+    mantenimiento: number;
+    documentosFijos: number;
+  };
   mantenimientoPendiente: Array<{
     camionPatente: string;
     tipo: string;
@@ -237,6 +243,12 @@ export class DashboardService {
       gananciaNetaDelMes: ingresosDelMes - gastosDelMes,
       camionesActivos,
       viajesCompletados: viajesMes.length,
+      detalleGastosDelMes: {
+        operativosViaje: gastosOperativosViajes,
+        sueldos: gastoSueldos,
+        mantenimiento: gastoMantenimiento,
+        documentosFijos: gastoDocumentosCamion,
+      },
       mantenimientoPendiente: [],
       documentosPorVencer: documentosFormato,
     };

@@ -113,6 +113,12 @@ describe('DashboardService', () => {
     expect(resumen.gananciaNetaDelMes).toBe(90);
     expect(resumen.camionesActivos).toBe(1);
     expect(resumen.viajesCompletados).toBe(1);
+    expect(resumen.detalleGastosDelMes).toMatchObject({
+      operativosViaje: 150,
+      sueldos: 250,
+      mantenimiento: 200,
+      documentosFijos: 310,
+    });
   });
 
   it('calcula el desempeño de camiones con costos documentales proyectados para el mes', async () => {

@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ChoferesService } from './choferes.service';
@@ -23,8 +24,8 @@ export class ChoferesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.choferesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.choferesService.findOne(id);
   }
 
   @Post()
@@ -33,12 +34,12 @@ export class ChoferesController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateChoferDto: UpdateChoferDto) {
-    return this.choferesService.update(+id, updateChoferDto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateChoferDto: UpdateChoferDto) {
+    return this.choferesService.update(id, updateChoferDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.choferesService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.choferesService.remove(id);
   }
 }

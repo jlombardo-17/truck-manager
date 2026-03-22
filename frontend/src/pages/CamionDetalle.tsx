@@ -163,13 +163,39 @@ const CamionDetalle: React.FC = () => {
   const projectionWindowLabel = costProjectionWindow === '5y' ? '5 años' : '1 año';
   const documentosConCosto = documentos.filter((doc) => Number(doc.costo || 0) > 0);
 
-  const getDocumentCoverageDays = (documento: Documento) => {
-    if (!documento.fechaVencimiento || !documento.createdAt) {
-      return 365;
+  const formatDate = (value?: string) => {
+    if (!value) {
+      return 'Sin fecha';
     }
 
-    const createdAt = new Date(documento.createdAt);
-    const fechaVencimiento = new Date(documento.fechaVencimiento);
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return 'Sin fecha';
+    }
+
+    return parsed.toLocaleDateString('es-AR');
+  };
+
+  const getDocumentCoverageRange = (documento: Documento) => {
+    const rawStart = documento.createdAt ? new Date(documento.createdAt) : new Date();
+    const start = Number.isNaN(rawStart.getTime()) ? new Date() : rawStart;
+    start.setHours(0, 0, 0, 0);
+
+    const rawEnd = documento.fechaVencimiento ? new Date(documento.fechaVencimiento) : null;
+    const hasValidEnd = rawEnd && !Number.isNaN(rawEnd.getTime());
+    const end = hasValidEnd ? new Date(rawEnd) : new Date(start);
+
+    if (!hasValidEnd || end < start) {
+      end.setDate(start.getDate() + 364);
+    }
+
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
+  };
+
+  const getDocumentCoverageDays = (documento: Documento) => {
+    const { start: createdAt, end: fechaVencimiento } = getDocumentCoverageRange(documento);
     const diffDays = Math.ceil(
       (fechaVencimiento.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24),
     );
@@ -177,10 +203,19 @@ const CamionDetalle: React.FC = () => {
     return diffDays > 0 ? diffDays : 365;
   };
 
-  const getProjectedDocumentCost = (documento: Documento) => {
+  const getDocumentWeeklyCost = (documento: Documento) => {
     const costo = Number(documento.costo || 0);
+    if (costo <= 0) {
+      return 0;
+    }
+
     const coverageDays = getDocumentCoverageDays(documento);
-    return costo * (projectionWindowDays / coverageDays);
+    return (costo / coverageDays) * 7;
+  };
+
+  const getProjectedDocumentCost = (documento: Documento) => {
+    const weeklyCost = getDocumentWeeklyCost(documento);
+    return weeklyCost * (projectionWindowDays / 7);
   };
 
   const totalCostoFijoActual = documentosConCosto.reduce(
@@ -190,6 +225,11 @@ const CamionDetalle: React.FC = () => {
 
   const totalCostoFijoProyectado = documentosConCosto.reduce(
     (sum, documento) => sum + getProjectedDocumentCost(documento),
+    0,
+  );
+
+  const totalCostoFijoSemanal = documentosConCosto.reduce(
+    (sum, documento) => sum + getDocumentWeeklyCost(documento),
     0,
   );
 
@@ -270,6 +310,10 @@ const CamionDetalle: React.FC = () => {
                     <strong>{documentosConCosto.length}</strong>
                   </div>
                   <div className="docs-cost-card">
+                    <span className="docs-cost-card-label">Costo semanal estimado</span>
+                    <strong>{formatCurrency(totalCostoFijoSemanal)}</strong>
+                  </div>
+                  <div className="docs-cost-card">
                     <span className="docs-cost-card-label">Costo actual cargado</span>
                     <strong>{formatCurrency(totalCostoFijoActual)}</strong>
                   </div>
@@ -282,7 +326,9 @@ const CamionDetalle: React.FC = () => {
                 <div className="docs-fixed-costs-list">
                   {documentosConCosto.map((doc) => {
                     const coverageDays = getDocumentCoverageDays(doc);
+                    const weeklyCost = getDocumentWeeklyCost(doc);
                     const projectedCost = getProjectedDocumentCost(doc);
+                    const coverageRange = getDocumentCoverageRange(doc);
 
                     return (
                       <div key={`cost-${doc.id}`} className="docs-fixed-cost-item">
@@ -292,8 +338,10 @@ const CamionDetalle: React.FC = () => {
                         </div>
                         <div className="docs-fixed-cost-metrics">
                           <span>Costo cargado: {formatCurrency(Number(doc.costo || 0))}</span>
+                          <span>Inicio: {coverageRange.start.toLocaleDateString('es-AR')}</span>
+                          <span>Fin: {formatDate(doc.fechaVencimiento || coverageRange.end.toISOString())}</span>
+                          <span>Valor semanal: {formatCurrency(weeklyCost)}</span>
                           <span>Cobertura estimada: {coverageDays} días</span>
-                          <span>Vence: {doc.fechaVencimiento ? new Date(doc.fechaVencimiento).toLocaleDateString('es-AR') : 'Sin fecha'}</span>
                           <span>Proyección {projectionWindowLabel}: {formatCurrency(projectedCost)}</span>
                         </div>
                       </div>

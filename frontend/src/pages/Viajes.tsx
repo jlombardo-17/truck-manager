@@ -53,8 +53,8 @@ const Viajes: React.FC = () => {
       setViajes(data);
 
       // Cargar datos complementarios (camiones y choferes) de manera eficiente
-      const uniqueCamionIds = new Set(data.map((v) => v.camionId));
-      const uniqueChoferIds = new Set(data.map((v) => v.choferId));
+      const uniqueCamionIds = new Set(data.filter(v => v.camionId != null).map((v) => v.camionId));
+      const uniqueChoferIds = new Set(data.filter(v => v.choferId != null).map((v) => v.choferId));
 
       if (uniqueCamionIds.size > 0) {
         const camionesData = await Promise.all(

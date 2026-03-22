@@ -689,13 +689,14 @@ const Reportes: React.FC = () => {
     const rows = (gastosDocumentales?.gastos || []).map((item) => [
       item.patente || `Camion ${item.camionId}`,
       item.cantidadDocumentos,
+      item.totalCostoSemanal.toFixed(2),
       item.totalCostoActual.toFixed(2),
       item.totalCostoProyectado.toFixed(2),
     ]);
 
     downloadCsv(
       `gastos_documentales_${desde}_${hasta}.csv`,
-      ['Patente', 'Documentos', 'CostoActual', 'CostoProyectado'],
+      ['Patente', 'Documentos', 'CostoSemanal', 'CostoActual', 'CostoProyectado'],
       rows,
     );
   };
@@ -1597,6 +1598,7 @@ const Reportes: React.FC = () => {
         ) : (
           <>
             <div className="operacion-resumen reportes-resumen-doble">
+              <span>Costo semanal: ${Number(gastosDocumentales?.resumenTotalSemanal || 0).toFixed(2)}</span>
               <span>Costo actual cargado: ${Number(gastosDocumentales?.resumenTotalActual || 0).toFixed(2)}</span>
               <span>Costo proyectado: ${Number(gastosDocumentales?.resumenTotalProyectado || 0).toFixed(2)}</span>
             </div>
@@ -1605,6 +1607,7 @@ const Reportes: React.FC = () => {
                 <tr>
                   <th>Patente</th>
                   <th>Documentos</th>
+                  <th>Costo Semanal</th>
                   <th>Costo Actual</th>
                   <th>Costo Proyectado</th>
                 </tr>
@@ -1614,13 +1617,14 @@ const Reportes: React.FC = () => {
                   <tr key={item.camionId}>
                     <td>{item.patente || `Camión ${item.camionId}`}</td>
                     <td>{item.cantidadDocumentos}</td>
+                    <td>${item.totalCostoSemanal.toFixed(2)}</td>
                     <td>${item.totalCostoActual.toFixed(2)}</td>
                     <td>${item.totalCostoProyectado.toFixed(2)}</td>
                   </tr>
                 ))}
                 {(gastosDocumentales?.gastos || []).length === 0 && (
                   <tr>
-                    <td colSpan={4}>No hay gastos documentales para el filtro seleccionado.</td>
+                    <td colSpan={5}>No hay gastos documentales para el filtro seleccionado.</td>
                   </tr>
                 )}
               </tbody>

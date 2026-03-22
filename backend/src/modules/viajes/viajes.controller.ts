@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
 import { ViajsService } from './viajes.service';
 import { CreateViajDTO } from './dto/create-viaje.dto';
 import { UpdateViajDTO } from './dto/update-viaje.dto';
@@ -44,32 +44,32 @@ export class ViajsController {
    * GET /api/viajes/:id - Obtener un viaje por ID
    */
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.viajsService.findOneWithRelations(parseInt(id));
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.viajsService.findOneWithRelations(id);
   }
 
   /**
    * GET /api/viajes/:id/comisiones - Obtener las comisiones de un viaje
    */
   @Get(':id/comisiones')
-  async getComisiones(@Param('id') id: string) {
-    return this.viajsService.getComisiones(parseInt(id));
+  async getComisiones(@Param('id', ParseIntPipe) id: number) {
+    return this.viajsService.getComisiones(id);
   }
 
   /**
    * GET /api/viajes/:id/desglose - Obtener el desglose económico de un viaje
    */
   @Get(':id/desglose')
-  async getDesglose(@Param('id') id: string) {
-    return this.viajsService.getDesglose(parseInt(id));
+  async getDesglose(@Param('id', ParseIntPipe) id: number) {
+    return this.viajsService.getDesglose(id);
   }
 
   /**
    * GET /api/viajes/:id/rutas - Obtener las rutas de un viaje
    */
   @Get(':id/rutas')
-  async getRoutes(@Param('id') id: string) {
-    return this.viajsService.getRoutes(parseInt(id));
+  async getRoutes(@Param('id', ParseIntPipe) id: number) {
+    return this.viajsService.getRoutes(id);
   }
 
   /**
@@ -77,11 +77,11 @@ export class ViajsController {
    */
   @Post(':id/rutas')
   async saveRoutes(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() saveViajRutasDTO: SaveViajRutasDTO,
   ) {
     return this.viajsService.saveRoutes(
-      parseInt(id),
+      id,
       saveViajRutasDTO.rutas,
       saveViajRutasDTO.kmRecorridos,
     );
@@ -92,10 +92,10 @@ export class ViajsController {
    */
   @Patch(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateViajDTO: UpdateViajDTO,
   ) {
-    return this.viajsService.update(parseInt(id), updateViajDTO);
+    return this.viajsService.update(id, updateViajDTO);
   }
 
   /**
@@ -103,18 +103,18 @@ export class ViajsController {
    */
   @Patch(':id/estado')
   async cambiarEstado(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body('estado') estado: string,
   ) {
-    return this.viajsService.cambiarEstado(parseInt(id), estado);
+    return this.viajsService.cambiarEstado(id, estado);
   }
 
   /**
    * DELETE /api/viajes/:id - Eliminar un viaje
    */
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    await this.viajsService.remove(parseInt(id));
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    await this.viajsService.remove(id);
     return { message: 'Viaje eliminado exitosamente' };
   }
 }
