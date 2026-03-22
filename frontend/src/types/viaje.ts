@@ -5,6 +5,7 @@ export interface Viaje {
   choferId: number;
   fechaInicio: string;
   fechaFin?: string;
+  fechaPago?: string;
   origen: string;
   destino: string;
   latitudOrigen?: number;

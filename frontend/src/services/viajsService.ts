@@ -46,6 +46,7 @@ const sanitizeViajePayload = (
     notas: viaje.notas,
     fechaInicio: toDateString(viaje.fechaInicio),
     fechaFin: toDateString(viaje.fechaFin),
+    fechaPago: toDateString(viaje.fechaPago),
     camionId: toNumberOrUndefined(viaje.camionId),
     choferId: toNumberOrUndefined(viaje.choferId),
     valorViaje: toNumberOrUndefined(viaje.valorViaje),
@@ -77,6 +78,7 @@ export interface Viaje {
   choferId: number;
   fechaInicio: string;
   fechaFin?: string;
+  fechaPago?: string;
   origen: string;
   destino: string;
   latitudOrigen?: number;
@@ -130,6 +132,8 @@ export const viajsService = {
     choferId?: number;
     fechaInicio?: string;
     fechaFin?: string;
+    fechaPagoDesde?: string;
+    fechaPagoHasta?: string;
   }) => {
     try {
       let url = `${API_BASE_URL}/viajes`;
@@ -141,6 +145,8 @@ export const viajsService = {
         if (filters.choferId) params.append('choferId', filters.choferId.toString());
         if (filters.fechaInicio) params.append('fechaInicio', filters.fechaInicio);
         if (filters.fechaFin) params.append('fechaFin', filters.fechaFin);
+        if (filters.fechaPagoDesde) params.append('fechaPagoDesde', filters.fechaPagoDesde);
+        if (filters.fechaPagoHasta) params.append('fechaPagoHasta', filters.fechaPagoHasta);
       }
 
       if (params.toString()) {

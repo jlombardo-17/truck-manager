@@ -26,6 +26,7 @@ export interface RentabilidadResponse {
     choferIds?: number[];
     desde: string;
     hasta: string;
+    criterioFecha?: 'fechaInicio' | 'fechaPago';
   };
   resumen: {
     totalIngresos: number;
@@ -42,6 +43,7 @@ export interface RentabilidadComparativaResponse {
     choferIds?: number[];
     desde: string;
     hasta: string;
+    criterioFecha?: 'fechaInicio' | 'fechaPago';
   };
   comparativas: Array<{
     id: number;
@@ -190,6 +192,7 @@ class ReportesService {
     choferIds?: number[];
     desde?: string;
     hasta?: string;
+    usarFechaPago?: boolean;
   }): Promise<RentabilidadResponse> {
     const response = await this.api.get<RentabilidadResponse>('/reportes/rentabilidad', {
       params: {
@@ -198,6 +201,7 @@ class ReportesService {
         ...(filters.choferIds?.length ? { choferIds: filters.choferIds.join(',') } : {}),
         ...(filters.desde ? { desde: filters.desde } : {}),
         ...(filters.hasta ? { hasta: filters.hasta } : {}),
+        ...(filters.usarFechaPago ? { usarFechaPago: true } : {}),
       },
     });
 
@@ -210,6 +214,7 @@ class ReportesService {
     hasta?: string;
     camionIds?: number[];
     choferIds?: number[];
+    usarFechaPago?: boolean;
   }): Promise<RentabilidadComparativaResponse> {
     const response = await this.api.get<RentabilidadComparativaResponse>('/reportes/rentabilidad/comparativa', {
       params: {
@@ -218,6 +223,7 @@ class ReportesService {
         ...(filters.hasta ? { hasta: filters.hasta } : {}),
         ...(filters.camionIds?.length ? { camionIds: filters.camionIds.join(',') } : {}),
         ...(filters.choferIds?.length ? { choferIds: filters.choferIds.join(',') } : {}),
+        ...(filters.usarFechaPago ? { usarFechaPago: true } : {}),
       },
     });
 

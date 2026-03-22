@@ -27,6 +27,8 @@ const Viajes: React.FC = () => {
     estado: '',
     camionId: '',
     choferId: '',
+    fechaPagoDesde: '',
+    fechaPagoHasta: '',
   });
 
   const handleLogout = () => {
@@ -47,6 +49,8 @@ const Viajes: React.FC = () => {
         ...(filtros.estado && { estado: filtros.estado }),
         ...(filtros.camionId && { camionId: parseInt(filtros.camionId) }),
         ...(filtros.choferId && { choferId: parseInt(filtros.choferId) }),
+        ...(filtros.fechaPagoDesde && { fechaPagoDesde: filtros.fechaPagoDesde }),
+        ...(filtros.fechaPagoHasta && { fechaPagoHasta: filtros.fechaPagoHasta }),
       };
 
       const data = await viajsService.getAll(filters);
@@ -241,9 +245,29 @@ const Viajes: React.FC = () => {
           />
         </div>
 
+        <div className="filter-group">
+          <label>Pago Desde</label>
+          <input
+            type="date"
+            value={filtros.fechaPagoDesde}
+            onChange={(e) => handleFiltroChange('fechaPagoDesde', e.target.value)}
+            className="filter-input"
+          />
+        </div>
+
+        <div className="filter-group">
+          <label>Pago Hasta</label>
+          <input
+            type="date"
+            value={filtros.fechaPagoHasta}
+            onChange={(e) => handleFiltroChange('fechaPagoHasta', e.target.value)}
+            className="filter-input"
+          />
+        </div>
+
         <button
           className="btn-secondary"
-          onClick={() => setFiltros({ estado: '', camionId: '', choferId: '' })}
+          onClick={() => setFiltros({ estado: '', camionId: '', choferId: '', fechaPagoDesde: '', fechaPagoHasta: '' })}
         >
           Limpiar Filtros
         </button>
@@ -261,6 +285,7 @@ const Viajes: React.FC = () => {
                 <th>Origen</th>
                 <th>Destino</th>
                 <th>Valor</th>
+                <th>Pago</th>
                 <th>KM</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -269,7 +294,7 @@ const Viajes: React.FC = () => {
             <tbody>
               {skeletonRows.map((row) => (
                 <tr key={row}>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <div className="skeleton-line" />
                   </td>
                 </tr>
@@ -295,6 +320,7 @@ const Viajes: React.FC = () => {
                 <th>Origen</th>
                 <th>Destino</th>
                 <th>Valor</th>
+                <th>Pago</th>
                 <th>KM</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -315,6 +341,7 @@ const Viajes: React.FC = () => {
                   <td>{viaje.origen}</td>
                   <td>{viaje.destino}</td>
                   <td className="valor-cell">${Number(viaje.valorViaje || 0).toFixed(2)}</td>
+                  <td>{viaje.fechaPago ? new Date(viaje.fechaPago).toLocaleDateString('es-UY') : 'Pendiente'}</td>
                   <td className="km-cell">{Number(viaje.kmRecorridos || 0).toFixed(2)} km</td>
                   <td>
                     <select

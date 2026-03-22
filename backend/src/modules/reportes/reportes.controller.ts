@@ -23,6 +23,7 @@ export class ReportesController {
     @Query('choferIds') choferIds?: string,
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
+    @Query('usarFechaPago') usarFechaPago?: string,
   ) {
     const parsedCamionIds = parseIds(camionIds) || (camionId ? [Number(camionId)] : undefined);
     const parsedChoferIds = parseIds(choferIds) || (choferId ? [Number(choferId)] : undefined);
@@ -33,6 +34,7 @@ export class ReportesController {
       choferIds: parsedChoferIds,
       desde: desde ? new Date(desde) : undefined,
       hasta: hasta ? new Date(hasta) : undefined,
+      usarFechaPago: usarFechaPago === 'true',
     });
   }
 
@@ -45,6 +47,7 @@ export class ReportesController {
     @Query('choferId') choferId?: string,
     @Query('camionIds') camionIds?: string,
     @Query('choferIds') choferIds?: string,
+    @Query('usarFechaPago') usarFechaPago?: string,
   ) {
     const parsedCamionIds = parseIds(camionIds) || (camionId ? [Number(camionId)] : undefined);
     const parsedChoferIds = parseIds(choferIds) || (choferId ? [Number(choferId)] : undefined);
@@ -55,6 +58,7 @@ export class ReportesController {
       hasta: hasta ? new Date(hasta) : undefined,
       camionIds: parsedCamionIds,
       choferIds: parsedChoferIds,
+      usarFechaPago: usarFechaPago === 'true',
     });
   }
 

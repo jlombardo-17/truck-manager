@@ -75,6 +75,10 @@ export class CreateViajDTO {
   @IsOptional()
   fechaFin?: string;
 
+  @IsDateString()
+  @IsOptional()
+  fechaPago?: string;
+
   @IsString()
   origen: string;
 

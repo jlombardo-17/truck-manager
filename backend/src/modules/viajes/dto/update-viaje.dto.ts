@@ -84,6 +84,10 @@ export class UpdateViajDTO {
   @IsOptional()
   fechaFin?: string;
 
+  @IsDateString()
+  @IsOptional()
+  fechaPago?: string;
+
   @IsString()
   @IsOptional()
   origen?: string;

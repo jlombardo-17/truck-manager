@@ -76,6 +76,9 @@ export class Viaje {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   otrosGastos: number;
 
+  @Column({ type: 'date', nullable: true })
+  fechaPago: Date;
+
   // Estado
   @Column({ default: 'en_progreso' })
   estado: string; // en_progreso, completado, cancelado

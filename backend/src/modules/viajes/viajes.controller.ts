@@ -28,6 +28,8 @@ export class ViajsController {
     @Query('choferId') choferId?: string,
     @Query('fechaInicio') fechaInicio?: string,
     @Query('fechaFin') fechaFin?: string,
+    @Query('fechaPagoDesde') fechaPagoDesde?: string,
+    @Query('fechaPagoHasta') fechaPagoHasta?: string,
   ) {
     const filters = {
       ...(estado && { estado }),
@@ -35,6 +37,8 @@ export class ViajsController {
       ...(choferId && { choferId: parseInt(choferId) }),
       ...(fechaInicio && { fechaInicio: new Date(fechaInicio) }),
       ...(fechaFin && { fechaFin: new Date(fechaFin) }),
+      ...(fechaPagoDesde && { fechaPagoDesde: new Date(fechaPagoDesde) }),
+      ...(fechaPagoHasta && { fechaPagoHasta: new Date(fechaPagoHasta) }),
     };
 
     return this.viajsService.findAll(filters);

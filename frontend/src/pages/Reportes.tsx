@@ -135,6 +135,7 @@ const Reportes: React.FC = () => {
   const [choferIds, setChoferIds] = useState<string[]>([]);
   const [desde, setDesde] = useState<string>(defaultDesdeDiario);
   const [hasta, setHasta] = useState<string>(today.toISOString().split('T')[0]);
+  const [usarFechaPagoRentabilidad, setUsarFechaPagoRentabilidad] = useState(false);
 
   const [compararPor, setCompararPor] = useState<'camion' | 'chofer'>('camion');
   const [comparativaMetric, setComparativaMetric] = useState<'rentabilidad' | 'ingresos' | 'gastos' | 'gananciaNeta'>('rentabilidad');
@@ -221,17 +222,17 @@ const Reportes: React.FC = () => {
 
   useEffect(() => {
     fetchRentabilidad();
-  }, [granularidadIngresos, camionIds, choferIds, desde, hasta]);
+  }, [granularidadIngresos, camionIds, choferIds, desde, hasta, usarFechaPagoRentabilidad]);
 
   useEffect(() => {
     if (ingresosMode === 'por_camion') {
       fetchRentabilidadDetalleCamion();
     }
-  }, [ingresosMode, granularidadIngresos, ingresosSelectedCamionIds, camionIds, choferIds, desde, hasta]);
+  }, [ingresosMode, granularidadIngresos, ingresosSelectedCamionIds, camionIds, choferIds, desde, hasta, usarFechaPagoRentabilidad]);
 
   useEffect(() => {
     fetchComparativa();
-  }, [compararPor, desde, hasta]);
+  }, [compararPor, desde, hasta, usarFechaPagoRentabilidad]);
 
   useEffect(() => {
     const availableIds = new Set(comparativaEntitiesOptionList.map((item) => String(item.id)));
@@ -259,7 +260,7 @@ const Reportes: React.FC = () => {
 
   useEffect(() => {
     fetchComparativaTimeline();
-  }, [selectedComparativaEntityIds, comparativaEntitiesOptionList, compararPor, comparativaGranularidad, camionIds, choferIds, desde, hasta]);
+  }, [selectedComparativaEntityIds, comparativaEntitiesOptionList, compararPor, comparativaGranularidad, camionIds, choferIds, desde, hasta, usarFechaPagoRentabilidad]);
 
   useEffect(() => {
     fetchOperacionCamiones();
@@ -279,6 +280,7 @@ const Reportes: React.FC = () => {
         choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
         desde,
         hasta,
+        usarFechaPago: usarFechaPagoRentabilidad,
       });
       setReporte(data);
     } catch (err: any) {
@@ -304,6 +306,7 @@ const Reportes: React.FC = () => {
             choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
             desde,
             hasta,
+            usarFechaPago: usarFechaPagoRentabilidad,
           });
           return [camionId, data] as const;
         }),
@@ -327,6 +330,7 @@ const Reportes: React.FC = () => {
         choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
         desde,
         hasta,
+        usarFechaPago: usarFechaPagoRentabilidad,
       });
       setComparativa(data);
     } catch (err: any) {
@@ -354,6 +358,7 @@ const Reportes: React.FC = () => {
             choferIds: compararPor === 'chofer' ? [entity.id] : (choferIds.length ? choferIds.map((id) => Number(id)) : undefined),
             desde,
             hasta,
+            usarFechaPago: usarFechaPagoRentabilidad,
           });
           return [entity.id, data] as const;
         }),
@@ -1170,6 +1175,17 @@ const Reportes: React.FC = () => {
         <div className="filtro-item">
           <label>Hasta</label>
           <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+        </div>
+
+        <div className="filtro-item">
+          <label>
+            <input
+              type="checkbox"
+              checked={usarFechaPagoRentabilidad}
+              onChange={(e) => setUsarFechaPagoRentabilidad(e.target.checked)}
+            />{' '}
+            Usar fecha de pago (rentabilidad/comparativa)
+          </label>
         </div>
       </div>
 

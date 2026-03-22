@@ -7,10 +7,14 @@
     "backend:dev": "cd backend && npm run start:dev",
     "backend:build": "cd backend && npm run build",
     "backend:start": "cd backend && npm run start",
+    "backend:install": "npm --prefix backend install",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build",
+    "frontend:install": "npm --prefix frontend install",
+    "install:apps": "npm run backend:install && npm run frontend:install",
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
-    "build": "npm run backend:build && npm run frontend:build"
+    "build": "npm run backend:build && npm run frontend:build",
+    "setup": "npm install && npm run install:apps"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"

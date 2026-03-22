@@ -48,6 +48,7 @@ export class ViajsService {
       chofer: { id: createViajDTO.choferId } as Chofer,
       fechaInicio: new Date(createViajDTO.fechaInicio),
       fechaFin: createViajDTO.fechaFin ? new Date(createViajDTO.fechaFin) : null,
+      fechaPago: createViajDTO.fechaPago ? new Date(createViajDTO.fechaPago) : null,
       origen: createViajDTO.origen,
       destino: createViajDTO.destino,
       latitudOrigen: createViajDTO.latitudOrigen as any || null,
@@ -100,6 +101,8 @@ export class ViajsService {
     choferId?: number;
     fechaInicio?: Date;
     fechaFin?: Date;
+    fechaPagoDesde?: Date;
+    fechaPagoHasta?: Date;
   }): Promise<Viaje[]> {
     let query = this.viajRepository.createQueryBuilder('viaje')
       .leftJoinAndSelect('viaje.camion', 'camion')
@@ -126,6 +129,14 @@ export class ViajsService {
 
     if (filters?.fechaFin) {
       query = query.andWhere('viaje.fechaFin <= :fechaFin', { fechaFin: filters.fechaFin });
+    }
+
+    if (filters?.fechaPagoDesde) {
+      query = query.andWhere('viaje.fechaPago >= :fechaPagoDesde', { fechaPagoDesde: filters.fechaPagoDesde });
+    }
+
+    if (filters?.fechaPagoHasta) {
+      query = query.andWhere('viaje.fechaPago <= :fechaPagoHasta', { fechaPagoHasta: filters.fechaPagoHasta });
     }
 
     return query.getMany();
@@ -178,6 +189,9 @@ export class ViajsService {
       ...(choferId ? { chofer: { id: choferId } as Chofer } : {}),
       fechaInicio: viajeChanges.fechaInicio ? new Date(viajeChanges.fechaInicio) : viaje.fechaInicio,
       fechaFin: viajeChanges.fechaFin ? new Date(viajeChanges.fechaFin) : viaje.fechaFin,
+      fechaPago: Object.prototype.hasOwnProperty.call(viajeChanges, 'fechaPago')
+        ? (viajeChanges.fechaPago ? new Date(viajeChanges.fechaPago) : null)
+        : viaje.fechaPago,
     });
 
     await this.viajRepository.save(viaje);

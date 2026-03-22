@@ -146,6 +146,7 @@ const ViajeForm: React.FC = () => {
           choferId: toNumberOrZero(viaje.choferId),
           fechaInicio: toDateInputValue(viaje.fechaInicio),
           fechaFin: toDateInputValue(viaje.fechaFin),
+          fechaPago: toDateInputValue(viaje.fechaPago),
           valorViaje: toNumberOrZero(viaje.valorViaje),
           kmRecorridos: toNumberOrZero(viaje.kmRecorridos),
           consumoCombustible: toNumberOrUndefined(viaje.consumoCombustible),
@@ -230,6 +231,7 @@ const ViajeForm: React.FC = () => {
         ...formData,
         fechaInicio: toDateInputValue(formData.fechaInicio),
         fechaFin: toDateInputValue(formData.fechaFin),
+        fechaPago: toDateInputValue(formData.fechaPago),
         camionId: toNumberOrZero(formData.camionId),
         choferId: toNumberOrZero(formData.choferId),
         valorViaje: toNumberOrZero(formData.valorViaje),
@@ -559,6 +561,21 @@ const ViajeForm: React.FC = () => {
                 required
                 className="form-input"
               />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="fechaPago">Fecha de Pago</label>
+              <input
+                type="date"
+                id="fechaPago"
+                name="fechaPago"
+                value={formData.fechaPago || ''}
+                onChange={handleInputChange}
+                className="form-input"
+              />
+              <small className="field-hint">
+                Opcional. Permite registrar pagos diferidos a 30/60/90 dias o mas.
+              </small>
             </div>
 
             <div className="form-field">

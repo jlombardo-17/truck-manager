@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
 import { Chofer } from '../choferes/chofer.entity';
@@ -16,6 +16,7 @@ interface RentabilidadFilters {
   choferIds?: number[];
   desde: Date;
   hasta: Date;
+  usarFechaPago?: boolean;
 }
 
 interface BucketAccumulator {
@@ -64,6 +65,7 @@ export class ReportesService {
       choferIds: filters.choferIds,
       desde,
       hasta,
+      usarFechaPago: filters.usarFechaPago,
     };
 
     const viajes = await this.getViajes(parsedFilters);
@@ -142,6 +144,7 @@ export class ReportesService {
         choferIds: parsedFilters.choferIds,
         desde: parsedFilters.desde.toISOString().split('T')[0],
         hasta: parsedFilters.hasta.toISOString().split('T')[0],
+        criterioFecha: parsedFilters.usarFechaPago ? 'fechaPago' : 'fechaInicio',
       },
       resumen: {
         totalIngresos: this.round2(resumen.totalIngresos),
@@ -158,6 +161,7 @@ export class ReportesService {
     hasta?: Date;
     camionIds?: number[];
     choferIds?: number[];
+    usarFechaPago?: boolean;
   }) {
     const hasta = filters.hasta || new Date();
     const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -168,6 +172,7 @@ export class ReportesService {
       hasta,
       camionIds: filters.camionIds,
       choferIds: filters.choferIds,
+      usarFechaPago: filters.usarFechaPago,
     });
 
     const buckets = new Map<string, {
@@ -349,6 +354,7 @@ export class ReportesService {
         choferIds: filters.choferIds,
         desde: desde.toISOString().split('T')[0],
         hasta: hasta.toISOString().split('T')[0],
+        criterioFecha: filters.usarFechaPago ? 'fechaPago' : 'fechaInicio',
       },
       comparativas,
     };
@@ -363,13 +369,12 @@ export class ReportesService {
     const hasta = filters.hasta || new Date();
     const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const viajes = await this.viajeRepository.find({
-      where: {
-        camionId: filters.camionId,
-        fechaInicio: Between(desde, hasta),
-      },
-      order: { fechaInicio: 'ASC' },
-    });
+    const viajes = await this.viajeRepository
+      .createQueryBuilder('viaje')
+      .where('viaje.camion_id = :camionId', { camionId: filters.camionId })
+      .andWhere('viaje.fechaInicio BETWEEN :desde AND :hasta', { desde, hasta })
+      .orderBy('viaje.fechaInicio', 'ASC')
+      .getMany();
 
     const buckets = new Map<string, OperacionBucket>();
     for (const viaje of viajes) {
@@ -408,23 +413,30 @@ export class ReportesService {
   }
 
   private async getViajes(filters: RentabilidadFilters): Promise<Viaje[]> {
-    const where: any = {
-      fechaInicio: Between(filters.desde, filters.hasta),
-    };
+    const dateField = filters.usarFechaPago ? 'viaje.fechaPago' : 'viaje.fechaInicio';
+    const query = this.viajeRepository
+      .createQueryBuilder('viaje')
+      .leftJoinAndSelect('viaje.chofer', 'chofer')
+      .leftJoinAndSelect('viaje.camion', 'camion')
+      .where(`${dateField} BETWEEN :desde AND :hasta`, {
+        desde: filters.desde,
+        hasta: filters.hasta,
+      })
+      .orderBy(dateField, 'ASC');
 
     if (filters.camionIds && filters.camionIds.length > 0) {
-      where.camionId = In(filters.camionIds);
+      query.andWhere('viaje.camion_id IN (:...camionIds)', {
+        camionIds: filters.camionIds,
+      });
     }
 
     if (filters.choferIds && filters.choferIds.length > 0) {
-      where.choferId = In(filters.choferIds);
+      query.andWhere('viaje.chofer_id IN (:...choferIds)', {
+        choferIds: filters.choferIds,
+      });
     }
 
-    return this.viajeRepository.find({
-      where,
-      order: { fechaInicio: 'ASC' },
-      relations: ['chofer', 'camion'],
-    });
+    return query.getMany();
   }
 
   private async addMantenimientoToBuckets(
@@ -737,14 +749,19 @@ export class ReportesService {
     const hasta = filters.hasta || new Date();
     const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const viajes = await this.viajeRepository.find({
-      relations: ['chofer'],
-      where: {
-        fechaInicio: Between(desde, hasta),
-        choferId: filters.choferIds && filters.choferIds.length > 0 ? In(filters.choferIds) : undefined,
-      },
-      order: { fechaInicio: 'ASC' },
-    });
+    const query = this.viajeRepository
+      .createQueryBuilder('viaje')
+      .leftJoinAndSelect('viaje.chofer', 'chofer')
+      .where('viaje.fechaInicio BETWEEN :desde AND :hasta', { desde, hasta })
+      .orderBy('viaje.fechaInicio', 'ASC');
+
+    if (filters.choferIds && filters.choferIds.length > 0) {
+      query.andWhere('viaje.chofer_id IN (:...choferIds)', {
+        choferIds: filters.choferIds,
+      });
+    }
+
+    const viajes = await query.getMany();
 
     const choferesMap = new Map<number, {
       id: number;
@@ -800,11 +817,14 @@ export class ReportesService {
     const hasta = filters.hasta || new Date();
     const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    const where: any = {};
+    if (filters.camionIds && filters.camionIds.length > 0) {
+      where.camionId = In(filters.camionIds);
+    }
+
     const mantenimientos = await this.mantenimientoRepository.find({
       relations: ['camion', 'tipo'],
-      where: {
-        costoReal: filters.camionIds && filters.camionIds.length > 0 ? In(filters.camionIds) : undefined,
-      },
+      where,
     });
 
     const gastosPorCamion = new Map<number, {
