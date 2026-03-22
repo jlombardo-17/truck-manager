@@ -40,12 +40,14 @@ truck-manager/
 ├── .gitignore                  # Ya configurado
 ├── package.json               # Scripts de monorepo
 │
-├── QUICK_START.md              # ⭐ EMPIEZA AQUI (5 pasos)
-├── README.md                   # Descripción del proyecto
-├── SETUP.md                    # Instalación detallada
-├── PLAN_EJECUTIVO.md           # Para entender el proyecto
-├── DATABASE_SCHEMA.md          # Esquema de BD completo
-└── DEVELOPMENT_ROADMAP.md      # Plan de 20 semanas
+├── README.md                   # Descripción general del proyecto
+└── docs/
+	├── README.md               # Índice de documentación
+	├── QUICK_START.md          # ⭐ EMPIEZA AQUI (5 pasos)
+	├── SETUP.md                # Instalación detallada
+	├── PLAN_EJECUTIVO.md       # Para entender el proyecto
+	├── DATABASE_SCHEMA.md      # Esquema de BD completo
+	└── DEVELOPMENT_ROADMAP.md  # Plan de desarrollo
 
 ```
 

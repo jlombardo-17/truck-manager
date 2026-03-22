@@ -420,10 +420,10 @@ if (variant === 'full-width') {
 
 ## 🔗 Referencias
 
-- [HeroSection Component](../components/HeroSection.tsx)
-- [Styles](../styles/HeroSection.css)
-- [Color Variables](../index.css) (`:root`)
-- [Analysis](../GEOTAB_DESIGN_ANALYSIS.md)
+- [HeroSection Component](../frontend/src/components/HeroSection.tsx)
+- [Styles](../frontend/src/styles/HeroSection.css)
+- [Color Variables](../frontend/src/index.css) (`:root`)
+- [Analysis](./GEOTAB_DESIGN_ANALYSIS.md)
 
 ---
 

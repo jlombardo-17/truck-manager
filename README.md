@@ -41,14 +41,26 @@ truck-manager/
 │   │   └── App.tsx
 │   ├── package.json
 │   └── vite.config.ts
+├── docs/                # Documentación complementaria
+│   ├── README.md        # Índice de documentación
+│   ├── QUICK_START.md   # Inicio rápido
+│   └── ...
 ├── .gitignore
 ├── README.md
 └── docker-compose.yml   # (Opcional para desarrollo)
 ```
 
+## 📚 Documentación
+
+- [Índice de documentación](docs/README.md): índice central con guías, referencia técnica, testing y documentos históricos.
+- [Quick Start](docs/QUICK_START.md): arranque rápido del proyecto.
+- [Setup](docs/SETUP.md): instalación completa y troubleshooting.
+- [API Endpoints](docs/API_ENDPOINTS.md): referencia de endpoints del backend.
+- [Database Schema](docs/DATABASE_SCHEMA.md): referencia de base de datos.
+
 ## 📚 Guías de UI
 
-- [UI Navigation Guidelines](UI_NAVIGATION_GUIDELINES.md): convención de BackButton, variantes y criterios de uso.
+- [UI Navigation Guidelines](docs/UI_NAVIGATION_GUIDELINES.md): convención de BackButton, variantes y criterios de uso.
 
 ## 🚀 Inicio Rápido
 

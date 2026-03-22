@@ -30,10 +30,12 @@ C:\Users\Usuario\Proyectos\truck-manager\
 │   ├── package.json
 │   └── .env.example
 │
+├── docs/                ( Documentación complementaria )
+│   ├── README.md        ( Índice de documentación )
+│   ├── SETUP.md         ( Guía de instalación ✅ )
+│   ├── DATABASE_SCHEMA.md ( Esquema de BD completo ✅ )
+│   └── DEVELOPMENT_ROADMAP.md ( Plan de desarrollo )
 ├── README.md            ( Descripción general )
-├── SETUP.md             ( Guía de instalación ✅ )
-├── DATABASE_SCHEMA.md   ( Esquema de BD completo ✅ )
-├── DEVELOPMENT_ROADMAP.md ( Plan de desarrollo 20 semanas ✅ )
 └── .gitignore
 ```
 
@@ -253,7 +255,7 @@ Fichas que ya tienes en el proyecto:
    - Checklist de tareas
    - Comandos por fase
 
-4. **[README.md](README.md)** ← Descripción general
+4. **[README.md](../README.md)** ← Descripción general
 
 ---
 
