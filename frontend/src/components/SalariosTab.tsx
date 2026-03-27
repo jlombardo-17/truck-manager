@@ -39,6 +39,19 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
   });
   const metodosPago = ['transferencia', 'efectivo', 'cheque', 'otro'];
 
+  const [showEditarPagoModal, setShowEditarPagoModal] = useState(false);
+  const [pagoEditando, setPagoEditando] = useState<{ salarioId: number; pagoId: number } | null>(null);
+  const [guardandoEditarPago, setGuardandoEditarPago] = useState(false);
+  const [editarPagoError, setEditarPagoError] = useState<string | null>(null);
+  const [pagoEditarForm, setPagoEditarForm] = useState({
+    monto: '',
+    fechaPago: new Date().toISOString().split('T')[0],
+    metodoPago: 'transferencia',
+    tipo: TipoPagoSalario.ADELANTO,
+    comprobante: '',
+    observaciones: '',
+  });
+
   const loadSalarios = async () => {
     try {
       setLoading(true);
@@ -133,6 +146,67 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
     setSalarioSeleccionado(null);
     setGuardandoPago(false);
     setPagoError(null);
+  };
+
+  const handleAbrirEditarPagoModal = (salarioId: number, pago: SalarioPago) => {
+    setPagoEditando({ salarioId, pagoId: pago.id });
+    setPagoEditarForm({
+      monto: Number(pago.monto || 0).toFixed(2),
+      fechaPago: pago.fechaPago
+        ? new Date(pago.fechaPago).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0],
+      metodoPago: pago.metodoPago || 'transferencia',
+      tipo: pago.tipo || TipoPagoSalario.ADELANTO,
+      comprobante: pago.comprobante || '',
+      observaciones: pago.observaciones || '',
+    });
+    setEditarPagoError(null);
+    setShowEditarPagoModal(true);
+  };
+
+  const handleCerrarEditarPagoModal = () => {
+    setShowEditarPagoModal(false);
+    setPagoEditando(null);
+    setGuardandoEditarPago(false);
+    setEditarPagoError(null);
+  };
+
+  const handleEditarPago = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!pagoEditando) return;
+    if (!pagoEditarForm.fechaPago || !pagoEditarForm.metodoPago || Number(pagoEditarForm.monto) <= 0) {
+      setEditarPagoError('Debes completar monto, fecha y método de pago');
+      return;
+    }
+    try {
+      setGuardandoEditarPago(true);
+      setEditarPagoError(null);
+      await salariosService.updatePago(pagoEditando.salarioId, pagoEditando.pagoId, {
+        monto: Number(pagoEditarForm.monto),
+        fechaPago: pagoEditarForm.fechaPago,
+        metodoPago: pagoEditarForm.metodoPago,
+        tipo: pagoEditarForm.tipo,
+        comprobante: pagoEditarForm.comprobante.trim() || undefined,
+        observaciones: pagoEditarForm.observaciones.trim() || undefined,
+      });
+      await loadSalarios();
+      handleCerrarEditarPagoModal();
+    } catch (err: any) {
+      console.error('Error al editar pago:', err);
+      setEditarPagoError(err?.response?.data?.message || 'No se pudo editar el pago');
+      setGuardandoEditarPago(false);
+    }
+  };
+
+  const handleEliminarPago = async (salarioId: number, pagoId: number) => {
+    if (!window.confirm('¿Eliminar este pago? Esta acción no se puede deshacer.')) return;
+    try {
+      await salariosService.deletePago(salarioId, pagoId);
+      await loadSalarios();
+    } catch (err: any) {
+      console.error('Error al eliminar pago:', err);
+      setError(err?.response?.data?.message || 'No se pudo eliminar el pago');
+    }
   };
 
   const handleRegistrarPago = async (event: React.FormEvent) => {
@@ -260,7 +334,27 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                     Fecha: {new Date(pago.fechaPago).toLocaleDateString('es-CL')} | Metodo: {pago.metodoPago}
                   </p>
                 </div>
-                <strong className="salarios-tab-amount">{formatCurrency(pago.monto)}</strong>
+                <div className="salarios-tab-item-right">
+                  <strong className="salarios-tab-amount">{formatCurrency(pago.monto)}</strong>
+                  <div className="salarios-tab-actions">
+                    <button
+                      type="button"
+                      className="salarios-tab-action"
+                      onClick={() => handleAbrirEditarPagoModal(salario.id, pago)}
+                      title="Editar pago"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="salarios-tab-action danger"
+                      onClick={() => handleEliminarPago(salario.id, pago.id)}
+                      title="Eliminar pago"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
               </article>
             ))}
           </div>
@@ -319,6 +413,122 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
           </div>
         )}
       </div>
+
+      {showEditarPagoModal && pagoEditando && (
+        <div className="salarios-tab-modal-overlay" onClick={handleCerrarEditarPagoModal}>
+          <div className="salarios-tab-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="salarios-tab-modal-header">
+              <h3>Editar pago</h3>
+              <button type="button" className="salarios-tab-modal-close" onClick={handleCerrarEditarPagoModal}>
+                ✕
+              </button>
+            </div>
+
+            {editarPagoError && <div className="salarios-tab-modal-error">{editarPagoError}</div>}
+
+            <form onSubmit={handleEditarPago} className="salarios-tab-modal-form">
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="editar-pago-monto">Monto</label>
+                  <input
+                    id="editar-pago-monto"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={pagoEditarForm.monto}
+                    onChange={(event) => setPagoEditarForm((prev) => ({ ...prev, monto: event.target.value }))}
+                    required
+                    disabled={guardandoEditarPago}
+                  />
+                </div>
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="editar-pago-fecha">Fecha de pago</label>
+                  <input
+                    id="editar-pago-fecha"
+                    type="date"
+                    value={pagoEditarForm.fechaPago}
+                    onChange={(event) => setPagoEditarForm((prev) => ({ ...prev, fechaPago: event.target.value }))}
+                    required
+                    disabled={guardandoEditarPago}
+                  />
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="editar-pago-metodo">Método de pago</label>
+                  <select
+                    id="editar-pago-metodo"
+                    value={pagoEditarForm.metodoPago}
+                    onChange={(event) => setPagoEditarForm((prev) => ({ ...prev, metodoPago: event.target.value }))}
+                    required
+                    disabled={guardandoEditarPago}
+                  >
+                    {metodosPago.map((metodo) => (
+                      <option key={metodo} value={metodo}>
+                        {metodo.charAt(0).toUpperCase() + metodo.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="editar-pago-tipo">Tipo de pago</label>
+                  <select
+                    id="editar-pago-tipo"
+                    value={pagoEditarForm.tipo}
+                    onChange={(event) =>
+                      setPagoEditarForm((prev) => ({ ...prev, tipo: event.target.value as TipoPagoSalario }))
+                    }
+                    required
+                    disabled={guardandoEditarPago}
+                  >
+                    <option value={TipoPagoSalario.ADELANTO}>Adelanto</option>
+                    <option value={TipoPagoSalario.LIQUIDACION}>Liquidación</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="editar-pago-comprobante">Comprobante</label>
+                <input
+                  id="editar-pago-comprobante"
+                  type="text"
+                  placeholder="Nro transferencia, referencia, etc."
+                  value={pagoEditarForm.comprobante}
+                  onChange={(event) => setPagoEditarForm((prev) => ({ ...prev, comprobante: event.target.value }))}
+                  disabled={guardandoEditarPago}
+                />
+              </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="editar-pago-observaciones">Observaciones</label>
+                <textarea
+                  id="editar-pago-observaciones"
+                  rows={3}
+                  placeholder="Comentario interno del pago"
+                  value={pagoEditarForm.observaciones}
+                  onChange={(event) => setPagoEditarForm((prev) => ({ ...prev, observaciones: event.target.value }))}
+                  disabled={guardandoEditarPago}
+                />
+              </div>
+
+              <div className="salarios-tab-modal-actions">
+                <button
+                  type="button"
+                  className="salarios-tab-modal-button secondary"
+                  onClick={handleCerrarEditarPagoModal}
+                  disabled={guardandoEditarPago}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="salarios-tab-modal-button primary" disabled={guardandoEditarPago}>
+                  {guardandoEditarPago ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showPagoModal && salarioSeleccionado && (
         <div className="salarios-tab-modal-overlay" onClick={handleCerrarPagoModal}>
