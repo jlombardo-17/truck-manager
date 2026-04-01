@@ -8,7 +8,12 @@ import { repostadasService } from '../services/repostadasService';
 import { Camion } from '../types/camion';
 import { Servicio, TipoServicio, TipoServicioLabels } from '../types/servicio';
 import { Documento, TipoDocumento, TipoDocumentoLabels } from '../types/servicio';
-import { Repostada, TipoCombustibleLabels, Estadisticas } from '../types/repostada';
+import {
+  CreateRepostadaDto,
+  Estadisticas,
+  Repostada,
+  TipoCombustibleLabels,
+} from '../types/repostada';
 import { RepostadaModal } from '../components/RepostadaModal';
 import { MantenimientoTab } from '../components/MantenimientoTab';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
@@ -41,6 +46,8 @@ const CamionDetalle: React.FC = () => {
   const [showServicioModal, setShowServicioModal] = useState(false);
   const [showDocumentoModal, setShowDocumentoModal] = useState(false);
   const [showRepostadaModal, setShowRepostadaModal] = useState(false);
+  const [editingServicio, setEditingServicio] = useState<Servicio | null>(null);
+  const [editingRepostada, setEditingRepostada] = useState<Repostada | null>(null);
   const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
   const [viewingDocumento, setViewingDocumento] = useState<Documento | null>(null);
   const [costProjectionWindow, setCostProjectionWindow] = useState<DocumentCostProjectionWindow>('1y');
@@ -92,6 +99,11 @@ const CamionDetalle: React.FC = () => {
     }
   };
 
+  const handleEditServicio = (servicio: Servicio) => {
+    setEditingServicio(servicio);
+    setShowServicioModal(true);
+  };
+
   const handleDeleteDocumento = async (documentoId: number) => {
     if (!window.confirm('¿Estás seguro de eliminar este documento?')) return;
     try {
@@ -117,9 +129,19 @@ const CamionDetalle: React.FC = () => {
     }
   };
 
-  const handleAddRepostada = async (data: any) => {
+  const handleEditRepostada = (repostada: Repostada) => {
+    setEditingRepostada(repostada);
+    setShowRepostadaModal(true);
+  };
+
+  const handleSubmitRepostada = async (data: CreateRepostadaDto) => {
     try {
-      await repostadasService.create(camionId, data);
+      if (editingRepostada) {
+        await repostadasService.update(camionId, editingRepostada.id, data);
+      } else {
+        await repostadasService.create(camionId, data);
+      }
+      setEditingRepostada(null);
       setShowRepostadaModal(false);
       loadData();
     } catch (err: any) {
@@ -596,7 +618,14 @@ const CamionDetalle: React.FC = () => {
             <span className={`section-chevron${collapsed['servicios'] ? ' is-collapsed' : ''}`}>▼</span>
             <h2>🛠️ Historial de Servicios {servicios.length > 0 && <span className="section-count">{servicios.length}</span>}</h2>
           </div>
-          <button type="button" onClick={() => setShowServicioModal(true)} className="add-button">
+          <button
+            type="button"
+            onClick={() => {
+              setEditingServicio(null);
+              setShowServicioModal(true);
+            }}
+            className="add-button"
+          >
             + Agregar Servicio
           </button>
         </div>
@@ -625,14 +654,26 @@ const CamionDetalle: React.FC = () => {
                   <div key={servicio.id} className="servicio-item">
                     <div className="servicio-header">
                       <span className="fecha">{new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteServicio(servicio.id)}
-                        className="delete-btn"
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
+                      <div className="servicio-actions">
+                        <button
+                          type="button"
+                          onClick={() => handleEditServicio(servicio)}
+                          className="servicio-action-btn servicio-edit-btn"
+                          title="Editar servicio"
+                          aria-label={`Editar servicio del ${new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}`}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteServicio(servicio.id)}
+                          className="servicio-action-btn servicio-delete-btn"
+                          title="Eliminar servicio"
+                          aria-label={`Eliminar servicio del ${new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}`}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
                     </div>
                     <div className="servicio-tipos">
                       {servicio.tipos.map((tipo) => (
@@ -661,7 +702,14 @@ const CamionDetalle: React.FC = () => {
             <span className={`section-chevron${collapsed['repostadas'] ? ' is-collapsed' : ''}`}>▼</span>
             <h2>⛽ Historial de Repostadas {repostadas.length > 0 && <span className="section-count">{repostadas.length}</span>}</h2>
           </div>
-          <button type="button" onClick={() => setShowRepostadaModal(true)} className="add-button">
+          <button
+            type="button"
+            onClick={() => {
+              setEditingRepostada(null);
+              setShowRepostadaModal(true);
+            }}
+            className="add-button"
+          >
             + Agregar Repostada
           </button>
         </div>
@@ -719,14 +767,26 @@ const CamionDetalle: React.FC = () => {
                 <div className="repostada-header">
                   <span className="fecha">{new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}</span>
                   <span className="tipo-combustible">{TipoCombustibleLabels[repostada.tipoCombustible]}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteRepostada(repostada.id)}
-                    className="delete-btn"
-                    title="Eliminar"
-                  >
-                    🗑️
-                  </button>
+                  <div className="repostada-actions">
+                    <button
+                      type="button"
+                      onClick={() => handleEditRepostada(repostada)}
+                      className="repostada-action-btn repostada-edit-btn"
+                      title="Editar repostada"
+                      aria-label={`Editar repostada del ${new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}`}
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRepostada(repostada.id)}
+                      className="repostada-action-btn repostada-delete-btn"
+                      title="Eliminar repostada"
+                      aria-label={`Eliminar repostada del ${new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}`}
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </div>
                 </div>
                 <div className="repostada-grid">
                   <div className="repostada-dato">
@@ -779,9 +839,14 @@ const CamionDetalle: React.FC = () => {
       {showServicioModal && (
         <ServicioModal
           camionId={camionId}
-          onClose={() => setShowServicioModal(false)}
+          servicio={editingServicio}
+          onClose={() => {
+            setShowServicioModal(false);
+            setEditingServicio(null);
+          }}
           onSave={() => {
             setShowServicioModal(false);
+            setEditingServicio(null);
             loadData();
           }}
         />
@@ -813,8 +878,12 @@ const CamionDetalle: React.FC = () => {
       {showRepostadaModal && (
         <RepostadaModal
           isOpen={showRepostadaModal}
-          onClose={() => setShowRepostadaModal(false)}
-          onSubmit={handleAddRepostada}
+          onClose={() => {
+            setShowRepostadaModal(false);
+            setEditingRepostada(null);
+          }}
+          onSubmit={handleSubmitRepostada}
+          initialData={editingRepostada}
         />
       )}
       </div>
@@ -825,15 +894,17 @@ const CamionDetalle: React.FC = () => {
 // Modal para Servicio
 const ServicioModal: React.FC<{
   camionId: number;
+  servicio?: Servicio | null;
   onClose: () => void;
   onSave: () => void;
-}> = ({ camionId, onClose, onSave }) => {
+}> = ({ camionId, servicio, onClose, onSave }) => {
+  const isEditing = !!servicio;
   const [formData, setFormData] = useState({
-    fechaServicio: new Date().toISOString().split('T')[0],
-    tipos: [] as TipoServicio[],
-    descripcion: '',
-    costo: '',
-    kilometraje: '',
+    fechaServicio: servicio?.fechaServicio ? servicio.fechaServicio.split('T')[0] : new Date().toISOString().split('T')[0],
+    tipos: servicio?.tipos ?? ([] as TipoServicio[]),
+    descripcion: servicio?.descripcion ?? '',
+    costo: servicio?.costo != null ? String(servicio.costo) : '',
+    kilometraje: servicio?.kilometraje != null ? String(servicio.kilometraje) : '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -856,13 +927,19 @@ const ServicioModal: React.FC<{
     setError(null);
 
     try {
-      await serviciosService.create(camionId, {
+      const payload = {
         fechaServicio: formData.fechaServicio,
         tipos: formData.tipos,
         descripcion: formData.descripcion || undefined,
         costo: formData.costo ? Number(formData.costo) : undefined,
         kilometraje: formData.kilometraje ? Number(formData.kilometraje) : undefined,
-      });
+      };
+
+      if (isEditing && servicio) {
+        await serviciosService.update(servicio.id, camionId, payload);
+      } else {
+        await serviciosService.create(camionId, payload);
+      }
       onSave();
     } catch (err: any) {
       setError(err.message || 'Error al guardar servicio');
@@ -875,7 +952,7 @@ const ServicioModal: React.FC<{
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Agregar Servicio</h2>
+          <h2>{isEditing ? 'Editar Servicio' : 'Agregar Servicio'}</h2>
           <button type="button" onClick={onClose} className="close-btn">
             ✕
           </button>
@@ -949,7 +1026,7 @@ const ServicioModal: React.FC<{
               Cancelar
             </button>
             <button type="submit" className="submit-btn" disabled={isLoading}>
-              {isLoading ? 'Guardando...' : 'Guardar Servicio'}
+              {isLoading ? 'Guardando...' : isEditing ? 'Actualizar Servicio' : 'Guardar Servicio'}
             </button>
           </div>
         </form>

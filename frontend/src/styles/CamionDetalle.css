@@ -352,6 +352,46 @@
   margin-bottom: 0.5rem;
 }
 
+.servicio-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.servicio-action-btn {
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  transition: transform 0.2s, opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.servicio-action-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.servicio-edit-btn {
+  background: #e6f4ea;
+  border-color: #c7ebd0;
+  color: #146c2e;
+}
+
+.servicio-delete-btn {
+  background: #fde8e8;
+  border-color: #f8cccc;
+  color: #b42318;
+}
+
 .servicio-header .fecha {
   font-weight: 600;
   color: #667eea;
@@ -871,6 +911,69 @@
   align-items: center;
   margin-bottom: 1rem;
   gap: 1rem;
+}
+
+.repostada-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.repostada-action-btn {
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  transition: transform 0.2s, opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.repostada-action-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.repostada-edit-btn {
+  background: #e6f4ea;
+  border-color: #c7ebd0;
+  color: #146c2e;
+}
+
+.repostada-delete-btn {
+  background: #fde8e8;
+  border-color: #f8cccc;
+  color: #b42318;
+}
+
+@media (max-width: 640px) {
+  .servicio-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .servicio-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .repostada-header {
+    flex-wrap: wrap;
+  }
+
+  .repostada-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
 }
 
 .repostada-header .fecha {

@@ -1,5 +1,10 @@
-import { useState } from 'react';
-import { CreateRepostadaDto, TipoCombustible, TipoCombustibleLabels } from '../types/repostada';
+import { useEffect, useState } from 'react';
+import {
+  CreateRepostadaDto,
+  Repostada,
+  TipoCombustible,
+  TipoCombustibleLabels,
+} from '../types/repostada';
 import '../styles/Modal.css';
 
 interface RepostadaModalProps {
@@ -7,21 +12,48 @@ interface RepostadaModalProps {
   onClose: () => void;
   onSubmit: (data: CreateRepostadaDto) => Promise<void>;
   isLoading?: boolean;
+  initialData?: Repostada | null;
 }
+
+const getDefaultFormData = (): CreateRepostadaDto => ({
+  tipoCombustible: TipoCombustible.DIESEL,
+  fechaRepostada: new Date().toISOString().split('T')[0],
+  kmRecorridos: 0,
+  litros: 0,
+  consumoPromedio: 0,
+});
+
+const mapRepostadaToFormData = (repostada: Repostada): CreateRepostadaDto => ({
+  tipoCombustible: repostada.tipoCombustible,
+  fechaRepostada: repostada.fechaRepostada.split('T')[0],
+  kmRecorridos: Number(repostada.kmRecorridos) || 0,
+  litros: Number(repostada.litros) || 0,
+  consumoPromedio: Number(repostada.consumoPromedio) || 0,
+  costo: repostada.costo != null ? Number(repostada.costo) : undefined,
+  precioLitro: repostada.precioLitro != null ? Number(repostada.precioLitro) : undefined,
+});
 
 export function RepostadaModal({
   isOpen,
   onClose,
   onSubmit,
   isLoading = false,
+  initialData = null,
 }: RepostadaModalProps) {
-  const [formData, setFormData] = useState<CreateRepostadaDto>({
-    tipoCombustible: TipoCombustible.DIESEL,
-    fechaRepostada: new Date().toISOString().split('T')[0],
-    kmRecorridos: 0,
-    litros: 0,
-    consumoPromedio: 0,
-  });
+  const [formData, setFormData] = useState<CreateRepostadaDto>(getDefaultFormData());
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (initialData) {
+      setFormData(mapRepostadaToFormData(initialData));
+      return;
+    }
+
+    setFormData(getDefaultFormData());
+  }, [initialData, isOpen]);
+
+  const isEditing = Boolean(initialData);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -65,13 +97,7 @@ export function RepostadaModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSubmit(formData);
-    setFormData({
-      tipoCombustible: TipoCombustible.DIESEL,
-      fechaRepostada: new Date().toISOString().split('T')[0],
-      kmRecorridos: 0,
-      litros: 0,
-      consumoPromedio: 0,
-    });
+    setFormData(getDefaultFormData());
   };
 
   if (!isOpen) return null;
@@ -80,7 +106,7 @@ export function RepostadaModal({
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h2>Agregar Repostada</h2>
+          <h2>{isEditing ? 'Editar Repostada' : 'Agregar Repostada'}</h2>
           <button type="button" className="modal-close" onClick={onClose}>
             ✕
           </button>
@@ -193,7 +219,7 @@ export function RepostadaModal({
               className="btn-primary"
               disabled={isLoading}
             >
-              {isLoading ? 'Guardando...' : 'Guardar'}
+              {isLoading ? 'Guardando...' : isEditing ? 'Actualizar' : 'Guardar'}
             </button>
           </div>
         </form>
