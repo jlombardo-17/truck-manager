@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import choferesService from '../services/choferesService';
+import choferDocumentosService from '../services/choferDocumentosService';
 import { EstadoChofer } from '../types/chofer';
+import {
+  ChoferDocumento,
+  TipoDocumentoChofer,
+  TipoDocumentoChoferLabels,
+} from '../types/chofer-documento';
 import BackButton from '../components/BackButton';
 import '../styles/ChoferForm.css';
 
@@ -18,6 +24,32 @@ interface FormData {
   sueldoBase: string;
   porcentajeComision: string;
 }
+
+interface DocumentoDraft {
+  tipo: TipoDocumentoChofer;
+  nombre: string;
+  numeroDocumento: string;
+  descripcion: string;
+  fechaEmision: string;
+  fechaVencimiento: string;
+  rutaArchivo: string;
+  rutasArchivos: string[];
+  selectedFileNames: string[];
+}
+
+const MAX_FILE_SIZE_MB = 50;
+
+const createEmptyDocumentoDraft = (): DocumentoDraft => ({
+  tipo: TipoDocumentoChofer.LICENCIA_CONDUCIR,
+  nombre: '',
+  numeroDocumento: '',
+  descripcion: '',
+  fechaEmision: '',
+  fechaVencimiento: '',
+  rutaArchivo: '',
+  rutasArchivos: [],
+  selectedFileNames: [],
+});
 
 const ChoferForm: React.FC = () => {
   const navigate = useNavigate();
@@ -43,6 +75,66 @@ const ChoferForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [documentosIniciales, setDocumentosIniciales] = useState<DocumentoDraft[]>([]);
+
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+      reader.readAsDataURL(file);
+    });
+
+  const updateDocumentoDraft = <K extends keyof DocumentoDraft>(
+    index: number,
+    field: K,
+    value: DocumentoDraft[K],
+  ) => {
+    setDocumentosIniciales((prev) =>
+      prev.map((doc, docIndex) => (docIndex === index ? { ...doc, [field]: value } : doc)),
+    );
+  };
+
+  const handleDocumentoFiles = async (index: number, fileList: FileList | null) => {
+    const files = fileList ? Array.from(fileList) : [];
+
+    if (files.length === 0) {
+      return;
+    }
+
+    for (const file of files) {
+      const sizeMb = file.size / (1024 * 1024);
+      if (sizeMb > MAX_FILE_SIZE_MB) {
+        alert(
+          `El archivo "${file.name}" supera el límite de ${MAX_FILE_SIZE_MB}MB (${sizeMb.toFixed(
+            2,
+          )}MB).`,
+        );
+        return;
+      }
+    }
+
+    try {
+      const dataUrls = await Promise.all(files.map((file) => fileToDataUrl(file)));
+
+      setDocumentosIniciales((prev) =>
+        prev.map((doc, docIndex) =>
+          docIndex === index
+            ? {
+                ...doc,
+                rutaArchivo: dataUrls[0],
+                rutasArchivos: dataUrls,
+                selectedFileNames: files.map((file) => file.name),
+                nombre: doc.nombre || (files.length === 1 ? files[0].name : doc.nombre),
+              }
+            : doc,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      alert('No se pudieron procesar los archivos seleccionados');
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -97,6 +189,12 @@ const ChoferForm: React.FC = () => {
       return;
     }
 
+    const documentoIncompleto = documentosIniciales.find((doc) => !doc.rutaArchivo);
+    if (documentoIncompleto) {
+      alert('Cada documento agregado debe tener al menos un archivo cargado o URL.');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -108,7 +206,40 @@ const ChoferForm: React.FC = () => {
         porcentajeComision: formData.porcentajeComision ? parseFloat(formData.porcentajeComision) : undefined,
       };
 
-      await choferesService.create(dataToSend);
+      const choferCreado = await choferesService.create(dataToSend);
+
+      if (documentosIniciales.length > 0) {
+        let documentosCreados = 0;
+        let documentosFallidos = 0;
+
+        for (const doc of documentosIniciales) {
+          try {
+            const payload: Partial<ChoferDocumento> = {
+              choferId: choferCreado.id,
+              tipo: doc.tipo,
+              nombre: doc.nombre || undefined,
+              numeroDocumento: doc.numeroDocumento || undefined,
+              descripcion: doc.descripcion || undefined,
+              fechaEmision: doc.fechaEmision || undefined,
+              fechaVencimiento: doc.fechaVencimiento || undefined,
+              rutaArchivo: doc.rutaArchivo,
+              rutasArchivos: doc.rutasArchivos.length > 0 ? doc.rutasArchivos : [doc.rutaArchivo],
+            };
+
+            await choferDocumentosService.create(payload);
+            documentosCreados += 1;
+          } catch (docError) {
+            console.error('Error al crear documento inicial:', docError);
+            documentosFallidos += 1;
+          }
+        }
+
+        if (documentosFallidos > 0) {
+          alert(
+            `Chofer creado. Documentos creados: ${documentosCreados}. Documentos con error: ${documentosFallidos}.`,
+          );
+        }
+      }
 
       navigate('/choferes');
     } catch (error: any) {
@@ -303,6 +434,168 @@ const ChoferForm: React.FC = () => {
             />
           </div>
         </div>
+
+        <section className="documentos-iniciales-section">
+          <div className="section-title-row">
+            <h2>📎 Documentación Inicial (Opcional)</h2>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setDocumentosIniciales((prev) => [...prev, createEmptyDocumentoDraft()])}
+              disabled={loading}
+            >
+              + Agregar Documento
+            </button>
+          </div>
+
+          {documentosIniciales.length === 0 ? (
+            <p className="documentos-empty-message">
+              Puedes crear el chofer y cargar documentos ahora mismo desde esta pantalla.
+            </p>
+          ) : (
+            <div className="documentos-iniciales-list">
+              {documentosIniciales.map((doc, index) => (
+                <article key={`doc-inicial-${index}`} className="documento-inicial-card">
+                  <div className="documento-inicial-header">
+                    <h3>Documento {index + 1}</h3>
+                    <button
+                      type="button"
+                      className="btn-remove-documento"
+                      onClick={() =>
+                        setDocumentosIniciales((prev) => prev.filter((_, docIndex) => docIndex !== index))
+                      }
+                      disabled={loading}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+
+                  <div className="form-grid documento-inicial-grid">
+                    <div className="form-group">
+                      <label>Tipo de Documento</label>
+                      <select
+                        value={doc.tipo}
+                        onChange={(e) =>
+                          updateDocumentoDraft(index, 'tipo', e.target.value as TipoDocumentoChofer)
+                        }
+                        disabled={loading}
+                      >
+                        {Object.values(TipoDocumentoChofer).map((tipo) => (
+                          <option key={tipo} value={tipo}>
+                            {TipoDocumentoChoferLabels[tipo]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Nombre del Documento</label>
+                      <input
+                        type="text"
+                        value={doc.nombre}
+                        onChange={(e) => updateDocumentoDraft(index, 'nombre', e.target.value)}
+                        placeholder="Ej: Licencia categoría C1"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Número de Documento</label>
+                      <input
+                        type="text"
+                        value={doc.numeroDocumento}
+                        onChange={(e) => updateDocumentoDraft(index, 'numeroDocumento', e.target.value)}
+                        placeholder="Ej: 12345678"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Fecha de Emisión</label>
+                      <input
+                        type="date"
+                        value={doc.fechaEmision}
+                        onChange={(e) => updateDocumentoDraft(index, 'fechaEmision', e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Fecha de Vencimiento</label>
+                      <input
+                        type="date"
+                        value={doc.fechaVencimiento}
+                        onChange={(e) => updateDocumentoDraft(index, 'fechaVencimiento', e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className="form-group full-width">
+                      <label>Archivo del Documento</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp,.svg,.doc,.docx,.txt"
+                        multiple
+                        onChange={async (e) => {
+                          await handleDocumentoFiles(index, e.target.files);
+                          e.target.value = '';
+                        }}
+                        disabled={loading}
+                      />
+                      {doc.selectedFileNames.length > 0 && (
+                        <small className="file-selection-note">
+                          Seleccionados ({doc.selectedFileNames.length}): {doc.selectedFileNames.join(', ')}
+                        </small>
+                      )}
+                      <small className="file-selection-note">
+                        Puedes seleccionar uno o varios archivos (máximo {MAX_FILE_SIZE_MB}MB por archivo).
+                      </small>
+                    </div>
+
+                    <div className="form-group full-width">
+                      <label>o URL del Archivo</label>
+                      <input
+                        type="text"
+                        value={doc.rutaArchivo}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDocumentosIniciales((prev) =>
+                            prev.map((currentDoc, docIndex) =>
+                              docIndex === index
+                                ? {
+                                    ...currentDoc,
+                                    rutaArchivo: value,
+                                    rutasArchivos: value ? [value] : [],
+                                    selectedFileNames:
+                                      value && !value.startsWith('data:')
+                                        ? []
+                                        : currentDoc.selectedFileNames,
+                                  }
+                                : currentDoc,
+                            ),
+                          );
+                        }}
+                        placeholder="https://... o data:image/png;base64,..."
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className="form-group full-width">
+                      <label>Descripción</label>
+                      <textarea
+                        value={doc.descripcion}
+                        onChange={(e) => updateDocumentoDraft(index, 'descripcion', e.target.value)}
+                        rows={2}
+                        placeholder="Notas adicionales sobre este documento"
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="form-actions">
           <button

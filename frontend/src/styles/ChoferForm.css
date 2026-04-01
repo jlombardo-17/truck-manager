@@ -177,6 +177,79 @@
   margin-top: 0.25rem;
 }
 
+.documentos-iniciales-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  background: #f9fbff;
+}
+
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-title-row h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+.documentos-empty-message {
+  margin: 0;
+  color: #6c7a89;
+}
+
+.documentos-iniciales-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.documento-inicial-card {
+  border: 1px solid #dce5f1;
+  border-radius: 8px;
+  background: white;
+  padding: 1rem;
+}
+
+.documento-inicial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.documento-inicial-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #334155;
+}
+
+.btn-remove-documento {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: #fde8e8;
+  color: #b42318;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-remove-documento:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.file-selection-note {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -234,6 +307,17 @@
   .form-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .section-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .documento-inicial-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .form-actions {
