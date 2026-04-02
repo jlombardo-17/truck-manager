@@ -4,8 +4,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { dashboardService, DashboardResumen, DesempenoCamion, DesempenoChofer } from '../services/dashboardService';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
+import DateRangeSelector from '../components/DateRangeSelector';
 import dashboardLogisticsHero from '../assets/dashboard-logistics-hero.svg';
 import '../styles/Dashboard.css';
+
+interface DateRange {
+  startDate: Date;
+  endDate: Date;
+}
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -14,18 +20,29 @@ const Dashboard: React.FC = () => {
   const [desempenoCamiones, setDesempenoCamiones] = useState<DesempenoCamion[]>([]);
   const [desempenoChoferes, setDesempenoChoferes] = useState<DesempenoChofer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+    startDate.setHours(0, 0, 0, 0);
+    return { startDate, endDate };
+  });
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [dateRange]);
 
   const cargarDatos = async () => {
     try {
       setLoading(true);
+      const fechaInicio = dateRange.startDate.toISOString().split('T')[0];
+      const fechaFin = dateRange.endDate.toISOString().split('T')[0];
+
       const [resumenData, camionesData, choferesData] = await Promise.all([
-        dashboardService.getResumen(),
-        dashboardService.getDesempenoCamiones(),
-        dashboardService.getDesempenoChoferes(),
+        dashboardService.getResumen(fechaInicio, fechaFin),
+        dashboardService.getDesempenoCamiones(fechaInicio, fechaFin),
+        dashboardService.getDesempenoChoferes(fechaInicio, fechaFin),
       ]);
       setResumen(resumenData);
       setDesempenoCamiones(camionesData);
@@ -40,6 +57,19 @@ const Dashboard: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const formatDateRangeLabel = (): string => {
+    const startDay = dateRange.startDate.toLocaleDateString('es-PY', { 
+      day: '2-digit', 
+      month: 'short' 
+    });
+    const endDay = dateRange.endDate.toLocaleDateString('es-PY', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+    return `${startDay} al ${endDay}`;
   };
 
   const formatCurrency = (value: number) => {
@@ -85,11 +115,16 @@ const Dashboard: React.FC = () => {
 
         <section className="dashboard-kpi-section">
           <div className="dashboard-container-inner">
+            <DateRangeSelector 
+              selectedRange={dateRange} 
+              onRangeChange={setDateRange}
+            />
+            
             {!loading && resumen && (
               <StatsGrid
                 stats={[
                   {
-                    label: 'Ingresos del Mes',
+                    label: `Ingresos - ${formatDateRangeLabel()}`,
                     value: `$${Number(resumen.ingresosDelMes || 0).toFixed(0)}`,
                     unit: 'USD',
                     icon: '💰',
@@ -97,7 +132,7 @@ const Dashboard: React.FC = () => {
                     trend: { direction: 'up', percentage: 12 },
                   },
                   {
-                    label: 'Gastos del Mes',
+                    label: `Gastos - ${formatDateRangeLabel()}`,
                     value: `$${Number(resumen.gastosDelMes || 0).toFixed(0)}`,
                     unit: 'USD',
                     icon: '📉',
@@ -105,7 +140,7 @@ const Dashboard: React.FC = () => {
                     trend: { direction: 'down', percentage: 5 },
                   },
                   {
-                    label: 'Ganancia Neta',
+                    label: `Ganancia Neta - ${formatDateRangeLabel()}`,
                     value: `$${Number(resumen.gananciaNetaDelMes || 0).toFixed(0)}`,
                     unit: 'USD',
                     icon: '📊',

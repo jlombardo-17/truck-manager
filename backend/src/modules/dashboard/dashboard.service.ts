@@ -141,26 +141,43 @@ export class DashboardService {
     return match;
   }
 
-  async getResumen(): Promise<DashboardResumen> {
+  private getDateRange(fechaInicio?: string, fechaFin?: string): { start: Date; end: Date } {
     const ahora = new Date();
-    const primerDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    const ultimoDiaDelMes = new Date(
-      ahora.getFullYear(),
-      ahora.getMonth() + 1,
-      0,
-    );
-    ultimoDiaDelMes.setHours(23, 59, 59, 999);
+    let startDate: Date;
+    let endDate: Date;
 
-    // Viajes completados del mes
+    if (fechaInicio && fechaFin) {
+      // Si se proporcionan ambas fechas, usarlas
+      startDate = new Date(fechaInicio);
+      endDate = new Date(fechaFin);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      // Default: últimos 30 días
+      endDate = new Date(ahora);
+      endDate.setHours(23, 59, 59, 999);
+      startDate = new Date(ahora);
+      startDate.setDate(ahora.getDate() - 30);
+      startDate.setHours(0, 0, 0, 0);
+    }
+
+    return { start: startDate, end: endDate };
+  }
+
+  async getResumen(fechaInicio?: string, fechaFin?: string): Promise<DashboardResumen> {
+    const ahora = new Date();
+    const { start: primerDia, end: ultimoDia } = this.getDateRange(fechaInicio, fechaFin);
+
+    // Viajes completados en el período
     const viajesMes = await this.viajesRepository.find({
       relations: ['camion', 'chofer'],
       where: {
         estado: 'completado' as any,
-        fechaInicio: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
+        fechaInicio: Between(primerDia, ultimoDia) as any,
       },
     });
 
-    // Ingresos del mes
+    // Ingresos del período
     const ingresosDelMes = viajesMes.reduce(
       (sum, v) => sum + this.toNumber(v.valorViaje),
       0,
@@ -174,7 +191,7 @@ export class DashboardService {
     const mantenimientoMes = await this.mantenimientoRepository.find({
       relations: ['camion'],
       where: {
-        fechaPrograma: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
+        fechaPrograma: Between(primerDia, ultimoDia) as any,
       },
     });
 
@@ -185,7 +202,7 @@ export class DashboardService {
 
     const pagosSueldosMes = await this.salarioPagoRepository.find({
       where: {
-        fechaPago: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
+        fechaPago: Between(primerDia, ultimoDia) as any,
       },
     });
 
@@ -197,7 +214,7 @@ export class DashboardService {
     const documentosCamion = await this.documentosCamionRepository.find();
 
     const gastoDocumentosCamion = documentosCamion.reduce(
-      (sum, documento) => sum + this.getProjectedDocumentCostForPeriod(documento, primerDiaDelMes, ultimoDiaDelMes),
+      (sum, documento) => sum + this.getProjectedDocumentCostForPeriod(documento, primerDia, ultimoDia),
       0,
     );
 
@@ -254,10 +271,8 @@ export class DashboardService {
     };
   }
 
-  async getDesempenoCamiones(): Promise<DesempenoCamion[]> {
-    const ahora = new Date();
-    const primerDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    const ultimoDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+  async getDesempenoCamiones(fechaInicio?: string, fechaFin?: string): Promise<DesempenoCamion[]> {
+    const { start: primerDia, end: ultimoDia } = this.getDateRange(fechaInicio, fechaFin);
     const viajeColumns = await this.getTableColumns('viajes');
     const camionIdColumn = this.pickColumn(viajeColumns, ['camion_id', 'camionId']);
     const valorViajeColumn = this.pickColumn(viajeColumns, ['valorViaje', 'valor_viaje']);
@@ -280,7 +295,7 @@ export class DashboardService {
           AND ${fechaInicioColumn} >= ?
           AND ${fechaInicioColumn} <= ?
       `,
-      ['completado', primerDiaDelMes, ultimoDiaDelMes],
+      ['completado', primerDia, ultimoDia],
     );
 
     const camionIds = [
@@ -335,7 +350,7 @@ export class DashboardService {
     const mantenimientos = await this.mantenimientoRepository.find({
       relations: ['camion'],
       where: {
-        fechaPrograma: Between(primerDiaDelMes, ultimoDiaDelMes) as any,
+        fechaPrograma: Between(primerDia, ultimoDia) as any,
       },
     });
 
@@ -358,7 +373,7 @@ export class DashboardService {
       if (!gastosMap.has(camionId)) gastosMap.set(camionId, 0);
       gastosMap.set(
         camionId,
-        gastosMap.get(camionId) + this.getProjectedDocumentCostForPeriod(documento, primerDiaDelMes, ultimoDiaDelMes),
+        gastosMap.get(camionId) + this.getProjectedDocumentCostForPeriod(documento, primerDia, ultimoDia),
       );
     });
 
@@ -381,10 +396,8 @@ export class DashboardService {
     return resultado.sort((a, b) => b.eficiencia - a.eficiencia);
   }
 
-  async getDesempenoChoferes(): Promise<DesempenoChofer[]> {
-    const ahora = new Date();
-    const primerDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-    const ultimoDiaDelMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59, 999);
+  async getDesempenoChoferes(fechaInicio?: string, fechaFin?: string): Promise<DesempenoChofer[]> {
+    const { start: primerDia, end: ultimoDia } = this.getDateRange(fechaInicio, fechaFin);
     const viajeColumns = await this.getTableColumns('viajes');
     const comisionColumns = await this.getTableColumns('viajes_comisiones');
     const viajeIdColumn = this.pickColumn(viajeColumns, ['id']);
@@ -408,7 +421,7 @@ export class DashboardService {
           AND v.${fechaInicioColumn} <= ?
         GROUP BY v.${viajeIdColumn}, v.${choferIdColumn}, v.${valorViajeColumn}
       `,
-      ['completado', primerDiaDelMes, ultimoDiaDelMes],
+      ['completado', primerDia, ultimoDia],
     );
 
     const choferIds = [

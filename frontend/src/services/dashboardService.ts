@@ -47,36 +47,48 @@ export interface DesempenoChofer {
 }
 
 export const dashboardService = {
-  async getResumen(): Promise<DashboardResumen> {
+  async getResumen(fechaInicio?: string, fechaFin?: string): Promise<DashboardResumen> {
     const token = authService.getToken();
-    const response = await axios.get(
-      `${API_BASE_URL}/api/dashboard/resumen`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const params = new URLSearchParams();
+    if (fechaInicio) params.append('fechaInicio', fechaInicio);
+    if (fechaFin) params.append('fechaFin', fechaFin);
+    
+    const queryString = params.toString();
+    const url = queryString ? `${API_BASE_URL}/api/dashboard/resumen?${queryString}` : `${API_BASE_URL}/api/dashboard/resumen`;
+    
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 
-  async getDesempenoCamiones(): Promise<DesempenoCamion[]> {
+  async getDesempenoCamiones(fechaInicio?: string, fechaFin?: string): Promise<DesempenoCamion[]> {
     const token = authService.getToken();
-    const response = await axios.get(
-      `${API_BASE_URL}/api/dashboard/camiones`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const params = new URLSearchParams();
+    if (fechaInicio) params.append('fechaInicio', fechaInicio);
+    if (fechaFin) params.append('fechaFin', fechaFin);
+    
+    const queryString = params.toString();
+    const url = queryString ? `${API_BASE_URL}/api/dashboard/camiones?${queryString}` : `${API_BASE_URL}/api/dashboard/camiones`;
+    
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 
-  async getDesempenoChoferes(): Promise<DesempenoChofer[]> {
+  async getDesempenoChoferes(fechaInicio?: string, fechaFin?: string): Promise<DesempenoChofer[]> {
     const token = authService.getToken();
-    const response = await axios.get(
-      `${API_BASE_URL}/api/dashboard/choferes`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const params = new URLSearchParams();
+    if (fechaInicio) params.append('fechaInicio', fechaInicio);
+    if (fechaFin) params.append('fechaFin', fechaFin);
+    
+    const queryString = params.toString();
+    const url = queryString ? `${API_BASE_URL}/api/dashboard/choferes?${queryString}` : `${API_BASE_URL}/api/dashboard/choferes`;
+    
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   },
 };
