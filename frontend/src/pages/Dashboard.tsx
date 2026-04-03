@@ -2,10 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { dashboardService, DashboardResumen, DesempenoCamion, DesempenoChofer } from '../services/dashboardService';
-import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import DateRangeSelector from '../components/DateRangeSelector';
-import dashboardLogisticsHero from '../assets/dashboard-logistics-hero.svg';
 import '../styles/Dashboard.css';
 
 interface DateRange {
@@ -105,14 +103,6 @@ const Dashboard: React.FC = () => {
 
       {/* Main Content */}
       <div className="dashboard-content">
-        <HeroSection
-          subtitle="Fleet Management Overview"
-          title={`¡Bienvenido, ${user?.firstName}!`}
-          description="Sistema integral de gestión y mantenimiento de tu flota de camiones"
-          backgroundImage={`linear-gradient(135deg, rgba(30, 60, 114, 0.95) 0%, rgba(42, 82, 152, 0.92) 50%, rgba(122, 168, 216, 0.88) 100%), url(${dashboardLogisticsHero})`}
-          darkBg={true}
-        />
-
         <section className="dashboard-kpi-section">
           <div className="dashboard-container-inner">
             <DateRangeSelector 
@@ -338,6 +328,12 @@ const Dashboard: React.FC = () => {
               <h3>Reportes</h3>
               <p>Visualiza rentabilidad diaria y mensual por camión o chofer</p>
               <button className="feature-button">Ver Reportes →</button>
+            </div>
+
+            <div className="feature-card clickable" onClick={() => navigate('/clima')}>
+              <h3>Clima</h3>
+              <p>Consulta el mapa climático interactivo y pronóstico por ciudad</p>
+              <button className="feature-button">Ver Clima →</button>
             </div>
           </div>
         </div>

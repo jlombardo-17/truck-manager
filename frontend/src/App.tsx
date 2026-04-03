@@ -13,6 +13,7 @@ import SalarioDetalle from './pages/SalarioDetalle';
 import Viajes from './pages/Viajes';
 import ViajeForm from './pages/ViajeForm';
 import Reportes from './pages/Reportes';
+import Clima from './pages/Clima';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 import './styles/accessibility.css';
@@ -141,6 +142,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Reportes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clima"
+            element={
+              <ProtectedRoute>
+                <Clima />
               </ProtectedRoute>
             }
           />
