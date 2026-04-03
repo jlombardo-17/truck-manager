@@ -36,7 +36,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = process.env.API_PORT || 3000;
+  const port = process.env.PORT || process.env.API_PORT || 3000;
 
   // Seed user en desarrollo (siempre)
   if (process.env.NODE_ENV !== 'production') {

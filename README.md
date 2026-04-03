@@ -83,6 +83,39 @@ npm install
 npm run dev
 ```
 
+## 🚂 Deploy En Railway
+
+Este repo se despliega como 2 servicios separados en Railway:
+
+1. `backend` (NestJS API)
+2. `frontend` (Vite preview)
+
+Cada carpeta ya incluye su archivo `railway.toml` con comandos de build/start.
+
+### Configuración recomendada
+
+1. Crear servicio backend con Root Directory = `backend`
+2. Crear servicio frontend con Root Directory = `frontend`
+
+### Variables de entorno mínimas
+
+Backend:
+
+- `PORT` (Railway la inyecta automáticamente)
+- `API_PORT` (opcional; fallback local)
+- `NODE_ENV=production`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_DATABASE`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+- `FRONTEND_URL` (URL pública del frontend)
+
+Frontend:
+
+- `VITE_API_BASE_URL` (URL pública del backend, por ejemplo `https://tu-backend.up.railway.app`)
+
 ## 📦 Próximos Pasos
 
 1. [ ] Configurar base de datos MySQL
