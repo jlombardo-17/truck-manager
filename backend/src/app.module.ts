@@ -29,6 +29,10 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
       // SÓLO para el primer deploy (crear tablas). Luego volver a false.
       synchronize: process.env.DB_SYNC === 'true' || process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
+      // Reintentos de conexión: evita que el proceso se caiga si la BD tarda en estar lista
+      retryAttempts: 10,
+      retryDelay: 5000,
+      connectTimeout: 30000,
     }),
     AuthModule,
     CamionesModule,
