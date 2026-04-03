@@ -72,6 +72,86 @@
   margin-bottom: 1.5rem;
 }
 
+.weather-points-manager {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  color: #ffffff;
+}
+
+.weather-points-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.weather-points-manager-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.weather-point-form {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+  gap: 0.6rem;
+  margin-bottom: 0.65rem;
+}
+
+.weather-point-form input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.weather-point-form input::placeholder {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.weather-point-error {
+  margin: 0 0 0.65rem;
+  color: #ffd1d1;
+  font-size: 0.84rem;
+}
+
+.weather-points-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.weather-point-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.weather-point-row p {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.weather-map-btn-danger {
+  border-color: rgba(248, 113, 113, 0.7);
+  background: rgba(220, 38, 38, 0.18);
+  color: #ffe4e4;
+}
+
+.weather-map-btn-danger:hover {
+  border-color: rgba(248, 113, 113, 0.95);
+  background: rgba(220, 38, 38, 0.3);
+}
+
 .weather-map-container {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
@@ -371,6 +451,20 @@
 
   .weather-map-details {
     padding: 1rem;
+  }
+
+  .weather-points-manager-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .weather-point-form {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-point-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .weather-points-grid {

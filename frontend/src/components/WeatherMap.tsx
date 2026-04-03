@@ -24,7 +24,7 @@ interface WeatherPointForecast {
   forecast: WeatherInfo[];
 }
 
-const WEATHER_POINTS: WeatherPoint[] = [
+const DEFAULT_WEATHER_POINTS: WeatherPoint[] = [
   { city: 'Montevideo', latitude: -34.9011, longitude: -56.1645 },
   { city: 'Salto', latitude: -31.3833, longitude: -57.9667 },
   { city: 'Paysandu', latitude: -32.3214, longitude: -58.0756 },
@@ -32,20 +32,74 @@ const WEATHER_POINTS: WeatherPoint[] = [
   { city: 'Rivera', latitude: -30.9053, longitude: -55.5508 },
 ];
 
+const WEATHER_POINTS_STORAGE_KEY = 'truck-manager-weather-points';
+
+const loadStoredPoints = (): WeatherPoint[] => {
+  try {
+    const raw = localStorage.getItem(WEATHER_POINTS_STORAGE_KEY);
+    if (!raw) return DEFAULT_WEATHER_POINTS;
+    const parsed = JSON.parse(raw) as WeatherPoint[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_WEATHER_POINTS;
+
+    const sanitized = parsed.filter(
+      (point) =>
+        typeof point?.city === 'string' &&
+        Number.isFinite(point?.latitude) &&
+        Number.isFinite(point?.longitude),
+    );
+
+    return sanitized.length > 0 ? sanitized : DEFAULT_WEATHER_POINTS;
+  } catch {
+    return DEFAULT_WEATHER_POINTS;
+  }
+};
+
+const geocodeCity = async (city: string): Promise<Pick<WeatherPoint, 'latitude' | 'longitude'>> => {
+  const params = new URLSearchParams({
+    name: city,
+    count: '1',
+    language: 'es',
+    format: 'json',
+  });
+
+  const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`No se pudo geocodificar la ciudad (${response.status})`);
+  }
+
+  const data = await response.json();
+  const result = data?.results?.[0];
+  if (!result || !Number.isFinite(result.latitude) || !Number.isFinite(result.longitude)) {
+    throw new Error('No se encontró la ciudad para obtener coordenadas');
+  }
+
+  return {
+    latitude: Number(result.latitude),
+    longitude: Number(result.longitude),
+  };
+};
+
 const WeatherMap: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const markersLayer = useRef<L.LayerGroup | null>(null);
   const [forecastByPoint, setForecastByPoint] = useState<WeatherPointForecast[]>([]);
+  const [weatherPoints, setWeatherPoints] = useState<WeatherPoint[]>(loadStoredPoints);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pointError, setPointError] = useState<string | null>(null);
   const [daysRange, setDaysRange] = useState<'today' | '3days' | '7days'>('today');
   const [selectedDay, setSelectedDay] = useState(0);
+  const [newPoint, setNewPoint] = useState({ city: '', latitude: '', longitude: '' });
   const heatLayer = useRef<L.TileLayer | null>(null);
 
   useEffect(() => {
     fetchWeather();
-  }, [daysRange]);
+  }, [daysRange, weatherPoints]);
+
+  useEffect(() => {
+    localStorage.setItem(WEATHER_POINTS_STORAGE_KEY, JSON.stringify(weatherPoints));
+  }, [weatherPoints]);
 
   useEffect(() => {
     if (mapContainer.current && !map.current) {
@@ -56,7 +110,7 @@ const WeatherMap: React.FC = () => {
   const initializeMap = () => {
     if (!mapContainer.current) return;
 
-    map.current = L.map(mapContainer.current).setView([WEATHER_POINTS[0].latitude, WEATHER_POINTS[0].longitude], 6);
+    map.current = L.map(mapContainer.current).setView([-32.5228, -55.7658], 6);
 
     // Add base layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -74,9 +128,6 @@ const WeatherMap: React.FC = () => {
     }).addTo(map.current);
 
     markersLayer.current = L.layerGroup().addTo(map.current);
-
-    const bounds = L.latLngBounds(WEATHER_POINTS.map((point) => [point.latitude, point.longitude] as [number, number]));
-    map.current.fitBounds(bounds.pad(0.2));
 
     if (forecastByPoint.length > 0) {
       updateMapMarkers();
@@ -108,6 +159,12 @@ const WeatherMap: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      if (weatherPoints.length === 0) {
+        setForecastByPoint([]);
+        setLoading(false);
+        return;
+      }
+
       const daysMap = {
         today: 1,
         '3days': 3,
@@ -116,7 +173,7 @@ const WeatherMap: React.FC = () => {
       const days = daysMap[daysRange] || 1;
 
       const allForecasts = await Promise.all(
-        WEATHER_POINTS.map((point) => fetchWeatherForPoint(point, days)),
+        weatherPoints.map((point) => fetchWeatherForPoint(point, days)),
       );
 
       setForecastByPoint(allForecasts);
@@ -185,6 +242,13 @@ const WeatherMap: React.FC = () => {
 
     markersLayer.current.clearLayers();
 
+    const bounds = L.latLngBounds(
+      forecastByPoint.map(({ point }) => [point.latitude, point.longitude] as [number, number]),
+    );
+    if (bounds.isValid()) {
+      map.current.fitBounds(bounds.pad(0.22));
+    }
+
     forecastByPoint.forEach(({ point, forecast }) => {
       const dayForecast = forecast[selectedDay] || forecast[0];
       const temp = dayForecast?.tempMax ?? 20;
@@ -207,6 +271,73 @@ const WeatherMap: React.FC = () => {
 
       marker.addTo(markersLayer.current!);
     });
+  };
+
+  const handleAddPoint = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const city = newPoint.city.trim();
+    const latitudeRaw = newPoint.latitude.trim();
+    const longitudeRaw = newPoint.longitude.trim();
+
+    if (!city) {
+      setPointError('Debes indicar el nombre de la ciudad');
+      return;
+    }
+
+    const exists = weatherPoints.some(
+      (point) => point.city.toLowerCase() === city.toLowerCase(),
+    );
+    if (exists) {
+      setPointError('Esa ciudad ya está agregada');
+      return;
+    }
+
+    try {
+      let latitude: number;
+      let longitude: number;
+
+      const hasManualCoords = latitudeRaw !== '' || longitudeRaw !== '';
+      if (hasManualCoords) {
+        if (latitudeRaw === '' || longitudeRaw === '') {
+          setPointError('Si ingresas coordenadas manuales, debes completar latitud y longitud');
+          return;
+        }
+
+        latitude = Number(latitudeRaw);
+        longitude = Number(longitudeRaw);
+      } else {
+        const geocoded = await geocodeCity(city);
+        latitude = geocoded.latitude;
+        longitude = geocoded.longitude;
+      }
+
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+        setPointError('La latitud debe estar entre -90 y 90');
+        return;
+      }
+
+      if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+        setPointError('La longitud debe estar entre -180 y 180');
+        return;
+      }
+
+      setWeatherPoints((prev) => [...prev, { city, latitude, longitude }]);
+      setNewPoint({ city: '', latitude: '', longitude: '' });
+      setPointError(null);
+    } catch (error) {
+      console.error(error);
+      setPointError('No se pudo ubicar esa ciudad. Prueba con otro nombre o carga coordenadas manuales.');
+    }
+  };
+
+  const handleRemovePoint = (city: string) => {
+    setWeatherPoints((prev) => prev.filter((point) => point.city !== city));
+  };
+
+  const handleResetPoints = () => {
+    setWeatherPoints(DEFAULT_WEATHER_POINTS);
+    setPointError(null);
   };
 
   useEffect(() => {
@@ -255,6 +386,63 @@ const WeatherMap: React.FC = () => {
       </div>
 
       <div className="weather-map-content">
+        <section className="weather-points-manager">
+          <div className="weather-points-manager-header">
+            <h3>Puntos del Mapa</h3>
+            <button type="button" className="weather-map-btn" onClick={handleResetPoints}>
+              Restaurar puntos por defecto
+            </button>
+          </div>
+
+          <form className="weather-point-form" onSubmit={handleAddPoint}>
+            <input
+              type="text"
+              placeholder="Ciudad"
+              value={newPoint.city}
+              onChange={(event) => setNewPoint((prev) => ({ ...prev, city: event.target.value }))}
+            />
+            <input
+              type="number"
+              step="0.0001"
+              placeholder="Latitud (opcional)"
+              value={newPoint.latitude}
+              onChange={(event) => setNewPoint((prev) => ({ ...prev, latitude: event.target.value }))}
+            />
+            <input
+              type="number"
+              step="0.0001"
+              placeholder="Longitud (opcional)"
+              value={newPoint.longitude}
+              onChange={(event) => setNewPoint((prev) => ({ ...prev, longitude: event.target.value }))}
+            />
+            <button type="submit" className="weather-map-btn active">
+              Agregar punto
+            </button>
+          </form>
+
+          {pointError && <p className="weather-point-error">{pointError}</p>}
+
+          <div className="weather-points-list">
+            {weatherPoints.map((point) => (
+              <article key={point.city} className="weather-point-row">
+                <div>
+                  <strong>{point.city}</strong>
+                  <p>
+                    {point.latitude.toFixed(4)}, {point.longitude.toFixed(4)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="weather-map-btn weather-map-btn-danger"
+                  onClick={() => handleRemovePoint(point.city)}
+                >
+                  Eliminar
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <div
           ref={mapContainer}
           className="weather-map-container"
@@ -347,7 +535,7 @@ const WeatherMap: React.FC = () => {
           </div>
         </div>
         <p className="legend-note">
-          ⓘ Puntos actuales: {WEATHER_POINTS.map((point) => point.city).join(', ')}
+          ⓘ Puntos actuales: {weatherPoints.map((point) => point.city).join(', ')}
         </p>
       </div>
     </div>
