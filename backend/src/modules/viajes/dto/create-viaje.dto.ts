@@ -132,7 +132,8 @@ export class CreateViajDTO {
   @IsOptional()
   notas?: string;
 
-  @Exclude()
+  @IsString()
+  @IsOptional()
   estado?: string;
 
   @IsArray()

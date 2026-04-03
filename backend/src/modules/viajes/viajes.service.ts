@@ -62,6 +62,7 @@ export class ViajsService {
       consumoCombustible: createViajDTO.consumoCombustible as any || null,
       costoCombustible: createViajDTO.costoCombustible as any || 0,
       otrosGastos: createViajDTO.otrosGastos as any || 0,
+      estado: createViajDTO.estado || 'en_progreso',
       notas: createViajDTO.notas,
     });
 

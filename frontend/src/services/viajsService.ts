@@ -187,7 +187,7 @@ export const viajsService = {
    */
   create: async (viaje: Viaje) => {
     try {
-      const payload = sanitizeViajePayload(viaje, { includeEstado: false });
+      const payload = sanitizeViajePayload(viaje, { includeEstado: true });
       const response = await axios.post<Viaje>(`${API_BASE_URL}/viajes`, payload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('authToken')}`,
