@@ -44,6 +44,9 @@ export class ChoferSalarioPago {
   @Column({ nullable: true })
   comprobante: string;
 
+  @Column({ type: 'longtext', name: 'comprobante_adjunto', nullable: true })
+  comprobanteAdjunto: string;
+
   @Column({ type: 'text', nullable: true })
   observaciones: string;
 

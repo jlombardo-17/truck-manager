@@ -99,7 +99,7 @@ export class SalariosService {
 
     const viajes = await this.viajeRepository.find({
       where: {
-        choferId,
+        chofer: { id: choferId } as Chofer,
         fechaInicio: Between(fechaInicio, fechaFin),
         estado: 'completado', // Solo viajes completados generan comisión
       },
@@ -332,6 +332,7 @@ export class SalariosService {
         metodoPago: dto.metodoPago,
         tipo: dto.tipo || TipoPagoSalario.ADELANTO,
         comprobante: dto.comprobante,
+        comprobanteAdjunto: dto.comprobanteAdjunto,
         observaciones: dto.observaciones,
       }),
     );
@@ -366,6 +367,7 @@ export class SalariosService {
     pago.metodoPago = dto.metodoPago;
     pago.tipo = dto.tipo || pago.tipo;
     pago.comprobante = dto.comprobante;
+    pago.comprobanteAdjunto = dto.comprobanteAdjunto;
     pago.observaciones = dto.observaciones;
 
     await this.salarioPagoRepository.save(pago);

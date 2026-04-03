@@ -17,6 +17,76 @@ type PagoHistorico = {
   pago: SalarioPago;
 };
 
+const MAX_COMPROBANTE_SIZE_MB = 10;
+const ALLOWED_COMPROBANTE_MIME_TYPES = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/svg+xml',
+];
+
+const ALLOWED_COMPROBANTE_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg'];
+
+const fileToDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo seleccionado'));
+    reader.readAsDataURL(file);
+  });
+
+const normalizeMimeType = (mimeType?: string) => {
+  if (!mimeType) return '';
+  return mimeType.toLowerCase() === 'image/jpg' ? 'image/jpeg' : mimeType.toLowerCase();
+};
+
+const getFileExtension = (fileName: string) => {
+  const parts = fileName.toLowerCase().split('.');
+  return parts.length > 1 ? parts.pop() || '' : '';
+};
+
+const getMimeTypeFromDataUrl = (value?: string) => {
+  if (!value || !value.startsWith('data:')) return '';
+  const semiColonIndex = value.indexOf(';');
+  if (semiColonIndex <= 5) return '';
+  return normalizeMimeType(value.slice(5, semiColonIndex));
+};
+
+const isImageAttachment = (value?: string) => {
+  if (!value) return false;
+  const dataUrlMimeType = getMimeTypeFromDataUrl(value);
+  if (dataUrlMimeType) return dataUrlMimeType.startsWith('image/');
+  return /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(value);
+};
+
+const isPdfAttachment = (value?: string) => {
+  if (!value) return false;
+  const dataUrlMimeType = getMimeTypeFromDataUrl(value);
+  if (dataUrlMimeType) return dataUrlMimeType === 'application/pdf';
+  return /\.pdf(\?|$)/i.test(value);
+};
+
+const isEmbeddedAttachment = (value?: string) => Boolean(value && value.startsWith('data:'));
+
+const getAttachmentKindLabel = (value?: string) => {
+  if (!value) return 'Adjunto';
+  if (value.startsWith('data:application/pdf')) return 'PDF adjunto';
+  if (value.startsWith('data:image/')) return 'Imagen adjunta';
+  return 'Adjunto';
+};
+
+const getAttachmentExtension = (value?: string) => {
+  if (!value) return '';
+  if (value.startsWith('data:application/pdf')) return '.pdf';
+  if (value.startsWith('data:image/png')) return '.png';
+  if (value.startsWith('data:image/webp')) return '.webp';
+  return '.jpg';
+};
+
 interface SalariosTabProps {
   choferId: number;
 }
@@ -26,6 +96,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPagoModal, setShowPagoModal] = useState(false);
+  const [showPagoManualModal, setShowPagoManualModal] = useState(false);
   const [salarioSeleccionado, setSalarioSeleccionado] = useState<ChoferSalario | null>(null);
   const [guardandoPago, setGuardandoPago] = useState(false);
   const [pagoError, setPagoError] = useState<string | null>(null);
@@ -35,6 +106,22 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
     metodoPago: 'transferencia',
     tipo: TipoPagoSalario.ADELANTO,
     comprobante: '',
+    comprobanteAdjunto: '',
+    observaciones: '',
+  });
+  const [pagoManualForm, setPagoManualForm] = useState({
+    mes: new Date().getMonth() + 1,
+    anio: new Date().getFullYear(),
+    salarioBase: '',
+    totalComisiones: '0',
+    bonos: '0',
+    deducciones: '0',
+    fechaPago: new Date().toISOString().split('T')[0],
+    metodoPago: 'transferencia',
+    monto: '',
+    tipo: TipoPagoSalario.ADELANTO,
+    comprobante: '',
+    comprobanteAdjunto: '',
     observaciones: '',
   });
   const metodosPago = ['transferencia', 'efectivo', 'cheque', 'otro'];
@@ -43,14 +130,94 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
   const [pagoEditando, setPagoEditando] = useState<{ salarioId: number; pagoId: number } | null>(null);
   const [guardandoEditarPago, setGuardandoEditarPago] = useState(false);
   const [editarPagoError, setEditarPagoError] = useState<string | null>(null);
+  const [isPagoDropActive, setIsPagoDropActive] = useState(false);
+  const [isPagoManualDropActive, setIsPagoManualDropActive] = useState(false);
+  const [isPagoEditarDropActive, setIsPagoEditarDropActive] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<string | null>(null);
   const [pagoEditarForm, setPagoEditarForm] = useState({
     monto: '',
     fechaPago: new Date().toISOString().split('T')[0],
     metodoPago: 'transferencia',
     tipo: TipoPagoSalario.ADELANTO,
     comprobante: '',
+    comprobanteAdjunto: '',
     observaciones: '',
   });
+
+  const handleComprobanteFileChange = async <T extends { comprobanteAdjunto: string }>(
+    files: FileList | null,
+    setForm: React.Dispatch<React.SetStateAction<T>>,
+    setFormError: (message: string | null) => void,
+  ) => {
+    const file = files?.[0];
+    if (!file) return;
+
+    const normalizedMimeType = normalizeMimeType(file.type);
+    const extension = getFileExtension(file.name);
+    const isMimeAllowed = normalizedMimeType
+      ? ALLOWED_COMPROBANTE_MIME_TYPES.map((mimeType) => normalizeMimeType(mimeType)).includes(normalizedMimeType)
+      : false;
+    const isExtensionAllowed = ALLOWED_COMPROBANTE_EXTENSIONS.includes(extension);
+
+    if (!isMimeAllowed && !isExtensionAllowed) {
+      setFormError('Solo se permiten comprobantes en PDF o imagen (PNG, JPG, WEBP, GIF, BMP, SVG)');
+      return;
+    }
+
+    const sizeMb = file.size / (1024 * 1024);
+    if (sizeMb > MAX_COMPROBANTE_SIZE_MB) {
+      setFormError(`El archivo supera el límite de ${MAX_COMPROBANTE_SIZE_MB}MB`);
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setForm((prev) => ({ ...prev, comprobanteAdjunto: dataUrl }));
+      setFormError(null);
+    } catch (error) {
+      console.error(error);
+      setFormError('No se pudo procesar el archivo adjunto');
+    }
+  };
+
+  const handleOpenAttachmentPreview = (attachmentValue?: string) => {
+    if (!attachmentValue) return;
+    setPreviewAttachment(attachmentValue);
+  };
+
+  const handleCloseAttachmentPreview = () => {
+    setPreviewAttachment(null);
+  };
+
+  const handleComprobanteDragOver = (
+    event: React.DragEvent<HTMLElement>,
+    setActive: React.Dispatch<React.SetStateAction<boolean>>,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActive(true);
+  };
+
+  const handleComprobanteDragLeave = (
+    event: React.DragEvent<HTMLElement>,
+    setActive: React.Dispatch<React.SetStateAction<boolean>>,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActive(false);
+  };
+
+  const handleComprobanteDrop = async <T extends { comprobanteAdjunto: string }>(
+    event: React.DragEvent<HTMLElement>,
+    setForm: React.Dispatch<React.SetStateAction<T>>,
+    setFormError: (message: string | null) => void,
+    setActive: React.Dispatch<React.SetStateAction<boolean>>,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActive(false);
+    await handleComprobanteFileChange(event.dataTransfer.files, setForm, setFormError);
+  };
 
   const loadSalarios = async () => {
     try {
@@ -136,6 +303,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
       metodoPago: 'transferencia',
       tipo: TipoPagoSalario.ADELANTO,
       comprobante: salario.comprobante || '',
+      comprobanteAdjunto: '',
       observaciones: '',
     });
     setShowPagoModal(true);
@@ -144,6 +312,32 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
   const handleCerrarPagoModal = () => {
     setShowPagoModal(false);
     setSalarioSeleccionado(null);
+    setGuardandoPago(false);
+    setPagoError(null);
+  };
+
+  const handleAbrirPagoManualModal = () => {
+    setPagoError(null);
+    setPagoManualForm({
+      mes: new Date().getMonth() + 1,
+      anio: new Date().getFullYear(),
+      salarioBase: '',
+      totalComisiones: '0',
+      bonos: '0',
+      deducciones: '0',
+      fechaPago: new Date().toISOString().split('T')[0],
+      metodoPago: 'transferencia',
+      monto: '',
+      tipo: TipoPagoSalario.ADELANTO,
+      comprobante: '',
+      comprobanteAdjunto: '',
+      observaciones: '',
+    });
+    setShowPagoManualModal(true);
+  };
+
+  const handleCerrarPagoManualModal = () => {
+    setShowPagoManualModal(false);
     setGuardandoPago(false);
     setPagoError(null);
   };
@@ -158,6 +352,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
       metodoPago: pago.metodoPago || 'transferencia',
       tipo: pago.tipo || TipoPagoSalario.ADELANTO,
       comprobante: pago.comprobante || '',
+      comprobanteAdjunto: pago.comprobanteAdjunto || '',
       observaciones: pago.observaciones || '',
     });
     setEditarPagoError(null);
@@ -187,6 +382,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
         metodoPago: pagoEditarForm.metodoPago,
         tipo: pagoEditarForm.tipo,
         comprobante: pagoEditarForm.comprobante.trim() || undefined,
+        comprobanteAdjunto: pagoEditarForm.comprobanteAdjunto || undefined,
         observaciones: pagoEditarForm.observaciones.trim() || undefined,
       });
       await loadSalarios();
@@ -231,6 +427,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
         metodoPago: pagoForm.metodoPago,
         tipo: pagoForm.tipo,
         comprobante: pagoForm.comprobante.trim() || undefined,
+        comprobanteAdjunto: pagoForm.comprobanteAdjunto || undefined,
         observaciones: pagoForm.observaciones.trim() || undefined,
       });
 
@@ -239,6 +436,72 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
     } catch (err: any) {
       console.error('Error al registrar pago:', err);
       setPagoError(err?.response?.data?.message || 'No se pudo registrar el pago');
+      setGuardandoPago(false);
+    }
+  };
+
+  const handleRegistrarPagoManual = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (Number(pagoManualForm.monto) <= 0) {
+      setPagoError('Debes ingresar un monto de pago mayor a 0');
+      return;
+    }
+
+    try {
+      setGuardandoPago(true);
+      setPagoError(null);
+
+      let salarioPeriodo: ChoferSalario | null = null;
+
+      try {
+        salarioPeriodo = await salariosService.getSalarioChoferPeriodo(
+          choferId,
+          Number(pagoManualForm.anio),
+          Number(pagoManualForm.mes),
+        );
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status !== 404) {
+          throw err;
+        }
+      }
+
+      if (!salarioPeriodo) {
+        if (!pagoManualForm.salarioBase || Number(pagoManualForm.salarioBase) <= 0) {
+          setPagoError('Si el salario del período no existe, debes ingresar Salario Base');
+          setGuardandoPago(false);
+          return;
+        }
+
+        salarioPeriodo = await salariosService.create({
+          choferId,
+          mes: Number(pagoManualForm.mes),
+          anio: Number(pagoManualForm.anio),
+          salarioBase: Number(pagoManualForm.salarioBase),
+          totalComisiones: Number(pagoManualForm.totalComisiones || 0),
+          bonos: Number(pagoManualForm.bonos || 0),
+          deducciones: Number(pagoManualForm.deducciones || 0),
+          estado: EstadoSalario.PENDIENTE,
+          observaciones: pagoManualForm.observaciones.trim() || undefined,
+        });
+      }
+
+      await salariosService.registrarPago(salarioPeriodo.id, {
+        monto: Number(pagoManualForm.monto),
+        fechaPago: pagoManualForm.fechaPago,
+        metodoPago: pagoManualForm.metodoPago,
+        tipo: pagoManualForm.tipo,
+        comprobante: pagoManualForm.comprobante.trim() || undefined,
+        comprobanteAdjunto: pagoManualForm.comprobanteAdjunto || undefined,
+        observaciones: pagoManualForm.observaciones.trim() || undefined,
+      });
+
+      await loadSalarios();
+      handleCerrarPagoManualModal();
+    } catch (err: any) {
+      console.error('Error al registrar pago manual:', err);
+      setPagoError(err?.response?.data?.message || 'No se pudo registrar el pago manual');
       setGuardandoPago(false);
     }
   };
@@ -276,6 +539,13 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
         <div className="salarios-tab-block-header">
           <h3>Registro de Pagos Pendientes</h3>
           <div className="salarios-tab-block-header-actions">
+            <button
+              type="button"
+              className="salarios-tab-action"
+              onClick={handleAbrirPagoManualModal}
+            >
+              Cargar salario o pago manual
+            </button>
             {salarios.length > 0 && (
               <button
                 type="button"
@@ -290,7 +560,18 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
         </div>
 
         {salariosPendientes.length === 0 ? (
-          <div className="salarios-tab-empty">No hay salarios pendientes de pago para este chofer.</div>
+          <div className="salarios-tab-empty">
+            <p>No hay salarios pendientes de pago para este chofer.</p>
+            {salarios.length === 0 && (
+              <button
+                type="button"
+                className="salarios-tab-action primary"
+                onClick={handleAbrirPagoManualModal}
+              >
+                Registrar primer salario o pago
+              </button>
+            )}
+          </div>
         ) : (
           <div className="salarios-tab-list">
             {salariosPendientes.map((salario) => (
@@ -333,10 +614,29 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                   <p>
                     Fecha: {new Date(pago.fechaPago).toLocaleDateString('es-CL')} | Metodo: {pago.metodoPago}
                   </p>
+                  {pago.comprobante && <p>Referencia: {pago.comprobante}</p>}
                 </div>
                 <div className="salarios-tab-item-right">
                   <strong className="salarios-tab-amount">{formatCurrency(pago.monto)}</strong>
                   <div className="salarios-tab-actions">
+                    {pago.comprobanteAdjunto && (
+                      <>
+                        <button
+                          type="button"
+                          className="salarios-tab-link"
+                          onClick={() => handleOpenAttachmentPreview(pago.comprobanteAdjunto)}
+                        >
+                          Ver adjunto
+                        </button>
+                        <a
+                          className="salarios-tab-link"
+                          href={pago.comprobanteAdjunto}
+                          download={`comprobante-pago-${pago.id}${getAttachmentExtension(pago.comprobanteAdjunto)}`}
+                        >
+                          Descargar
+                        </a>
+                      </>
+                    )}
                     <button
                       type="button"
                       className="salarios-tab-action"
@@ -489,7 +789,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
               </div>
 
               <div className="salarios-tab-modal-group">
-                <label htmlFor="editar-pago-comprobante">Comprobante</label>
+                <label htmlFor="editar-pago-comprobante">Referencia del comprobante</label>
                 <input
                   id="editar-pago-comprobante"
                   type="text"
@@ -499,6 +799,53 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                   disabled={guardandoEditarPago}
                 />
               </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="editar-pago-comprobante-adjunto">Adjuntar comprobante</label>
+                <div
+                  className={`salarios-tab-dropzone ${isPagoEditarDropActive ? 'active' : ''}`}
+                  onDragOver={(event) => handleComprobanteDragOver(event, setIsPagoEditarDropActive)}
+                  onDragLeave={(event) => handleComprobanteDragLeave(event, setIsPagoEditarDropActive)}
+                  onDrop={(event) =>
+                    handleComprobanteDrop(event, setPagoEditarForm, setEditarPagoError, setIsPagoEditarDropActive)
+                  }
+                >
+                  <input
+                    id="editar-pago-comprobante-adjunto"
+                    className="salarios-tab-file-input"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml"
+                    onChange={(event) =>
+                      handleComprobanteFileChange(event.target.files, setPagoEditarForm, setEditarPagoError)
+                    }
+                    disabled={guardandoEditarPago}
+                  />
+                  <p>Arrastra y suelta aquí tu comprobante o selecciónalo manualmente.</p>
+                </div>
+                <span className="salarios-tab-file-help">PDF o imagen hasta {MAX_COMPROBANTE_SIZE_MB}MB</span>
+              </div>
+
+              {isEmbeddedAttachment(pagoEditarForm.comprobanteAdjunto) && (
+                <div className="salarios-tab-attachment-preview">
+                  <span>{getAttachmentKindLabel(pagoEditarForm.comprobanteAdjunto)} listo para guardar.</span>
+                  <div className="salarios-tab-actions">
+                    <button
+                      type="button"
+                      className="salarios-tab-link"
+                      onClick={() => handleOpenAttachmentPreview(pagoEditarForm.comprobanteAdjunto)}
+                    >
+                      Ver adjunto
+                    </button>
+                    <button
+                      type="button"
+                      className="salarios-tab-action danger"
+                      onClick={() => setPagoEditarForm((prev) => ({ ...prev, comprobanteAdjunto: '' }))}
+                    >
+                      Quitar adjunto
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="salarios-tab-modal-group">
                 <label htmlFor="editar-pago-observaciones">Observaciones</label>
@@ -615,7 +962,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
               </div>
 
               <div className="salarios-tab-modal-group">
-                <label htmlFor="salarios-tab-comprobante">Comprobante</label>
+                <label htmlFor="salarios-tab-comprobante">Referencia del comprobante</label>
                 <input
                   id="salarios-tab-comprobante"
                   type="text"
@@ -625,6 +972,49 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                   disabled={guardandoPago}
                 />
               </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="salarios-tab-comprobante-adjunto">Adjuntar comprobante</label>
+                <div
+                  className={`salarios-tab-dropzone ${isPagoDropActive ? 'active' : ''}`}
+                  onDragOver={(event) => handleComprobanteDragOver(event, setIsPagoDropActive)}
+                  onDragLeave={(event) => handleComprobanteDragLeave(event, setIsPagoDropActive)}
+                  onDrop={(event) => handleComprobanteDrop(event, setPagoForm, setPagoError, setIsPagoDropActive)}
+                >
+                  <input
+                    id="salarios-tab-comprobante-adjunto"
+                    className="salarios-tab-file-input"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml"
+                    onChange={(event) => handleComprobanteFileChange(event.target.files, setPagoForm, setPagoError)}
+                    disabled={guardandoPago}
+                  />
+                  <p>Arrastra y suelta aquí tu comprobante o selecciónalo manualmente.</p>
+                </div>
+                <span className="salarios-tab-file-help">PDF o imagen hasta {MAX_COMPROBANTE_SIZE_MB}MB</span>
+              </div>
+
+              {isEmbeddedAttachment(pagoForm.comprobanteAdjunto) && (
+                <div className="salarios-tab-attachment-preview">
+                  <span>{getAttachmentKindLabel(pagoForm.comprobanteAdjunto)} listo para guardar.</span>
+                  <div className="salarios-tab-actions">
+                    <button
+                      type="button"
+                      className="salarios-tab-link"
+                      onClick={() => handleOpenAttachmentPreview(pagoForm.comprobanteAdjunto)}
+                    >
+                      Ver adjunto
+                    </button>
+                    <button
+                      type="button"
+                      className="salarios-tab-action danger"
+                      onClick={() => setPagoForm((prev) => ({ ...prev, comprobanteAdjunto: '' }))}
+                    >
+                      Quitar adjunto
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="salarios-tab-modal-group">
                 <label htmlFor="salarios-tab-observaciones">Observaciones</label>
@@ -647,6 +1037,319 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showPagoManualModal && (
+        <div className="salarios-tab-modal-overlay" onClick={handleCerrarPagoManualModal}>
+          <div className="salarios-tab-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="salarios-tab-modal-header">
+              <h3>Cargar salario o pago manual</h3>
+              <button type="button" className="salarios-tab-modal-close" onClick={handleCerrarPagoManualModal}>
+                ✕
+              </button>
+            </div>
+
+            <p className="salarios-tab-modal-periodo">
+              Usa este formulario si todavía no existe la liquidación del período o si quieres cargar un pago manual.
+            </p>
+
+            {pagoError && <div className="salarios-tab-modal-error">{pagoError}</div>}
+
+            <form onSubmit={handleRegistrarPagoManual} className="salarios-tab-modal-form">
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-mes">Mes</label>
+                  <select
+                    id="salarios-tab-manual-mes"
+                    value={pagoManualForm.mes}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, mes: Number(event.target.value) }))
+                    }
+                    disabled={guardandoPago}
+                  >
+                    {Array.from({ length: 12 }, (_, index) => index + 1).map((mes) => (
+                      <option key={mes} value={mes}>
+                        {formatPeriodo(mes, pagoManualForm.anio).replace(` ${pagoManualForm.anio}`, '')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-anio">Año</label>
+                  <input
+                    id="salarios-tab-manual-anio"
+                    type="number"
+                    min={2020}
+                    max={2100}
+                    value={pagoManualForm.anio}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, anio: Number(event.target.value) }))
+                    }
+                    disabled={guardandoPago}
+                  />
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-salario-base">Salario Base</label>
+                  <input
+                    id="salarios-tab-manual-salario-base"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Obligatorio si el período no existe"
+                    value={pagoManualForm.salarioBase}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, salarioBase: event.target.value }))
+                    }
+                    disabled={guardandoPago}
+                  />
+                </div>
+
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-monto">Monto a pagar</label>
+                  <input
+                    id="salarios-tab-manual-monto"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={pagoManualForm.monto}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, monto: event.target.value }))
+                    }
+                    required
+                    disabled={guardandoPago}
+                  />
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-comisiones">Comisiones</label>
+                  <input
+                    id="salarios-tab-manual-comisiones"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={pagoManualForm.totalComisiones}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, totalComisiones: event.target.value }))
+                    }
+                    disabled={guardandoPago}
+                  />
+                </div>
+
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-bonos">Bonos</label>
+                  <input
+                    id="salarios-tab-manual-bonos"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={pagoManualForm.bonos}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, bonos: event.target.value }))
+                    }
+                    disabled={guardandoPago}
+                  />
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-deducciones">Deducciones</label>
+                  <input
+                    id="salarios-tab-manual-deducciones"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={pagoManualForm.deducciones}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, deducciones: event.target.value }))
+                    }
+                    disabled={guardandoPago}
+                  />
+                </div>
+
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-fecha">Fecha de pago</label>
+                  <input
+                    id="salarios-tab-manual-fecha"
+                    type="date"
+                    value={pagoManualForm.fechaPago}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, fechaPago: event.target.value }))
+                    }
+                    required
+                    disabled={guardandoPago}
+                  />
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-row">
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-metodo">Método de pago</label>
+                  <select
+                    id="salarios-tab-manual-metodo"
+                    value={pagoManualForm.metodoPago}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, metodoPago: event.target.value }))
+                    }
+                    required
+                    disabled={guardandoPago}
+                  >
+                    {metodosPago.map((metodo) => (
+                      <option key={metodo} value={metodo}>
+                        {metodo.charAt(0).toUpperCase() + metodo.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="salarios-tab-modal-group">
+                  <label htmlFor="salarios-tab-manual-tipo">Tipo de pago</label>
+                  <select
+                    id="salarios-tab-manual-tipo"
+                    value={pagoManualForm.tipo}
+                    onChange={(event) =>
+                      setPagoManualForm((prev) => ({ ...prev, tipo: event.target.value as TipoPagoSalario }))
+                    }
+                    required
+                    disabled={guardandoPago}
+                  >
+                    <option value={TipoPagoSalario.ADELANTO}>Adelanto</option>
+                    <option value={TipoPagoSalario.LIQUIDACION}>Liquidación</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="salarios-tab-manual-comprobante">Comprobante</label>
+                <input
+                  id="salarios-tab-manual-comprobante"
+                  type="text"
+                  placeholder="Nro transferencia, referencia, etc."
+                  value={pagoManualForm.comprobante}
+                  onChange={(event) =>
+                    setPagoManualForm((prev) => ({ ...prev, comprobante: event.target.value }))
+                  }
+                  disabled={guardandoPago}
+                />
+              </div>
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="salarios-tab-manual-comprobante-adjunto">Adjuntar comprobante</label>
+                <div
+                  className={`salarios-tab-dropzone ${isPagoManualDropActive ? 'active' : ''}`}
+                  onDragOver={(event) => handleComprobanteDragOver(event, setIsPagoManualDropActive)}
+                  onDragLeave={(event) => handleComprobanteDragLeave(event, setIsPagoManualDropActive)}
+                  onDrop={(event) =>
+                    handleComprobanteDrop(event, setPagoManualForm, setPagoError, setIsPagoManualDropActive)
+                  }
+                >
+                  <input
+                    id="salarios-tab-manual-comprobante-adjunto"
+                    className="salarios-tab-file-input"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml"
+                    onChange={(event) =>
+                      handleComprobanteFileChange(event.target.files, setPagoManualForm, setPagoError)
+                    }
+                    disabled={guardandoPago}
+                  />
+                  <p>Arrastra y suelta aquí tu comprobante o selecciónalo manualmente.</p>
+                </div>
+                <span className="salarios-tab-file-help">PDF o imagen hasta {MAX_COMPROBANTE_SIZE_MB}MB</span>
+              </div>
+
+              {isEmbeddedAttachment(pagoManualForm.comprobanteAdjunto) && (
+                <div className="salarios-tab-attachment-preview">
+                  <span>{getAttachmentKindLabel(pagoManualForm.comprobanteAdjunto)} listo para guardar.</span>
+                  <div className="salarios-tab-actions">
+                    <button
+                      type="button"
+                      className="salarios-tab-link"
+                      onClick={() => handleOpenAttachmentPreview(pagoManualForm.comprobanteAdjunto)}
+                    >
+                      Ver adjunto
+                    </button>
+                    <button
+                      type="button"
+                      className="salarios-tab-action danger"
+                      onClick={() => setPagoManualForm((prev) => ({ ...prev, comprobanteAdjunto: '' }))}
+                    >
+                      Quitar adjunto
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="salarios-tab-modal-group">
+                <label htmlFor="salarios-tab-manual-observaciones">Observaciones</label>
+                <textarea
+                  id="salarios-tab-manual-observaciones"
+                  rows={3}
+                  placeholder="Comentario interno del pago o de la liquidación"
+                  value={pagoManualForm.observaciones}
+                  onChange={(event) =>
+                    setPagoManualForm((prev) => ({ ...prev, observaciones: event.target.value }))
+                  }
+                  disabled={guardandoPago}
+                />
+              </div>
+
+              <div className="salarios-tab-modal-actions">
+                <button
+                  type="button"
+                  className="salarios-tab-modal-button secondary"
+                  onClick={handleCerrarPagoManualModal}
+                  disabled={guardandoPago}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="salarios-tab-modal-button primary" disabled={guardandoPago}>
+                  {guardandoPago ? 'Guardando...' : 'Guardar salario/pago'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {previewAttachment && (
+        <div className="salarios-tab-modal-overlay" onClick={handleCloseAttachmentPreview}>
+          <div className="salarios-tab-modal salarios-tab-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="salarios-tab-modal-header">
+              <h3>Vista previa de comprobante</h3>
+              <button type="button" className="salarios-tab-modal-close" onClick={handleCloseAttachmentPreview}>
+                ✕
+              </button>
+            </div>
+
+            {isImageAttachment(previewAttachment) ? (
+              <img
+                className="salarios-tab-preview-image"
+                src={previewAttachment}
+                alt="Comprobante adjunto"
+              />
+            ) : isPdfAttachment(previewAttachment) ? (
+              <iframe
+                className="salarios-tab-preview-pdf"
+                src={previewAttachment}
+                title="Vista previa PDF"
+              />
+            ) : (
+              <div className="salarios-tab-preview-fallback">
+                <p>No se pudo renderizar una vista previa para este tipo de adjunto.</p>
+                <a className="salarios-tab-link" href={previewAttachment} download="comprobante-adjunto">
+                  Descargar adjunto
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}

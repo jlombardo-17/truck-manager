@@ -139,6 +139,10 @@ export class RegistrarPagoSalarioDto {
   comprobante?: string;
 
   @IsOptional()
+  @IsString({ message: 'El adjunto del comprobante debe ser texto' })
+  comprobanteAdjunto?: string;
+
+  @IsOptional()
   @IsString({ message: 'Las observaciones deben ser texto' })
   observaciones?: string;
 }
@@ -165,6 +169,10 @@ export class UpdatePagoSalarioDto {
   @IsOptional()
   @IsString({ message: 'El comprobante debe ser texto' })
   comprobante?: string;
+
+  @IsOptional()
+  @IsString({ message: 'El adjunto del comprobante debe ser texto' })
+  comprobanteAdjunto?: string;
 
   @IsOptional()
   @IsString({ message: 'Las observaciones deben ser texto' })

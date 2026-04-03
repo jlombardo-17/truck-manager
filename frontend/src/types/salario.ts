@@ -37,6 +37,7 @@ export interface SalarioPago {
   metodoPago: string;
   tipo: TipoPagoSalario;
   comprobante?: string;
+  comprobanteAdjunto?: string;
   observaciones?: string;
   createdAt: string;
 }
@@ -85,6 +86,7 @@ export interface RegistrarPagoSalarioDto {
   metodoPago: string;
   tipo?: TipoPagoSalario;
   comprobante?: string;
+  comprobanteAdjunto?: string;
   observaciones?: string;
 }
 
