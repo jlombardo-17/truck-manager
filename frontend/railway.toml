@@ -1,0 +1,5 @@
+[deploy]
+# Nginx escucha en 8080 (fijo), Railway hace el proxy desde 443/80 hacia aquí
+internalPort = 8080
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
