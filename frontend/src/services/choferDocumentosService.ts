@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ChoferDocumento, EstadoDocumento } from '../types/chofer-documento';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -21,13 +22,13 @@ api.interceptors.request.use((config) => {
 
 export const choferDocumentosService = {
   async getByChoferId(choferId: number): Promise<ChoferDocumento[]> {
-    const response = await api.get(`/choferes-documentos/chofer/${choferId}`);
-    return response.data;
+    const response = await api.get<unknown>(`/choferes-documentos/chofer/${choferId}`);
+    return normalizeArrayResponse<ChoferDocumento>(response.data, 'documentos');
   },
 
   async getById(documentoId: number): Promise<ChoferDocumento> {
-    const response = await api.get(`/choferes-documentos/${documentoId}`);
-    return response.data;
+    const response = await api.get<unknown>(`/choferes-documentos/${documentoId}`);
+    return normalizeObjectResponse<ChoferDocumento>(response.data, 'documento');
   },
 
   async create(documento: Partial<ChoferDocumento>): Promise<ChoferDocumento> {
@@ -45,13 +46,13 @@ export const choferDocumentosService = {
   },
 
   async getProximosAVencer(dias: number = 30): Promise<ChoferDocumento[]> {
-    const response = await api.get(`/choferes-documentos/alertas/proximos-vencer?dias=${dias}`);
-    return response.data;
+    const response = await api.get<unknown>(`/choferes-documentos/alertas/proximos-vencer?dias=${dias}`);
+    return normalizeArrayResponse<ChoferDocumento>(response.data, 'documentos');
   },
 
   async getVencidos(): Promise<ChoferDocumento[]> {
-    const response = await api.get(`/choferes-documentos/alertas/vencidos`);
-    return response.data;
+    const response = await api.get<unknown>(`/choferes-documentos/alertas/vencidos`);
+    return normalizeArrayResponse<ChoferDocumento>(response.data, 'documentos');
   },
 
   /**

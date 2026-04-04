@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import authService from './authService';
 import { Repostada, CreateRepostadaDto, Estadisticas } from '../types/repostada';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -27,8 +28,8 @@ class RepostadasService {
 
   async getByCamion(camionId: number): Promise<Repostada[]> {
     try {
-      const response = await this.api.get<Repostada[]>(`/camiones/${camionId}/repostadas`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/camiones/${camionId}/repostadas`);
+      return normalizeArrayResponse<Repostada>(response.data, 'repostadas');
     } catch (error: any) {
       throw error.response?.data || error;
     }
@@ -36,8 +37,8 @@ class RepostadasService {
 
   async getById(camionId: number, id: number): Promise<Repostada> {
     try {
-      const response = await this.api.get<Repostada>(`/camiones/${camionId}/repostadas/${id}`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/camiones/${camionId}/repostadas/${id}`);
+      return normalizeObjectResponse<Repostada>(response.data, 'repostada');
     } catch (error: any) {
       throw error.response?.data || error;
     }
@@ -45,10 +46,10 @@ class RepostadasService {
 
   async getEstadisticas(camionId: number): Promise<Estadisticas> {
     try {
-      const response = await this.api.get<Estadisticas>(
+      const response = await this.api.get<unknown>(
         `/camiones/${camionId}/repostadas/estadisticas`
       );
-      return response.data;
+      return normalizeObjectResponse<Estadisticas>(response.data, 'estadisticas');
     } catch (error: any) {
       throw error.response?.data || error;
     }

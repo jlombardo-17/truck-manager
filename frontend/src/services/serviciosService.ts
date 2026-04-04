@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { Servicio, CreateServicioDto } from '../types/servicio';
 import authService from './authService';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -27,8 +28,8 @@ class ServiciosService {
 
   async getByCamion(camionId: number): Promise<Servicio[]> {
     try {
-      const response = await this.api.get<Servicio[]>(`/camiones/${camionId}/servicios`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/camiones/${camionId}/servicios`);
+      return normalizeArrayResponse<Servicio>(response.data, 'servicios');
     } catch (error: any) {
       throw error.response?.data || error;
     }
@@ -36,8 +37,8 @@ class ServiciosService {
 
   async getById(servicioId: number, camionId: number): Promise<Servicio> {
     try {
-      const response = await this.api.get<Servicio>(`/camiones/${camionId}/servicios/${servicioId}`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/camiones/${camionId}/servicios/${servicioId}`);
+      return normalizeObjectResponse<Servicio>(response.data, 'servicio');
     } catch (error: any) {
       throw error.response?.data || error;
     }

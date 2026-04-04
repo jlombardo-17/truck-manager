@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Chofer, CreateChoferDto, UpdateChoferDto } from '../types/chofer';
 import authService from './authService';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_URL = '/api';
 
@@ -24,13 +25,13 @@ axiosInstance.interceptors.request.use(
 
 class ChoferesService {
   async getAll(): Promise<Chofer[]> {
-    const response = await axiosInstance.get<Chofer[]>('/choferes');
-    return response.data;
+    const response = await axiosInstance.get<unknown>('/choferes');
+    return normalizeArrayResponse<Chofer>(response.data, 'choferes');
   }
 
   async getById(id: number): Promise<Chofer> {
-    const response = await axiosInstance.get<Chofer>(`/choferes/${id}`);
-    return response.data;
+    const response = await axiosInstance.get<unknown>(`/choferes/${id}`);
+    return normalizeObjectResponse<Chofer>(response.data, 'chofer');
   }
 
   async create(data: CreateChoferDto): Promise<Chofer> {

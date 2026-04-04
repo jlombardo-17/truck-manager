@@ -103,7 +103,9 @@ const ViajeForm: React.FC = () => {
           viajsService.getRoutes(viajeId).catch(() => [] as ViajRuta[]),
         ]);
 
-        const rawRutas = rutasFromEndpoint.length > 0 ? rutasFromEndpoint : (viaje.rutas || []);
+        const rutasFromService = Array.isArray(rutasFromEndpoint) ? rutasFromEndpoint : [];
+        const rutasFromViaje = Array.isArray(viaje.rutas) ? viaje.rutas : [];
+        const rawRutas = rutasFromService.length > 0 ? rutasFromService : rutasFromViaje;
 
         const normalizedRutas = rawRutas.map((ruta) => ({
           ...ruta,
@@ -161,8 +163,10 @@ const ViajeForm: React.FC = () => {
 
         setFormData(normalizedViaje);
         setRutas(rutasToUse);
+        const safeComisiones = Array.isArray(viaje.comisiones) ? viaje.comisiones : [];
+
         setComisiones(
-          (viaje.comisiones || []).map((comision) => ({
+          safeComisiones.map((comision) => ({
             ...comision,
             montoBase: toNumberOrUndefined(comision.montoBase),
             porcentaje: toNumberOrUndefined(comision.porcentaje),

@@ -16,6 +16,45 @@ const toDateString = (value?: string): string | undefined => {
   return parsed.toISOString().split('T')[0];
 };
 
+const normalizeArrayResponse = <T>(value: unknown, fieldName?: string): T[] => {
+  if (Array.isArray(value)) return value as T[];
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+
+    if (fieldName && Array.isArray(record[fieldName])) {
+      return record[fieldName] as T[];
+    }
+
+    const commonArrayFields = ['data', 'items', 'results'];
+    for (const key of commonArrayFields) {
+      if (Array.isArray(record[key])) {
+        return record[key] as T[];
+      }
+    }
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return normalizeArrayResponse<T>(parsed, fieldName);
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
+const normalizeViajeResponse = (value: unknown): Viaje => {
+  const viaje = (value || {}) as Viaje & Record<string, unknown>;
+  return {
+    ...viaje,
+    rutas: normalizeArrayResponse<ViajRuta>(viaje.rutas, 'rutas'),
+    comisiones: normalizeArrayResponse<ViajComision>(viaje.comisiones, 'comisiones'),
+  };
+};
+
 const sanitizeComisiones = (
   comisiones?: ViajComision[],
   options?: { includeEstado?: boolean },
@@ -153,12 +192,12 @@ export const viajsService = {
         url += `?${params.toString()}`;
       }
 
-      const response = await axios.get<Viaje[]>(url, {
+      const response = await axios.get<unknown>(url, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
-      return response.data;
+      return normalizeArrayResponse<Viaje>(response.data).map(normalizeViajeResponse);
     } catch (error) {
       console.error('Error fetching viajes:', error);
       throw error;
@@ -170,12 +209,12 @@ export const viajsService = {
    */
   getById: async (id: number) => {
     try {
-      const response = await axios.get<Viaje>(`${API_BASE_URL}/viajes/${id}`, {
+      const response = await axios.get<unknown>(`${API_BASE_URL}/viajes/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
-      return response.data;
+      return normalizeViajeResponse(response.data);
     } catch (error) {
       console.error(`Error fetching viaje ${id}:`, error);
       throw error;
@@ -247,7 +286,7 @@ export const viajsService = {
    */
   getComisiones: async (id: number) => {
     try {
-      const response = await axios.get<ViajComision[]>(
+      const response = await axios.get<unknown>(
         `${API_BASE_URL}/viajes/${id}/comisiones`,
         {
           headers: {
@@ -255,7 +294,7 @@ export const viajsService = {
           },
         },
       );
-      return response.data;
+      return normalizeArrayResponse<ViajComision>(response.data, 'comisiones');
     } catch (error) {
       console.error(`Error fetching comisiones for viaje ${id}:`, error);
       throw error;
@@ -318,12 +357,12 @@ export const viajsService = {
    */
   getRoutes: async (viajeId: number): Promise<ViajRuta[]> => {
     try {
-      const response = await axios.get<ViajRuta[]>(`${API_BASE_URL}/viajes/${viajeId}/rutas`, {
+      const response = await axios.get<unknown>(`${API_BASE_URL}/viajes/${viajeId}/rutas`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('authToken')}`,
         },
       });
-      return response.data;
+      return normalizeArrayResponse<ViajRuta>(response.data, 'rutas');
     } catch (error) {
       console.error(`Error fetching rutas for viaje ${viajeId}:`, error);
       throw error;
@@ -361,7 +400,7 @@ export const viajsService = {
           },
         },
       );
-      return response.data;
+      return normalizeArrayResponse<ViajRuta>(response.data, 'rutas');
     } catch (error) {
       console.error(`Error saving rutas for viaje ${viajeId}:`, error);
       throw error;

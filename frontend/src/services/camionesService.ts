@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { Camion, CreateCamionDto, UpdateCamionDto } from '../types/camion';
 import authService from './authService';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -27,8 +28,8 @@ class CamionesService {
 
   async getAll(): Promise<Camion[]> {
     try {
-      const response = await this.api.get<Camion[]>('/camiones');
-      return response.data;
+      const response = await this.api.get<unknown>('/camiones');
+      return normalizeArrayResponse<Camion>(response.data, 'camiones');
     } catch (error: any) {
       throw error.response?.data || error;
     }
@@ -36,8 +37,8 @@ class CamionesService {
 
   async getById(id: number): Promise<Camion> {
     try {
-      const response = await this.api.get<Camion>(`/camiones/${id}`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/camiones/${id}`);
+      return normalizeObjectResponse<Camion>(response.data, 'camion');
     } catch (error: any) {
       throw error.response?.data || error;
     }

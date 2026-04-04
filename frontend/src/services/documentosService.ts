@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { Documento, CreateDocumentoDto } from '../types/servicio';
 import authService from './authService';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -27,8 +28,8 @@ class DocumentosService {
 
   async getByCamion(camionId: number): Promise<Documento[]> {
     try {
-      const response = await this.api.get<Documento[]>(`/camiones/${camionId}/documentos`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/camiones/${camionId}/documentos`);
+      return normalizeArrayResponse<Documento>(response.data, 'documentos');
     } catch (error: any) {
       throw error.response?.data || error;
     }
@@ -36,8 +37,8 @@ class DocumentosService {
 
   async getById(documentoId: number, camionId: number): Promise<Documento> {
     try {
-      const response = await this.api.get<Documento>(`/camiones/${camionId}/documentos/${documentoId}`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/camiones/${camionId}/documentos/${documentoId}`);
+      return normalizeObjectResponse<Documento>(response.data, 'documento');
     } catch (error: any) {
       throw error.response?.data || error;
     }
@@ -72,8 +73,8 @@ class DocumentosService {
 
   async getProximosAVencer(dias: number = 30): Promise<Documento[]> {
     try {
-      const response = await this.api.get<Documento[]>(`/documentos-camiones/proximos-vencer?dias=${dias}`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/documentos-camiones/proximos-vencer?dias=${dias}`);
+      return normalizeArrayResponse<Documento>(response.data, 'documentos');
     } catch (error: any) {
       throw error.response?.data || error;
     }
@@ -81,8 +82,8 @@ class DocumentosService {
 
   async getVencidos(): Promise<Documento[]> {
     try {
-      const response = await this.api.get<Documento[]>(`/documentos-camiones/vencidos`);
-      return response.data;
+      const response = await this.api.get<unknown>(`/documentos-camiones/vencidos`);
+      return normalizeArrayResponse<Documento>(response.data, 'documentos');
     } catch (error: any) {
       throw error.response?.data || error;
     }

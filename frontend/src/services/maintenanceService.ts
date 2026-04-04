@@ -1,5 +1,6 @@
 import { MantenimientoTipo, MantenimientoRegistro } from '../types/mantenimiento';
 import authService from './authService';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -15,7 +16,7 @@ export const maintenanceService = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance types');
-    return response.json();
+    return normalizeArrayResponse<MantenimientoTipo>(await response.json(), 'tipos');
   },
 
   async getTipoById(id: number): Promise<MantenimientoTipo> {
@@ -23,7 +24,7 @@ export const maintenanceService = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance type');
-    return response.json();
+    return normalizeObjectResponse<MantenimientoTipo>(await response.json(), 'tipo');
   },
 
   async createTipo(data: Omit<MantenimientoTipo, 'id' | 'createdAt' | 'updatedAt'>): Promise<MantenimientoTipo> {
@@ -67,7 +68,7 @@ export const maintenanceService = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance records');
-    return response.json();
+    return normalizeArrayResponse<MantenimientoRegistro>(await response.json(), 'registros');
   },
 
   async getRegistroById(id: number): Promise<MantenimientoRegistro> {
@@ -75,7 +76,7 @@ export const maintenanceService = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching maintenance record');
-    return response.json();
+    return normalizeObjectResponse<MantenimientoRegistro>(await response.json(), 'registro');
   },
 
   async createRegistro(data: Omit<MantenimientoRegistro, 'id' | 'createdAt' | 'updatedAt'>): Promise<MantenimientoRegistro> {
@@ -139,7 +140,7 @@ export const maintenanceService = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching upcoming maintenance');
-    return response.json();
+    return normalizeArrayResponse<MantenimientoRegistro>(await response.json(), 'registros');
   },
 
   async getVencidos(camionId?: number): Promise<MantenimientoRegistro[]> {
@@ -150,7 +151,7 @@ export const maintenanceService = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error fetching overdue maintenance');
-    return response.json();
+    return normalizeArrayResponse<MantenimientoRegistro>(await response.json(), 'registros');
   },
 
   // ============ Estadísticas ============

@@ -10,6 +10,7 @@ import {
   SalarioPago,
 } from '../types/salario';
 import authService from './authService';
+import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -37,24 +38,24 @@ class SalariosService {
    * Obtener todos los salarios (admin)
    */
   async getAll(): Promise<ChoferSalario[]> {
-    const response = await this.api.get('/salarios');
-    return response.data;
+    const response = await this.api.get<unknown>('/salarios');
+    return normalizeArrayResponse<ChoferSalario>(response.data, 'salarios');
   }
 
   /**
    * Obtener salarios de un chofer específico
    */
   async getByChofer(choferId: number): Promise<ChoferSalario[]> {
-    const response = await this.api.get(`/salarios/chofer/${choferId}`);
-    return response.data;
+    const response = await this.api.get<unknown>(`/salarios/chofer/${choferId}`);
+    return normalizeArrayResponse<ChoferSalario>(response.data, 'salarios');
   }
 
   /**
    * Obtener salarios por período (todos los choferes)
    */
   async getByPeriodo(anio: number, mes: number): Promise<ChoferSalario[]> {
-    const response = await this.api.get(`/salarios/periodo/${anio}/${mes}`);
-    return response.data;
+    const response = await this.api.get<unknown>(`/salarios/periodo/${anio}/${mes}`);
+    return normalizeArrayResponse<ChoferSalario>(response.data, 'salarios');
   }
 
   /**
@@ -65,8 +66,8 @@ class SalariosService {
     anio: number,
     mes: number,
   ): Promise<ChoferSalario> {
-    const response = await this.api.get(`/salarios/chofer/${choferId}/${anio}/${mes}`);
-    return response.data;
+    const response = await this.api.get<unknown>(`/salarios/chofer/${choferId}/${anio}/${mes}`);
+    return normalizeObjectResponse<ChoferSalario>(response.data, 'salario');
   }
 
   /**
@@ -77,8 +78,12 @@ class SalariosService {
     anio: number,
     mes: number,
   ): Promise<{ viajes: ViajeConComision[]; totalComisiones: number }> {
-    const response = await this.api.get(`/salarios/chofer/${choferId}/${anio}/${mes}/detalle`);
-    return response.data;
+    const response = await this.api.get<unknown>(`/salarios/chofer/${choferId}/${anio}/${mes}/detalle`);
+    const payload = normalizeObjectResponse<{ viajes?: unknown; totalComisiones?: unknown }>(response.data);
+    return {
+      viajes: normalizeArrayResponse<ViajeConComision>(payload.viajes, 'viajes'),
+      totalComisiones: Number(payload.totalComisiones) || 0,
+    };
   }
 
   /**
@@ -139,8 +144,8 @@ class SalariosService {
    * Obtener pagos de un salario específico
    */
   async getPagosBySalario(id: number): Promise<SalarioPago[]> {
-    const response = await this.api.get(`/salarios/${id}/pagos`);
-    return response.data;
+    const response = await this.api.get<unknown>(`/salarios/${id}/pagos`);
+    return normalizeArrayResponse<SalarioPago>(response.data, 'pagos');
   }
 
   /**
