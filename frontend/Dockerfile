@@ -21,21 +21,22 @@ RUN npm run build
 # ─────────────────────────────────────────────
 FROM nginx:1.25-alpine AS production
 
-# Copiar config de nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copiar config de nginx como template (PORT se resuelve en runtime via envsubst)
+COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
 # Copiar el build de Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Usuario no-root
+# Permisos para usuario no-root + acceso a conf.d para envsubst en runtime
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 
 USER nginx
 
-EXPOSE 80
+EXPOSE ${PORT}
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
