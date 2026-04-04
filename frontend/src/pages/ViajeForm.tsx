@@ -254,24 +254,46 @@ const ViajeForm: React.FC = () => {
 
       let viajeId: number;
 
-      if (isEditing) {
-        await viajsService.update(parseInt(id!), dataToSend);
-        viajeId = parseInt(id!);
-        setSuccess('Viaje actualizado exitosamente');
-      } else {
-        const createdViaje = await viajsService.create(dataToSend);
-        viajeId = createdViaje.id!;
-        setSuccess('Viaje creado exitosamente');
+      try {
+        if (isEditing) {
+          await viajsService.update(parseInt(id!), dataToSend);
+          viajeId = parseInt(id!);
+          setSuccess('Viaje actualizado exitosamente');
+        } else {
+          const createdViaje = await viajsService.create(dataToSend);
+          viajeId = createdViaje.id!;
+          setSuccess('Viaje creado exitosamente');
+        }
+      } catch (err) {
+        const backendMessage = (err as any)?.response?.data?.message;
+        const errorText = Array.isArray(backendMessage)
+          ? backendMessage.join(', ')
+          : backendMessage;
+
+        setError(errorText || 'Error al guardar los datos del viaje');
+        console.error('Error saving viaje core data:', err);
+        return;
       }
 
       // Guardar las rutas si existen
       if (rutas.length > 0) {
-        await viajsService.saveRoutes(viajeId, rutas, dataToSend.kmRecorridos);
-        setSuccess(
-          (prev) =>
-            prev +
-            ` y ${rutas.length} punto(s) de ruta guardado(s)`,
-        );
+        try {
+          await viajsService.saveRoutes(viajeId, rutas, dataToSend.kmRecorridos);
+          setSuccess(
+            (prev) =>
+              (prev || (isEditing ? 'Viaje actualizado exitosamente' : 'Viaje creado exitosamente')) +
+              ` y ${rutas.length} punto(s) de ruta guardado(s)`,
+          );
+        } catch (err) {
+          const backendMessage = (err as any)?.response?.data?.message;
+          const errorText = Array.isArray(backendMessage)
+            ? backendMessage.join(', ')
+            : backendMessage;
+
+          setError(errorText || 'El viaje se guardó, pero falló la actualización de rutas');
+          console.error('Error saving viaje routes:', err);
+          return;
+        }
       }
 
       setTimeout(() => {

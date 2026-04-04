@@ -28,6 +28,7 @@ const MapEditor: React.FC<MapEditorProps> = ({
   initialZoom = 6, // Permite visualizar el territorio uruguayo completo en la mayoría de pantallas
   title = 'Editor de Ruta',
 }) => {
+  const canUseBrowserOsrm = !import.meta.env.PROD;
   const [routes, setRoutes] = useState<ViajRuta[]>(initialRoutes);
   const [selectedPoint, setSelectedPoint] = useState<string | null>(null);
   const [totalDistance, setTotalDistance] = useState<number>(0);
@@ -99,12 +100,13 @@ const MapEditor: React.FC<MapEditorProps> = ({
     setTotalDistance(total);
 
     // Calcular distancia real por carretera con OSRM si hay 2+ puntos
-    if (routes.length >= 2) {
+    if (routes.length >= 2 && canUseBrowserOsrm) {
       calculateRoadDistance(routes);
     } else {
       setRoadDistance(null);
+      setRoadGeometry([]);
     }
-  }, [routes]);
+  }, [routes, canUseBrowserOsrm]);
 
   /**
    * Decodifica geometría polyline6 de OSRM
@@ -190,7 +192,9 @@ const MapEditor: React.FC<MapEditorProps> = ({
         setRoadGeometry(geometry ? decodePolyline(geometry) : []);
       }
     } catch (error) {
-      console.warn('Error calculating road distance with OSRM:', error);
+      if (!import.meta.env.PROD) {
+        console.warn('Error calculating road distance with OSRM:', error);
+      }
       // Si OSRM falla, mostrar NULL pero no romper la UI
       setRoadDistance(null);
       setRoadGeometry([]);
@@ -270,7 +274,7 @@ const MapEditor: React.FC<MapEditorProps> = ({
           <span className="stat-item">
             <strong>Distancia Recta:</strong> {Number(totalDistance || 0).toFixed(2)} km
           </span>
-          {routes.length >= 2 && (
+          {routes.length >= 2 && canUseBrowserOsrm && (
             <span className="stat-item">
               <strong>Distancia por Carretera:</strong>{' '}
               {loadingDistance ? (

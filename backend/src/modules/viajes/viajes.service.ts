@@ -1,4 +1,10 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Viaje } from './viaje.entity';
@@ -21,6 +27,8 @@ type RoutePointInput = {
 
 @Injectable()
 export class ViajsService {
+  private readonly logger = new Logger(ViajsService.name);
+
   constructor(
     @InjectRepository(Viaje)
     private viajRepository: Repository<Viaje>,
@@ -35,62 +43,67 @@ export class ViajsService {
    * Crear un nuevo viaje
    */
   async create(createViajDTO: CreateViajDTO): Promise<Viaje> {
-    // Validar que camión y chofer existan
-    const camion = await this.camionesService.findOne(createViajDTO.camionId);
-    if (!camion) {
-      throw new BadRequestException('Camión no encontrado');
-    }
+    try {
+      await this.assertCamionExists(createViajDTO.camionId);
+      await this.assertChoferExists(createViajDTO.choferId);
 
-    // Crear el viaje
-    const viaje = this.viajRepository.create({
-      numeroViaje: createViajDTO.numeroViaje,
-      camion: { id: createViajDTO.camionId } as Camion,
-      chofer: { id: createViajDTO.choferId } as Chofer,
-      fechaInicio: new Date(createViajDTO.fechaInicio),
-      fechaFin: createViajDTO.fechaFin ? new Date(createViajDTO.fechaFin) : null,
-      fechaPago: createViajDTO.fechaPago ? new Date(createViajDTO.fechaPago) : null,
-      origen: createViajDTO.origen,
-      destino: createViajDTO.destino,
-      latitudOrigen: createViajDTO.latitudOrigen as any || null,
-      longitudOrigen: createViajDTO.longitudOrigen as any || null,
-      latitudDestino: createViajDTO.latitudDestino as any || null,
-      longitudDestino: createViajDTO.longitudDestino as any || null,
-      descripcionCarga: createViajDTO.descripcionCarga,
-      pesoCargaKg: createViajDTO.pesoCargaKg as any || null,
-      valorViaje: createViajDTO.valorViaje,
-      kmRecorridos: createViajDTO.kmRecorridos as any || 0,
-      consumoCombustible: createViajDTO.consumoCombustible as any || null,
-      costoCombustible: createViajDTO.costoCombustible as any || 0,
-      otrosGastos: createViajDTO.otrosGastos as any || 0,
-      estado: createViajDTO.estado || 'en_progreso',
-      notas: createViajDTO.notas,
-    });
+      const viaje = this.viajRepository.create({
+        numeroViaje: createViajDTO.numeroViaje,
+        camion: { id: createViajDTO.camionId } as Camion,
+        chofer: { id: createViajDTO.choferId } as Chofer,
+        fechaInicio: new Date(createViajDTO.fechaInicio),
+        fechaFin: createViajDTO.fechaFin ? new Date(createViajDTO.fechaFin) : null,
+        fechaPago: createViajDTO.fechaPago ? new Date(createViajDTO.fechaPago) : null,
+        origen: createViajDTO.origen,
+        destino: createViajDTO.destino,
+        latitudOrigen: createViajDTO.latitudOrigen as any || null,
+        longitudOrigen: createViajDTO.longitudOrigen as any || null,
+        latitudDestino: createViajDTO.latitudDestino as any || null,
+        longitudDestino: createViajDTO.longitudDestino as any || null,
+        descripcionCarga: createViajDTO.descripcionCarga,
+        pesoCargaKg: createViajDTO.pesoCargaKg as any || null,
+        valorViaje: createViajDTO.valorViaje,
+        kmRecorridos: createViajDTO.kmRecorridos as any || 0,
+        consumoCombustible: createViajDTO.consumoCombustible as any || null,
+        costoCombustible: createViajDTO.costoCombustible as any || 0,
+        otrosGastos: createViajDTO.otrosGastos as any || 0,
+        estado: createViajDTO.estado || 'en_progreso',
+        notas: createViajDTO.notas,
+      });
 
-    // Guardar el viaje
-    const savedViaje = await this.viajRepository.save(viaje);
+      const savedViaje = await this.viajRepository.save(viaje);
 
-    // Agregar rutas si existen
-    if (createViajDTO.rutas && createViajDTO.rutas.length > 0) {
-      const rutas = createViajDTO.rutas.map((rutaDTO) =>
-        this.viajRutaRepository.create({
-          viaje: { id: savedViaje.id } as Viaje,
-          ...rutaDTO,
-        }),
+      if (createViajDTO.rutas && createViajDTO.rutas.length > 0) {
+        const rutas = this.normalizeRoutePoints(createViajDTO.rutas).map((rutaDTO) =>
+          this.viajRutaRepository.create({
+            viaje: { id: savedViaje.id } as Viaje,
+            ...rutaDTO,
+          }),
+        );
+        await this.viajRutaRepository.save(rutas);
+      }
+
+      if (createViajDTO.comisiones && createViajDTO.comisiones.length > 0) {
+        await this.guardarComisiones(
+          savedViaje.id,
+          savedViaje.valorViaje,
+          createViajDTO.comisiones,
+        );
+      }
+
+      return this.findOneWithRelations(savedViaje.id);
+    } catch (error) {
+      this.logger.error(
+        `Error creating viaje numeroViaje=${createViajDTO.numeroViaje}`,
+        error instanceof Error ? error.stack : undefined,
       );
-      await this.viajRutaRepository.save(rutas);
-    }
 
-    // Agregar comisiones si existen
-    if (createViajDTO.comisiones && createViajDTO.comisiones.length > 0) {
-      await this.guardarComisiones(
-        savedViaje.id,
-        savedViaje.valorViaje,
-        createViajDTO.comisiones,
-      );
-    }
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
 
-    // Retornar el viaje completo con relaciones
-    return this.findOneWithRelations(savedViaje.id);
+      throw new InternalServerErrorException('No se pudo crear el viaje');
+    }
   }
 
   /**
@@ -174,54 +187,74 @@ export class ViajsService {
    * Actualizar un viaje
    */
   async update(id: number, updateViajDTO: UpdateViajDTO): Promise<Viaje> {
-    const viaje = await this.findOne(id);
-    const {
-      rutas,
-      comisiones,
-      camionId,
-      choferId,
-      ...viajeChanges
-    } = updateViajDTO;
+    try {
+      const viaje = await this.findOne(id);
+      const {
+        rutas,
+        comisiones,
+        camionId,
+        choferId,
+        ...viajeChanges
+      } = updateViajDTO;
 
-    // Actualizar campos
-    Object.assign(viaje, {
-      ...viajeChanges,
-      ...(camionId ? { camion: { id: camionId } as Camion } : {}),
-      ...(choferId ? { chofer: { id: choferId } as Chofer } : {}),
-      fechaInicio: viajeChanges.fechaInicio ? new Date(viajeChanges.fechaInicio) : viaje.fechaInicio,
-      fechaFin: viajeChanges.fechaFin ? new Date(viajeChanges.fechaFin) : viaje.fechaFin,
-      fechaPago: Object.prototype.hasOwnProperty.call(viajeChanges, 'fechaPago')
-        ? (viajeChanges.fechaPago ? new Date(viajeChanges.fechaPago) : null)
-        : viaje.fechaPago,
-    });
+      if (camionId) {
+        await this.assertCamionExists(camionId);
+      }
 
-    await this.viajRepository.save(viaje);
+      if (choferId) {
+        await this.assertChoferExists(choferId);
+      }
 
-    // Eliminar y recrear rutas si se proporcionan
-    if (rutas) {
-      await this.viajRutaRepository
-        .createQueryBuilder()
-        .delete()
-        .from(ViajRuta)
-        .where('viaje_id = :viajeId', { viajeId: id })
-        .execute();
+      Object.assign(viaje, {
+        ...viajeChanges,
+        ...(camionId ? { camion: { id: camionId } as Camion } : {}),
+        ...(choferId ? { chofer: { id: choferId } as Chofer } : {}),
+        fechaInicio: viajeChanges.fechaInicio ? new Date(viajeChanges.fechaInicio) : viaje.fechaInicio,
+        fechaFin: viajeChanges.fechaFin ? new Date(viajeChanges.fechaFin) : viaje.fechaFin,
+        fechaPago: Object.prototype.hasOwnProperty.call(viajeChanges, 'fechaPago')
+          ? (viajeChanges.fechaPago ? new Date(viajeChanges.fechaPago) : null)
+          : viaje.fechaPago,
+      });
 
-      const rutasToSave = rutas.map((rutaDTO) =>
-        this.viajRutaRepository.create({
-          viaje: { id } as Viaje,
-          ...rutaDTO,
-        }),
+      await this.viajRepository.save(viaje);
+
+      if (rutas) {
+        const normalizedRutas = this.normalizeRoutePoints(rutas);
+
+        await this.viajRutaRepository
+          .createQueryBuilder()
+          .delete()
+          .from(ViajRuta)
+          .where('viaje_id = :viajeId', { viajeId: id })
+          .execute();
+
+        const rutasToSave = normalizedRutas.map((rutaDTO) =>
+          this.viajRutaRepository.create({
+            viaje: { id } as Viaje,
+            ...rutaDTO,
+          }),
+        );
+        await this.viajRutaRepository.save(rutasToSave);
+      }
+
+      if (comisiones) {
+        await this.viajComisionRepository.delete({ viajeId: id });
+        await this.guardarComisiones(id, viaje.valorViaje, comisiones);
+      }
+
+      return this.findOneWithRelations(id);
+    } catch (error) {
+      this.logger.error(
+        `Error updating viaje id=${id}`,
+        error instanceof Error ? error.stack : undefined,
       );
-      await this.viajRutaRepository.save(rutasToSave);
-    }
 
-    // Eliminar y recrear comisiones si se proporcionan
-    if (comisiones) {
-      await this.viajComisionRepository.delete({ viajeId: id });
-      await this.guardarComisiones(id, viaje.valorViaje, comisiones);
-    }
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
 
-    return this.findOneWithRelations(id);
+      throw new InternalServerErrorException('No se pudo actualizar el viaje');
+    }
   }
 
   /**
@@ -381,53 +414,113 @@ export class ViajsService {
     rutasDTO: any[],
     kmRecorridosManual?: number,
   ): Promise<ViajRuta[]> {
-    // Verificar que el viaje existe
-    const viaje = await this.findOne(viajeId);
-    if (!viaje) {
-      throw new NotFoundException(`Viaje con ID ${viajeId} no encontrado`);
-    }
+    try {
+      const viaje = await this.findOne(viajeId);
+      if (!viaje) {
+        throw new NotFoundException(`Viaje con ID ${viajeId} no encontrado`);
+      }
 
-    // Eliminar rutas existentes
-    await this.viajRutaRepository
-      .createQueryBuilder()
-      .delete()
-      .from(ViajRuta)
-      .where('viaje_id = :viajeId', { viajeId })
-      .execute();
+      const normalizedRutas = this.normalizeRoutePoints(rutasDTO);
 
-    // Mejor ruta por carretera (OSRM); si falla, usa Haversine como fallback
-    const optimizedRoute = await this.getBestRoadRoute(rutasDTO);
+      await this.viajRutaRepository
+        .createQueryBuilder()
+        .delete()
+        .from(ViajRuta)
+        .where('viaje_id = :viajeId', { viajeId })
+        .execute();
 
-    // Crear y guardar las nuevas rutas
-    const rutas = optimizedRoute.points.map((rutaDTO, index) =>
-      this.viajRutaRepository.create({
-        viaje: { id: viajeId } as Viaje,
-        orden: index + 1,
-        latitud: rutaDTO.latitud,
-        longitud: rutaDTO.longitud,
-        direccion: rutaDTO.direccion,
-        odometroKm: rutaDTO.odometroKm || null,
-        notas: rutaDTO.notas,
-      }),
-    );
+      const optimizedRoute = await this.getBestRoadRoute(normalizedRutas);
 
-    await this.viajRutaRepository.save(rutas);
-
-    // Actualizar km recorridos, priorizando el valor manual enviado desde el formulario.
-    const distanciaTotal = optimizedRoute.distanceKm;
-    const kmRecorridos =
-      kmRecorridosManual !== undefined
-        ? Math.round(kmRecorridosManual * 100) / 100
-        : Math.round(distanciaTotal * 100) / 100;
-
-    if (kmRecorridosManual !== undefined || distanciaTotal > 0) {
-      await this.viajRepository.update(
-        { id: viajeId },
-        { kmRecorridos },
+      const rutas = optimizedRoute.points.map((rutaDTO, index) =>
+        this.viajRutaRepository.create({
+          viaje: { id: viajeId } as Viaje,
+          orden: index + 1,
+          latitud: rutaDTO.latitud,
+          longitud: rutaDTO.longitud,
+          direccion: rutaDTO.direccion,
+          odometroKm: rutaDTO.odometroKm || null,
+          notas: rutaDTO.notas,
+        }),
       );
+
+      await this.viajRutaRepository.save(rutas);
+
+      const distanciaTotal = optimizedRoute.distanceKm;
+      const kmRecorridos =
+        kmRecorridosManual !== undefined
+          ? Math.round(kmRecorridosManual * 100) / 100
+          : Math.round(distanciaTotal * 100) / 100;
+
+      if (kmRecorridosManual !== undefined || distanciaTotal > 0) {
+        await this.viajRepository.update(
+          { id: viajeId },
+          { kmRecorridos },
+        );
+      }
+
+      return rutas.sort((a, b) => a.orden - b.orden);
+    } catch (error) {
+      this.logger.error(
+        `Error saving routes for viaje id=${viajeId}; routeCount=${Array.isArray(rutasDTO) ? rutasDTO.length : 0}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('No se pudieron guardar las rutas del viaje');
+    }
+  }
+
+  private async assertCamionExists(camionId: number): Promise<void> {
+    const camion = await this.camionesService.findOne(camionId);
+    if (!camion) {
+      throw new BadRequestException('Camión no encontrado');
+    }
+  }
+
+  private async assertChoferExists(choferId: number): Promise<void> {
+    const chofer = await this.viajRepository.manager.getRepository(Chofer).findOne({
+      where: { id: choferId },
+    });
+
+    if (!chofer) {
+      throw new BadRequestException('Chofer no encontrado');
+    }
+  }
+
+  private normalizeRoutePoints(inputPoints: RoutePointInput[]): RoutePointInput[] {
+    if (!Array.isArray(inputPoints)) {
+      throw new BadRequestException('Las rutas deben enviarse como un arreglo');
     }
 
-    return rutas.sort((a, b) => a.orden - b.orden);
+    return inputPoints.map((point, index) => {
+      const latitud = Number(point?.latitud);
+      const longitud = Number(point?.longitud);
+      const rawOdometroKm = (point as { odometroKm?: unknown })?.odometroKm;
+      const odometroKm =
+        rawOdometroKm === undefined || rawOdometroKm === null || rawOdometroKm === ''
+          ? null
+          : Number(rawOdometroKm);
+
+      if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+        throw new BadRequestException(`Ruta inválida en posición ${index + 1}`);
+      }
+
+      if (odometroKm !== null && !Number.isFinite(odometroKm)) {
+        throw new BadRequestException(`Odómetro inválido en ruta ${index + 1}`);
+      }
+
+      return {
+        orden: Number(point?.orden) || index + 1,
+        latitud,
+        longitud,
+        direccion: point?.direccion,
+        odometroKm,
+        notas: point?.notas,
+      };
+    });
   }
 
   /**
