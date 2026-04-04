@@ -10,8 +10,12 @@ RUN npm ci --only=production=false
 
 COPY . .
 
-# VITE_API_URL se inyecta en build-time via ARG
+# Variables API para build de Vite (Railway):
+# - VITE_API_BASE_URL: usada por la mayoría de servicios
+# - VITE_API_URL: fallback para módulos legacy
+ARG VITE_API_BASE_URL=/api
 ARG VITE_API_URL=/api
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build
