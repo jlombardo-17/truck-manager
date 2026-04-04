@@ -1,7 +1,10 @@
 import axios from 'axios';
 import authService from './authService';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+const DASHBOARD_BASE_PATH = API_BASE_URL.endsWith('/api')
+  ? `${API_BASE_URL}/dashboard`
+  : `${API_BASE_URL}/api/dashboard`;
 
 export interface DashboardResumen {
   ingresosDelMes: number;
@@ -54,7 +57,9 @@ export const dashboardService = {
     if (fechaFin) params.append('fechaFin', fechaFin);
     
     const queryString = params.toString();
-    const url = queryString ? `${API_BASE_URL}/dashboard/resumen?${queryString}` : `${API_BASE_URL}/dashboard/resumen`;
+    const url = queryString
+      ? `${DASHBOARD_BASE_PATH}/resumen?${queryString}`
+      : `${DASHBOARD_BASE_PATH}/resumen`;
     
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -69,7 +74,9 @@ export const dashboardService = {
     if (fechaFin) params.append('fechaFin', fechaFin);
     
     const queryString = params.toString();
-    const url = queryString ? `${API_BASE_URL}/dashboard/camiones?${queryString}` : `${API_BASE_URL}/dashboard/camiones`;
+    const url = queryString
+      ? `${DASHBOARD_BASE_PATH}/camiones?${queryString}`
+      : `${DASHBOARD_BASE_PATH}/camiones`;
     
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -84,7 +91,9 @@ export const dashboardService = {
     if (fechaFin) params.append('fechaFin', fechaFin);
     
     const queryString = params.toString();
-    const url = queryString ? `${API_BASE_URL}/dashboard/choferes?${queryString}` : `${API_BASE_URL}/dashboard/choferes`;
+    const url = queryString
+      ? `${DASHBOARD_BASE_PATH}/choferes?${queryString}`
+      : `${DASHBOARD_BASE_PATH}/choferes`;
     
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${token}` },
