@@ -14,7 +14,6 @@ import { ChoferesService } from './choferes.service';
 import { CreateChoferDto, UpdateChoferDto } from './dto/chofer.dto';
 
 @Controller('choferes')
-@UseGuards(JwtAuthGuard)
 export class ChoferesController {
   constructor(private readonly choferesService: ChoferesService) {}
 
