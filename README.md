@@ -115,6 +115,12 @@ Backend:
 Frontend:
 
 - `VITE_API_BASE_URL` (URL pública del backend, por ejemplo `https://tu-backend.up.railway.app`)
+- `BACKEND_PUBLIC_URL` (URL pública del backend para que nginx proxyee `/api/*` en runtime; ejemplo `https://tu-backend.up.railway.app`)
+
+Nota para Railway:
+
+- Si `VITE_API_BASE_URL` no está definido, el frontend seguirá usando `/api`.
+- En ese caso `BACKEND_PUBLIC_URL` es obligatoria para que nginx redirija `/api/*` al backend y no responda `index.html`.
 
 ## 📦 Próximos Pasos
 

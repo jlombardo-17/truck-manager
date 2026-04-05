@@ -25,8 +25,12 @@ RUN npm run build
 # ─────────────────────────────────────────────
 FROM nginx:1.25-alpine AS production
 
-# Copiar config de nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# URL pública del backend usada por nginx en runtime.
+# En docker-compose/local el default puede ser el servicio interno.
+ENV BACKEND_PUBLIC_URL=http://backend:3000
+
+# Copiar template de nginx para que el entrypoint oficial haga envsubst en runtime
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copiar el build de Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
