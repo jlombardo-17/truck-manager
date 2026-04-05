@@ -50,6 +50,8 @@ const normalizeViajeResponse = (value: unknown): Viaje => {
   const viaje = (value || {}) as Viaje & Record<string, unknown>;
   return {
     ...viaje,
+    camionId: toNumberOrUndefined(viaje.camionId) ?? toNumberOrUndefined((viaje.camion as { id?: unknown } | undefined)?.id) ?? 0,
+    choferId: toNumberOrUndefined(viaje.choferId) ?? toNumberOrUndefined((viaje.chofer as { id?: unknown } | undefined)?.id) ?? 0,
     rutas: normalizeArrayResponse<ViajRuta>(viaje.rutas, 'rutas'),
     comisiones: normalizeArrayResponse<ViajComision>(viaje.comisiones, 'comisiones'),
   };

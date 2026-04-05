@@ -103,6 +103,13 @@ const ViajeForm: React.FC = () => {
           viajsService.getRoutes(viajeId).catch(() => [] as ViajRuta[]),
         ]);
 
+        const viajeCamionId =
+          toNumberOrUndefined((viaje as Viaje & { camion?: { id?: number } }).camionId) ??
+          toNumberOrUndefined((viaje as Viaje & { camion?: { id?: number } }).camion?.id);
+        const viajeChoferId =
+          toNumberOrUndefined((viaje as Viaje & { chofer?: { id?: number } }).choferId) ??
+          toNumberOrUndefined((viaje as Viaje & { chofer?: { id?: number } }).chofer?.id);
+
         const rutasFromService = Array.isArray(rutasFromEndpoint) ? rutasFromEndpoint : [];
         const rutasFromViaje = Array.isArray(viaje.rutas) ? viaje.rutas : [];
         const rawRutas = rutasFromService.length > 0 ? rutasFromService : rutasFromViaje;
@@ -144,8 +151,8 @@ const ViajeForm: React.FC = () => {
 
         const normalizedViaje: Viaje = {
           ...viaje,
-          camionId: toNumberOrZero(viaje.camionId),
-          choferId: toNumberOrZero(viaje.choferId),
+          camionId: toNumberOrZero(viajeCamionId),
+          choferId: toNumberOrZero(viajeChoferId),
           fechaInicio: toDateInputValue(viaje.fechaInicio),
           fechaFin: toDateInputValue(viaje.fechaFin),
           fechaPago: toDateInputValue(viaje.fechaPago),

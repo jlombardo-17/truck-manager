@@ -153,7 +153,8 @@ export class ViajsService {
       query = query.andWhere('viaje.fechaPago <= :fechaPagoHasta', { fechaPagoHasta: filters.fechaPagoHasta });
     }
 
-    return query.getMany();
+    const viajes = await query.getMany();
+    return viajes.map((viaje) => this.withResolvedRelationIds(viaje));
   }
 
   /**
@@ -169,7 +170,7 @@ export class ViajsService {
       throw new NotFoundException(`Viaje con ID ${id} no encontrado`);
     }
 
-    return viaje;
+    return this.withResolvedRelationIds(viaje);
   }
 
   /**
@@ -180,6 +181,22 @@ export class ViajsService {
     if (!viaje) {
       throw new NotFoundException(`Viaje con ID ${id} no encontrado`);
     }
+    return viaje;
+  }
+
+  private withResolvedRelationIds(viaje: Viaje): Viaje {
+    if (!viaje) {
+      return viaje;
+    }
+
+    if (!viaje.camionId && viaje.camion?.id) {
+      viaje.camionId = viaje.camion.id;
+    }
+
+    if (!viaje.choferId && viaje.chofer?.id) {
+      viaje.choferId = viaje.chofer.id;
+    }
+
     return viaje;
   }
 
