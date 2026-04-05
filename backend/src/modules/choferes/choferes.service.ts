@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chofer } from './chofer.entity';
@@ -6,25 +6,37 @@ import { CreateChoferDto, UpdateChoferDto } from './dto/chofer.dto';
 
 @Injectable()
 export class ChoferesService {
+  private readonly logger = new Logger(ChoferesService.name);
+
   constructor(
     @InjectRepository(Chofer)
     private choferesRepository: Repository<Chofer>,
   ) {}
 
   async findAll(): Promise<Chofer[]> {
-    return this.choferesRepository.find({
-      order: {
-        nombre: 'ASC',
-      },
-      relations: ['user'],
-    });
+    try {
+      return await this.choferesRepository.find({
+        order: {
+          nombre: 'ASC',
+        },
+      });
+    } catch (error) {
+      this.logger.error('Error al obtener choferes', error);
+      throw error;
+    }
   }
 
   async findOne(id: number): Promise<Chofer> {
-    const chofer = await this.choferesRepository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
+    let chofer: Chofer | null = null;
+    try {
+      chofer = await this.choferesRepository.findOne({
+        where: { id },
+        relations: ['user'],
+      });
+    } catch (error) {
+      this.logger.warn(`No se pudo cargar relación user para chofer ${id}, reintentando sin relación`, error);
+      chofer = await this.choferesRepository.findOne({ where: { id } });
+    }
 
     if (!chofer) {
       throw new NotFoundException(`Chofer con ID ${id} no encontrado`);
@@ -34,10 +46,16 @@ export class ChoferesService {
   }
 
   async findByNumeroDocumento(numeroDocumento: string): Promise<Chofer> {
-    const chofer = await this.choferesRepository.findOne({
-      where: { numeroDocumento },
-      relations: ['user'],
-    });
+    let chofer: Chofer | null = null;
+    try {
+      chofer = await this.choferesRepository.findOne({
+        where: { numeroDocumento },
+        relations: ['user'],
+      });
+    } catch (error) {
+      this.logger.warn(`No se pudo cargar relación user para numeroDocumento ${numeroDocumento}`, error);
+      chofer = await this.choferesRepository.findOne({ where: { numeroDocumento } });
+    }
 
     if (!chofer) {
       throw new NotFoundException(
