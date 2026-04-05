@@ -3,7 +3,7 @@ import { Chofer, CreateChoferDto, UpdateChoferDto } from '../types/chofer';
 import authService from './authService';
 import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
