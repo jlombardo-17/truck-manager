@@ -64,11 +64,6 @@ const Login: React.FC = () => {
           </button>
         </form>
 
-        <div className="demo-credentials">
-          <p>Credenciales de prueba:</p>
-          <p>Email: admin@truckmanager.local</p>
-          <p>Contraseña: admin123</p>
-        </div>
       </div>
     </div>
   );

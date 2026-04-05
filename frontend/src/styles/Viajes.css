@@ -292,9 +292,23 @@
   border-color: #f44336;
 }
 
+.estado-header {
+  text-align: center !important;
+}
+
+.estado-cell {
+  text-align: center;
+}
+
+.acciones-header {
+  text-align: center !important;
+}
+
 /* Acciones */
 .acciones-cell {
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 6px;
 }
 

@@ -287,8 +287,8 @@ const Viajes: React.FC = () => {
                 <th>Valor</th>
                 <th>Pago</th>
                 <th>KM</th>
-                <th>Estado</th>
-                <th>Acciones</th>
+                <th className="estado-header">Estado</th>
+                <th className="acciones-header">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -322,8 +322,8 @@ const Viajes: React.FC = () => {
                 <th>Valor</th>
                 <th>Pago</th>
                 <th>KM</th>
-                <th>Estado</th>
-                <th>Acciones</th>
+                <th className="estado-header">Estado</th>
+                <th className="acciones-header">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -343,7 +343,7 @@ const Viajes: React.FC = () => {
                   <td className="valor-cell">${Number(viaje.valorViaje || 0).toFixed(2)}</td>
                   <td>{viaje.fechaPago ? new Date(viaje.fechaPago).toLocaleDateString('es-UY') : 'Pendiente'}</td>
                   <td className="km-cell">{Number(viaje.kmRecorridos || 0).toFixed(2)} km</td>
-                  <td>
+                  <td className="estado-cell">
                     <select
                       value={viaje.estado || 'en_progreso'}
                       onChange={(e) => handleCambiarEstado(viaje.id!, e.target.value)}
