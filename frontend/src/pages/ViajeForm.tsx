@@ -69,11 +69,11 @@ const ViajeForm: React.FC = () => {
   }, [id]);
 
   const gastosOperativos = (formData.costoCombustible || 0) + (formData.otrosGastos || 0);
-  const gananciaAntesDeComisiones = (formData.valorViaje || 0) - gastosOperativos;
   const valorViajeEquivalenteUyu =
     formData.moneda === 'USD'
       ? Number(formData.valorViaje || 0) * usdUyuRate
       : Number(formData.valorViaje || 0);
+  const gananciaAntesDeComisiones = valorViajeEquivalenteUyu - gastosOperativos;
   const totalComisiones = comisiones.reduce(
     (sum, comision) => sum + (Number(comision.montoTotal) || 0),
     0,
@@ -748,7 +748,7 @@ const ViajeForm: React.FC = () => {
           <CommissionsTable
             commissions={comisiones}
             onCommissionsChange={setComisiones}
-            valorViaje={formData.valorViaje}
+            valorViaje={valorViajeEquivalenteUyu}
             costoCombustible={formData.costoCombustible}
             otrosGastos={formData.otrosGastos}
             commissionTypes={['Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Otro']}
