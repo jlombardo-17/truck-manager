@@ -252,11 +252,21 @@ export class DashboardService {
         },
       });
 
+      this.logger.log(`[Dashboard] Viajes encontrados: ${viajesMes.length} entre ${primerDia.toISOString()} y ${ultimoDia.toISOString()}`);
+      if (viajesMes.length > 0) {
+        this.logger.log(`[Dashboard] Primer viaje: ${JSON.stringify(viajesMes[0])}`);
+      }
+
       // Ingresos del período
       const ingresosDelMes = viajesMes.reduce(
-        (sum, v) => sum + this.getIngresoViajeUyu(v),
+        (sum, v) => {
+          const ingreso = this.getIngresoViajeUyu(v);
+          this.logger.debug(`[Dashboard] Viaje ${v.numeroViaje}: ingreso=${ingreso}, valorViaje=${v.valorViaje}, valorViajeUyu=${v.valorViajeUyu}`);
+          return sum + ingreso;
+        },
         0,
       );
+      this.logger.log(`[Dashboard] Ingresos totales: ${ingresosDelMes}`);
 
       const gastosOperativosViajes = viajesMes.reduce(
         (sum, viaje) => sum + this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos),
@@ -289,6 +299,8 @@ export class DashboardService {
         gastoSueldos +
         gastoMantenimiento +
         gastoDocumentosCamion;
+
+      this.logger.log(`[Dashboard] Gastos: operativos=${gastosOperativosViajes}, sueldos=${gastoSueldos}, mantenimiento=${gastoMantenimiento}, documentos=${gastoDocumentosCamion}, total=${gastosDelMes}`);
 
       // Camiones activos: usar el estado operativo real del vehículo.
       const camionesActivos = await this.camionesRepository
@@ -340,7 +352,8 @@ export class DashboardService {
       };
     } catch (error) {
       const mensaje = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error en getResumen: ${mensaje}`, error instanceof Error ? error.stack : '');
+      this.logger.error(`[Dashboard] CRÍTICO - Error en getResumen: ${mensaje}`, error instanceof Error ? error.stack : '');
+      this.logger.error(`[Dashboard] Error completo:`, error);
       // Retornar datos por defecto en caso de error
       return {
         ingresosDelMes: 0,
