@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, Repository } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
@@ -55,6 +55,7 @@ export interface DesempenoChofer {
 @Injectable()
 export class DashboardService {
   private tableColumnsCache = new Map<string, Promise<Set<string>>>();
+  private readonly logger = new Logger(DashboardService.name);
 
   constructor(
     @InjectRepository(Viaje)
@@ -141,17 +142,79 @@ export class DashboardService {
     return match;
   }
 
+  private async getOptionalTableColumns(tableName: string): Promise<Set<string> | null> {
+    try {
+      return await this.getTableColumns(tableName);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`No se pudo inspeccionar la tabla ${tableName}: ${message}`);
+      return null;
+    }
+  }
+
+  private pickOptionalColumn(columns: Set<string> | null, candidates: string[]): string | null {
+    if (!columns) {
+      return null;
+    }
+
+    return candidates.find((candidate) => columns.has(candidate)) ?? null;
+  }
+
+  private parseQueryDate(value: string | undefined, endOfDay = false): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    if (endOfDay) {
+      parsed.setHours(23, 59, 59, 999);
+    } else {
+      parsed.setHours(0, 0, 0, 0);
+    }
+
+    return parsed;
+  }
+
+  private async getGastoSueldos(periodStart: Date, periodEnd: Date): Promise<number> {
+    const pagosColumns = await this.getOptionalTableColumns('choferes_salarios_pagos');
+    const fechaPagoColumn = this.pickOptionalColumn(pagosColumns, ['fecha_pago', 'fechaPago']);
+    const montoColumn = this.pickOptionalColumn(pagosColumns, ['monto']);
+
+    if (!fechaPagoColumn || !montoColumn) {
+      return 0;
+    }
+
+    const pagosSueldosMes = await this.salarioPagoRepository.query(
+      `
+        SELECT ${montoColumn} AS monto
+        FROM choferes_salarios_pagos
+        WHERE ${fechaPagoColumn} >= ?
+          AND ${fechaPagoColumn} <= ?
+      `,
+      [periodStart, periodEnd],
+    );
+
+    return pagosSueldosMes.reduce(
+      (sum: number, pago: { monto: unknown }) => sum + this.toNumber(pago.monto),
+      0,
+    );
+  }
+
   private getDateRange(fechaInicio?: string, fechaFin?: string): { start: Date; end: Date } {
     const ahora = new Date();
     let startDate: Date;
     let endDate: Date;
 
-    if (fechaInicio && fechaFin) {
-      // Si se proporcionan ambas fechas, usarlas
-      startDate = new Date(fechaInicio);
-      endDate = new Date(fechaFin);
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
+    const parsedStart = this.parseQueryDate(fechaInicio);
+    const parsedEnd = this.parseQueryDate(fechaFin, true);
+
+    if (parsedStart && parsedEnd) {
+      startDate = parsedStart;
+      endDate = parsedEnd;
     } else {
       // Default: últimos 30 días
       endDate = new Date(ahora);
@@ -200,16 +263,7 @@ export class DashboardService {
       0,
     );
 
-    const pagosSueldosMes = await this.salarioPagoRepository.find({
-      where: {
-        fechaPago: Between(primerDia, ultimoDia) as any,
-      },
-    });
-
-    const gastoSueldos = pagosSueldosMes.reduce(
-      (sum, pago) => sum + this.toNumber(pago.monto),
-      0,
-    );
+    const gastoSueldos = await this.getGastoSueldos(primerDia, ultimoDia);
 
     const documentosCamion = await this.documentosCamionRepository.find();
 

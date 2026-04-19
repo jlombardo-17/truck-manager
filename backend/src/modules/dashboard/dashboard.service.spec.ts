@@ -49,6 +49,7 @@ describe('DashboardService', () => {
     };
     const salarioPagoRepository = {
       find: jest.fn(),
+      query: jest.fn(),
     };
 
     const service = new DashboardService(
@@ -94,19 +95,32 @@ describe('DashboardService', () => {
           otrosGastos: '50',
         },
       ]);
+    viajesRepository.query.mockImplementation((sql: string) => {
+      if (sql.includes('SHOW COLUMNS FROM choferes_salarios_pagos')) {
+        return Promise.resolve([
+          { Field: 'fecha_pago' },
+          { Field: 'monto' },
+        ]);
+      }
+
+      return Promise.resolve([]);
+    });
+    salarioPagoRepository.query.mockResolvedValue([{ monto: '250' }]);
 
     camionesRepository.createQueryBuilder.mockReturnValue({
       where: jest.fn().mockReturnThis(),
       getCount: jest.fn().mockResolvedValue(1),
     });
     mantenimientoRepository.find.mockResolvedValue([{ camionId: 1, costoReal: '200' }]);
-    salarioPagoRepository.find.mockResolvedValue([{ monto: '250' }]);
     documentosCamionRepository.find.mockResolvedValue([
       { camionId: 1, costo: '310', createdAt: start, fechaVencimiento: end },
     ]);
     choferDocumentosRepository.createQueryBuilder.mockReturnValue(createQueryBuilderMock());
 
-    const resumen = await service.getResumen();
+    const resumen = await service.getResumen(
+      start.toISOString().slice(0, 10),
+      end.toISOString().slice(0, 10),
+    );
 
     expect(resumen.ingresosDelMes).toBe(1000);
     expect(resumen.gastosDelMes).toBe(910);
@@ -119,6 +133,48 @@ describe('DashboardService', () => {
       mantenimiento: 200,
       documentosFijos: 310,
     });
+  });
+
+  it('no falla si Railway todavia no tiene la tabla o columnas de pagos de salarios', async () => {
+    const {
+      service,
+      viajesRepository,
+      camionesRepository,
+      mantenimientoRepository,
+      documentosCamionRepository,
+      choferDocumentosRepository,
+    } = createService();
+
+    viajesRepository.find.mockResolvedValue([
+      {
+        camionId: 1,
+        valorViaje: '1000',
+        costoCombustible: '100',
+        otrosGastos: '50',
+      },
+    ]);
+    viajesRepository.query.mockImplementation((sql: string) => {
+      if (sql.includes('SHOW COLUMNS FROM choferes_salarios_pagos')) {
+        return Promise.reject(new Error('Table \"choferes_salarios_pagos\" doesn\'t exist'));
+      }
+
+      return Promise.resolve([]);
+    });
+
+    camionesRepository.createQueryBuilder.mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      getCount: jest.fn().mockResolvedValue(1),
+    });
+    mantenimientoRepository.find.mockResolvedValue([{ camionId: 1, costoReal: '200' }]);
+    documentosCamionRepository.find.mockResolvedValue([]);
+    choferDocumentosRepository.createQueryBuilder.mockReturnValue(createQueryBuilderMock());
+
+    const resumen = await service.getResumen('2026-03-15', '2026-04-15');
+
+    expect(resumen.ingresosDelMes).toBe(1000);
+    expect(resumen.detalleGastosDelMes.sueldos).toBe(0);
+    expect(resumen.gastosDelMes).toBe(350);
+    expect(resumen.gananciaNetaDelMes).toBe(650);
   });
 
   it('calcula el desempeño de camiones con costos documentales proyectados para el mes', async () => {
@@ -156,7 +212,10 @@ describe('DashboardService', () => {
       { camionId: 1, costo: '310', createdAt: start, fechaVencimiento: end },
     ]);
 
-    const [camion] = await service.getDesempenoCamiones();
+    const [camion] = await service.getDesempenoCamiones(
+      start.toISOString().slice(0, 10),
+      end.toISOString().slice(0, 10),
+    );
 
     expect(camion).toMatchObject({
       id: 1,
