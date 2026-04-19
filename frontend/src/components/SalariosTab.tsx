@@ -87,6 +87,45 @@ const getAttachmentExtension = (value?: string) => {
   return '.jpg';
 };
 
+const padDate = (value: number) => value.toString().padStart(2, '0');
+
+const getTodayLocalInputValue = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${padDate(today.getMonth() + 1)}-${padDate(today.getDate())}`;
+};
+
+const extractDatePart = (value?: string) => {
+  if (!value) return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  return { year: Number(year), month: Number(month), day: Number(day) };
+};
+
+const toDateInputValue = (value?: string) => {
+  const datePart = extractDatePart(value);
+  if (datePart) {
+    return `${datePart.year}-${padDate(datePart.month)}-${padDate(datePart.day)}`;
+  }
+
+  if (!value) {
+    return getTodayLocalInputValue();
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return getTodayLocalInputValue();
+  }
+
+  return `${parsed.getFullYear()}-${padDate(parsed.getMonth() + 1)}-${padDate(parsed.getDate())}`;
+};
+
+const formatDateForDisplay = (value?: string) => {
+  const datePart = extractDatePart(value);
+  if (!datePart) return '-';
+  return new Date(datePart.year, datePart.month - 1, datePart.day).toLocaleDateString('es-CL');
+};
+
 interface SalariosTabProps {
   choferId: number;
 }
@@ -102,7 +141,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
   const [pagoError, setPagoError] = useState<string | null>(null);
   const [pagoForm, setPagoForm] = useState({
     monto: '',
-    fechaPago: new Date().toISOString().split('T')[0],
+    fechaPago: getTodayLocalInputValue(),
     metodoPago: 'transferencia',
     tipo: TipoPagoSalario.ADELANTO,
     comprobante: '',
@@ -116,7 +155,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
     totalComisiones: '0',
     bonos: '0',
     deducciones: '0',
-    fechaPago: new Date().toISOString().split('T')[0],
+    fechaPago: getTodayLocalInputValue(),
     metodoPago: 'transferencia',
     monto: '',
     tipo: TipoPagoSalario.ADELANTO,
@@ -136,7 +175,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
   const [previewAttachment, setPreviewAttachment] = useState<string | null>(null);
   const [pagoEditarForm, setPagoEditarForm] = useState({
     monto: '',
-    fechaPago: new Date().toISOString().split('T')[0],
+    fechaPago: getTodayLocalInputValue(),
     metodoPago: 'transferencia',
     tipo: TipoPagoSalario.ADELANTO,
     comprobante: '',
@@ -299,7 +338,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
     setPagoError(null);
     setPagoForm({
       monto: saldo > 0 ? saldo.toFixed(2) : '',
-      fechaPago: new Date().toISOString().split('T')[0],
+      fechaPago: getTodayLocalInputValue(),
       metodoPago: 'transferencia',
       tipo: TipoPagoSalario.ADELANTO,
       comprobante: salario.comprobante || '',
@@ -325,7 +364,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
       totalComisiones: '0',
       bonos: '0',
       deducciones: '0',
-      fechaPago: new Date().toISOString().split('T')[0],
+      fechaPago: getTodayLocalInputValue(),
       metodoPago: 'transferencia',
       monto: '',
       tipo: TipoPagoSalario.ADELANTO,
@@ -346,9 +385,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
     setPagoEditando({ salarioId, pagoId: pago.id });
     setPagoEditarForm({
       monto: Number(pago.monto || 0).toFixed(2),
-      fechaPago: pago.fechaPago
-        ? new Date(pago.fechaPago).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0],
+      fechaPago: toDateInputValue(pago.fechaPago),
       metodoPago: pago.metodoPago || 'transferencia',
       tipo: pago.tipo || TipoPagoSalario.ADELANTO,
       comprobante: pago.comprobante || '',
@@ -612,7 +649,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                 <div>
                   <h4>{formatPeriodo(salario.mes, salario.anio)}</h4>
                   <p>
-                    Fecha: {new Date(pago.fechaPago).toLocaleDateString('es-CL')} | Metodo: {pago.metodoPago}
+                    Fecha: {formatDateForDisplay(pago.fechaPago)} | Metodo: {pago.metodoPago}
                   </p>
                   {pago.comprobante && <p>Referencia: {pago.comprobante}</p>}
                 </div>

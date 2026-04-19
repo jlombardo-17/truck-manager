@@ -130,6 +130,25 @@ const Viajes: React.FC = () => {
     return badges[estado] || 'badge-info';
   };
 
+  const formatViajeAmount = (viaje: Viaje) => {
+    const currency = viaje.moneda === 'USD' ? 'USD' : 'UYU';
+    return new Intl.NumberFormat('es-UY', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: currency === 'USD' ? 2 : 0,
+      maximumFractionDigits: currency === 'USD' ? 2 : 0,
+    }).format(Number(viaje.valorViaje || 0));
+  };
+
+  const formatViajeUyuEquivalent = (viaje: Viaje) => {
+    const equivalent = Number(viaje.valorViajeUyu || viaje.valorViaje || 0);
+    return new Intl.NumberFormat('es-UY', {
+      style: 'currency',
+      currency: 'UYU',
+      maximumFractionDigits: 0,
+    }).format(equivalent);
+  };
+
   return (
     <div className="viajes-page">
       <nav className="navbar">
@@ -340,7 +359,14 @@ const Viajes: React.FC = () => {
                   </td>
                   <td>{viaje.origen}</td>
                   <td>{viaje.destino}</td>
-                  <td className="valor-cell">${Number(viaje.valorViaje || 0).toFixed(2)}</td>
+                  <td className="valor-cell">
+                    {formatViajeAmount(viaje)}
+                    {viaje.moneda === 'USD' && (
+                      <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                        Eq. {formatViajeUyuEquivalent(viaje)}
+                      </div>
+                    )}
+                  </td>
                   <td>{viaje.fechaPago ? new Date(viaje.fechaPago).toLocaleDateString('es-UY') : 'Pendiente'}</td>
                   <td className="km-cell">{Number(viaje.kmRecorridos || 0).toFixed(2)} km</td>
                   <td className="estado-cell">

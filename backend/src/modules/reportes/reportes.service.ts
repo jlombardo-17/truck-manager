@@ -75,7 +75,7 @@ export class ReportesService {
     for (const viaje of viajes) {
       const key = this.toBucketKey(viaje.fechaInicio, granularidad);
       const bucket = this.ensureBucket(buckets, key);
-      const ingreso = this.toNumber(viaje.valorViaje);
+      const ingreso = this.getIngresoViajeUyu(viaje);
       const gastoCombustible = this.toNumber(viaje.costoCombustible);
       const otrosGastos = this.toNumber(viaje.otrosGastos);
       const kmRecorridos = this.toNumber(viaje.kmRecorridos);
@@ -208,7 +208,7 @@ export class ReportesService {
       }
 
       const bucket = buckets.get(key)!;
-      const ingreso = this.toNumber(viaje.valorViaje);
+      const ingreso = this.getIngresoViajeUyu(viaje);
       bucket.ingresos += ingreso;
       bucket.gastosOperativos += this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos);
 
@@ -645,6 +645,11 @@ export class ReportesService {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
+  private getIngresoViajeUyu(viaje: Viaje | Record<string, unknown>): number {
+    const record = viaje as Record<string, unknown>;
+    return this.toNumber(record.valorViajeUyu ?? record.valor_viaje_uyu ?? record.valorViaje ?? record.valor_viaje);
+  }
+
   private round2(value: number): number {
     return Math.round(value * 100) / 100;
   }
@@ -785,9 +790,9 @@ export class ReportesService {
 
       const chofer = choferesMap.get(choferId)!;
       chofer.viajesCompletos += 1;
-      chofer.ingresos += this.toNumber(viaje.valorViaje);
+      chofer.ingresos += this.getIngresoViajeUyu(viaje);
       const porcentajeComision = this.toNumber(viaje.chofer?.porcentajeComision || 0);
-      chofer.comisiones += (this.toNumber(viaje.valorViaje) * porcentajeComision) / 100;
+      chofer.comisiones += (this.getIngresoViajeUyu(viaje) * porcentajeComision) / 100;
     }
 
     const desempenio = Array.from(choferesMap.values())
@@ -1023,7 +1028,7 @@ export class ReportesService {
 
       const mes = ingresosPorMes.get(mesKey)!;
       mes.viajesCompletos += 1;
-      const ingreso = this.toNumber(viaje.valorViaje);
+      const ingreso = this.getIngresoViajeUyu(viaje);
       mes.ingresos += ingreso;
 
       // Gastos

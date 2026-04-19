@@ -43,6 +43,7 @@ const ViajeForm: React.FC = () => {
     origen: '',
     destino: '',
     valorViaje: 0,
+    moneda: 'UYU',
     kmRecorridos: 0,
     estado: 'en_progreso',
   });
@@ -60,6 +61,7 @@ const ViajeForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing] = useState(!!id);
+  const [usdUyuRate, setUsdUyuRate] = useState<number>(40);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -68,6 +70,10 @@ const ViajeForm: React.FC = () => {
 
   const gastosOperativos = (formData.costoCombustible || 0) + (formData.otrosGastos || 0);
   const gananciaAntesDeComisiones = (formData.valorViaje || 0) - gastosOperativos;
+  const valorViajeEquivalenteUyu =
+    formData.moneda === 'USD'
+      ? Number(formData.valorViaje || 0) * usdUyuRate
+      : Number(formData.valorViaje || 0);
   const totalComisiones = comisiones.reduce(
     (sum, comision) => sum + (Number(comision.montoTotal) || 0),
     0,
@@ -91,6 +97,15 @@ const ViajeForm: React.FC = () => {
         camionesService.getAll(),
         choferesService.getAll(),
       ]);
+
+      try {
+        const rateInfo = await viajsService.getUsdUyuRate();
+        if (Number.isFinite(rateInfo.rate) && rateInfo.rate > 0) {
+          setUsdUyuRate(rateInfo.rate);
+        }
+      } catch (rateError) {
+        console.warn('No se pudo obtener cotización USD/UYU en tiempo real', rateError);
+      }
 
       setCamiones(camionesData);
       setChoferes(choferesData);
@@ -156,6 +171,7 @@ const ViajeForm: React.FC = () => {
           fechaInicio: toDateInputValue(viaje.fechaInicio),
           fechaFin: toDateInputValue(viaje.fechaFin),
           fechaPago: toDateInputValue(viaje.fechaPago),
+          moneda: viaje.moneda === 'USD' ? 'USD' : 'UYU',
           valorViaje: toNumberOrZero(viaje.valorViaje),
           kmRecorridos: toNumberOrZero(viaje.kmRecorridos),
           consumoCombustible: toNumberOrUndefined(viaje.consumoCombustible),
@@ -243,6 +259,7 @@ const ViajeForm: React.FC = () => {
         fechaInicio: toDateInputValue(formData.fechaInicio),
         fechaFin: toDateInputValue(formData.fechaFin),
         fechaPago: toDateInputValue(formData.fechaPago),
+        moneda: formData.moneda === 'USD' ? 'USD' : 'UYU',
         camionId: toNumberOrZero(formData.camionId),
         choferId: toNumberOrZero(formData.choferId),
         valorViaje: toNumberOrZero(formData.valorViaje),
@@ -594,6 +611,30 @@ const ViajeForm: React.FC = () => {
                 required
                 className="form-input"
               />
+              <small className="field-hint">
+                Equivalente estimado en UYU: {new Intl.NumberFormat('es-UY', { style: 'currency', currency: 'UYU', maximumFractionDigits: 2 }).format(valorViajeEquivalenteUyu)}
+              </small>
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="moneda">Moneda del viaje *</label>
+              <select
+                id="moneda"
+                name="moneda"
+                value={formData.moneda || 'UYU'}
+                onChange={handleInputChange}
+                required
+                className="form-input"
+              >
+                <option value="UYU">Pesos (UYU)</option>
+                <option value="USD">Dolares (USD)</option>
+              </select>
+              <small className="field-hint">
+                Si eliges USD, se guarda el monto original en USD y su equivalente en UYU para balances y reportes.
+              </small>
+              <small className="field-hint">
+                Cotización usada en tiempo real: 1 USD = {new Intl.NumberFormat('es-UY', { maximumFractionDigits: 4 }).format(usdUyuRate)} UYU.
+              </small>
             </div>
 
             <div className="form-field">

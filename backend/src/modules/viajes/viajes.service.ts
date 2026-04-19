@@ -25,9 +25,104 @@ type RoutePointInput = {
   notas?: string;
 };
 
+type ViajeCurrency = 'UYU' | 'USD';
+
 @Injectable()
 export class ViajsService {
   private readonly logger = new Logger(ViajsService.name);
+  private usdUyuRateCache: { rate: number; fetchedAtMs: number } | null = null;
+
+  private getConfiguredUsdToUyuRate(): number {
+    const parsed = Number(process.env.USD_TO_UYU_RATE);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 40;
+  }
+
+  private normalizeCurrency(value?: string): ViajeCurrency {
+    if ((value || '').toUpperCase() === 'USD') return 'USD';
+    return 'UYU';
+  }
+
+  private roundToTwo(value: number): number {
+    return Math.round(value * 100) / 100;
+  }
+
+  private async getUsdUyuRateInfo(): Promise<{ rate: number; source: string; fetchedAt: string }> {
+    const nowMs = Date.now();
+
+    if (this.usdUyuRateCache && nowMs - this.usdUyuRateCache.fetchedAtMs < 15 * 60 * 1000) {
+      return {
+        rate: this.usdUyuRateCache.rate,
+        source: 'cache',
+        fetchedAt: new Date(this.usdUyuRateCache.fetchedAtMs).toISOString(),
+      };
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch('https://open.er-api.com/v6/latest/USD', {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json() as { rates?: Record<string, unknown> };
+      const rate = Number(payload?.rates?.UYU);
+      if (!Number.isFinite(rate) || rate <= 0) {
+        throw new Error('Tipo de cambio UYU inválido en la respuesta externa');
+      }
+
+      this.usdUyuRateCache = { rate, fetchedAtMs: nowMs };
+
+      return {
+        rate,
+        source: 'open.er-api.com',
+        fetchedAt: new Date(nowMs).toISOString(),
+      };
+    } catch (error) {
+      const fallbackRate = this.getConfiguredUsdToUyuRate();
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`No se pudo obtener cotización online USD/UYU (${message}). Se usa fallback=${fallbackRate}`);
+      return {
+        rate: fallbackRate,
+        source: 'fallback-env',
+        fetchedAt: new Date(nowMs).toISOString(),
+      };
+    }
+  }
+
+  private toUyuAmount(value: unknown, currency: ViajeCurrency, usdUyuRate: number): number | null {
+    if (value === undefined || value === null || value === '') return null;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return null;
+    if (currency === 'USD') {
+      return this.roundToTwo(parsed * usdUyuRate);
+    }
+    return this.roundToTwo(parsed);
+  }
+
+  private normalizeComisionesToUyu(
+    comisiones: any[] | undefined,
+    currency: ViajeCurrency,
+    usdUyuRate: number,
+  ): any[] | undefined {
+    if (!Array.isArray(comisiones)) {
+      return comisiones;
+    }
+
+    return comisiones.map((comision) => ({
+      ...comision,
+      montoBase: this.toUyuAmount(comision?.montoBase, currency, usdUyuRate) ?? comision?.montoBase,
+      montoFijo: this.toUyuAmount(comision?.montoFijo, currency, usdUyuRate) ?? comision?.montoFijo,
+    }));
+  }
+
+  async getUsdUyuRate() {
+    return this.getUsdUyuRateInfo();
+  }
 
   constructor(
     @InjectRepository(Viaje)
@@ -47,6 +142,18 @@ export class ViajsService {
       await this.assertCamionExists(createViajDTO.camionId);
       await this.assertChoferExists(createViajDTO.choferId);
 
+      const requestedCurrency = this.normalizeCurrency(createViajDTO.moneda);
+      const rateInfo = requestedCurrency === 'USD' ? await this.getUsdUyuRateInfo() : null;
+      const usdUyuRate = rateInfo?.rate ?? 1;
+      const valorViajeOriginal = Number(createViajDTO.valorViaje) || 0;
+      const valorViajeUyu =
+        this.toUyuAmount(valorViajeOriginal, requestedCurrency, usdUyuRate) ?? 0;
+      const comisionesNormalized = this.normalizeComisionesToUyu(
+        createViajDTO.comisiones,
+        requestedCurrency,
+        usdUyuRate,
+      );
+
       const viaje = this.viajRepository.create({
         numeroViaje: createViajDTO.numeroViaje,
         camion: { id: createViajDTO.camionId } as Camion,
@@ -62,7 +169,10 @@ export class ViajsService {
         longitudDestino: createViajDTO.longitudDestino as any || null,
         descripcionCarga: createViajDTO.descripcionCarga,
         pesoCargaKg: createViajDTO.pesoCargaKg as any || null,
-        valorViaje: createViajDTO.valorViaje,
+        valorViaje: valorViajeOriginal,
+        valorViajeUyu,
+        moneda: requestedCurrency,
+        cotizacionUsdUyu: requestedCurrency === 'USD' ? usdUyuRate : null,
         kmRecorridos: createViajDTO.kmRecorridos as any || 0,
         consumoCombustible: createViajDTO.consumoCombustible as any || null,
         costoCombustible: createViajDTO.costoCombustible as any || 0,
@@ -83,11 +193,11 @@ export class ViajsService {
         await this.viajRutaRepository.save(rutas);
       }
 
-      if (createViajDTO.comisiones && createViajDTO.comisiones.length > 0) {
+      if (comisionesNormalized && comisionesNormalized.length > 0) {
         await this.guardarComisiones(
           savedViaje.id,
-          savedViaje.valorViaje,
-          createViajDTO.comisiones,
+          savedViaje.valorViajeUyu,
+          comisionesNormalized,
         );
       }
 
@@ -211,8 +321,31 @@ export class ViajsService {
         comisiones,
         camionId,
         choferId,
+        valorViaje,
+        moneda,
         ...viajeChanges
       } = updateViajDTO;
+
+      const hasCurrencyChange = Object.prototype.hasOwnProperty.call(updateViajDTO, 'moneda');
+      const hasAmountChange = Object.prototype.hasOwnProperty.call(updateViajDTO, 'valorViaje');
+      const effectiveCurrency = this.normalizeCurrency(moneda ?? viaje.moneda);
+
+      const shouldResolveRate = effectiveCurrency === 'USD' && (hasCurrencyChange || hasAmountChange || Boolean(comisiones));
+      const rateInfo = shouldResolveRate ? await this.getUsdUyuRateInfo() : null;
+      const usdUyuRate = rateInfo?.rate || Number(viaje.cotizacionUsdUyu) || 1;
+
+      const nextOriginalAmount = hasAmountChange
+        ? Number(valorViaje)
+        : Number(viaje.valorViaje);
+
+      const nextValorViajeUyu =
+        this.toUyuAmount(nextOriginalAmount, effectiveCurrency, usdUyuRate) ?? Number(viaje.valorViajeUyu || viaje.valorViaje || 0);
+
+      const comisionesNormalized = this.normalizeComisionesToUyu(
+        comisiones,
+        effectiveCurrency,
+        usdUyuRate,
+      );
 
       if (camionId) {
         await this.assertCamionExists(camionId);
@@ -226,6 +359,14 @@ export class ViajsService {
         ...viajeChanges,
         ...(camionId ? { camion: { id: camionId } as Camion } : {}),
         ...(choferId ? { chofer: { id: choferId } as Chofer } : {}),
+        ...(hasAmountChange || hasCurrencyChange
+          ? {
+              valorViaje: Number.isFinite(nextOriginalAmount) ? nextOriginalAmount : Number(viaje.valorViaje),
+              valorViajeUyu: nextValorViajeUyu,
+              moneda: effectiveCurrency,
+              cotizacionUsdUyu: effectiveCurrency === 'USD' ? usdUyuRate : null,
+            }
+          : {}),
         fechaInicio: viajeChanges.fechaInicio ? new Date(viajeChanges.fechaInicio) : viaje.fechaInicio,
         fechaFin: viajeChanges.fechaFin ? new Date(viajeChanges.fechaFin) : viaje.fechaFin,
         fechaPago: Object.prototype.hasOwnProperty.call(viajeChanges, 'fechaPago')
@@ -254,9 +395,12 @@ export class ViajsService {
         await this.viajRutaRepository.save(rutasToSave);
       }
 
-      if (comisiones) {
+      if (comisionesNormalized) {
         await this.viajComisionRepository.delete({ viajeId: id });
-        await this.guardarComisiones(id, viaje.valorViaje, comisiones);
+        const baseMontoParaComisiones = Number(
+          (hasAmountChange || hasCurrencyChange ? nextValorViajeUyu : viaje.valorViajeUyu) || viaje.valorViaje,
+        );
+        await this.guardarComisiones(id, baseMontoParaComisiones, comisionesNormalized);
       }
 
       return this.findOneWithRelations(id);

@@ -15,6 +15,9 @@ export interface Viaje {
   descripcionCarga?: string;
   pesoCargaKg?: number;
   valorViaje: number;
+  moneda?: 'UYU' | 'USD';
+  valorViajeUyu?: number;
+  cotizacionUsdUyu?: number;
   kmRecorridos?: number;
   consumoCombustible?: number;
   costoCombustible?: number;

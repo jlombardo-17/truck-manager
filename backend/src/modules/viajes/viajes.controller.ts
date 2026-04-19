@@ -45,6 +45,14 @@ export class ViajsController {
   }
 
   /**
+   * GET /api/viajes/tipo-cambio/usd-uyu - Obtener cotización actual USD a UYU
+   */
+  @Get('tipo-cambio/usd-uyu')
+  async getUsdUyuRate() {
+    return this.viajsService.getUsdUyuRate();
+  }
+
+  /**
    * GET /api/viajes/:id - Obtener un viaje por ID
    */
   @Get(':id')

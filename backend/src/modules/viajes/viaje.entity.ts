@@ -64,6 +64,15 @@ export class Viaje {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   valorViaje: number;
 
+  @Column({ name: 'valor_viaje_uyu', type: 'decimal', precision: 12, scale: 2, default: 0 })
+  valorViajeUyu: number;
+
+  @Column({ type: 'varchar', length: 3, default: 'UYU' })
+  moneda: string;
+
+  @Column({ name: 'cotizacion_usd_uyu', type: 'decimal', precision: 10, scale: 4, nullable: true })
+  cotizacionUsdUyu: number | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   kmRecorridos: number;
 

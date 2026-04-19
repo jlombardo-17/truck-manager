@@ -71,9 +71,9 @@ const Dashboard: React.FC = () => {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-PY', {
+    return new Intl.NumberFormat('es-UY', {
       style: 'currency',
-      currency: 'PYG',
+      currency: 'UYU',
     }).format(value);
   };
 

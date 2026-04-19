@@ -50,6 +50,10 @@ const normalizeViajeResponse = (value: unknown): Viaje => {
   const viaje = (value || {}) as Viaje & Record<string, unknown>;
   return {
     ...viaje,
+    moneda: viaje.moneda === 'USD' ? 'USD' : 'UYU',
+    valorViajeUyu: toNumberOrUndefined(viaje.valorViajeUyu) ?? toNumberOrUndefined(viaje.valor_viaje_uyu),
+    cotizacionUsdUyu:
+      toNumberOrUndefined(viaje.cotizacionUsdUyu) ?? toNumberOrUndefined(viaje.cotizacion_usd_uyu),
     camionId: toNumberOrUndefined(viaje.camionId) ?? toNumberOrUndefined((viaje.camion as { id?: unknown } | undefined)?.id) ?? 0,
     choferId: toNumberOrUndefined(viaje.choferId) ?? toNumberOrUndefined((viaje.chofer as { id?: unknown } | undefined)?.id) ?? 0,
     rutas: normalizeArrayResponse<ViajRuta>(viaje.rutas, 'rutas'),
@@ -88,6 +92,7 @@ const sanitizeViajePayload = (
     fechaInicio: toDateString(viaje.fechaInicio),
     fechaFin: toDateString(viaje.fechaFin),
     fechaPago: toDateString(viaje.fechaPago),
+    moneda: viaje.moneda === 'USD' ? 'USD' : 'UYU',
     camionId: toNumberOrUndefined(viaje.camionId),
     choferId: toNumberOrUndefined(viaje.choferId),
     valorViaje: toNumberOrUndefined(viaje.valorViaje),
@@ -129,6 +134,9 @@ export interface Viaje {
   descripcionCarga?: string;
   pesoCargaKg?: number;
   valorViaje: number;
+  moneda?: 'UYU' | 'USD';
+  valorViajeUyu?: number;
+  cotizacionUsdUyu?: number;
   kmRecorridos?: number;
   consumoCombustible?: number;
   costoCombustible?: number;
@@ -164,6 +172,18 @@ export interface ViajComision {
 }
 
 export const viajsService = {
+  getUsdUyuRate: async (): Promise<{ rate: number; source: string; fetchedAt: string }> => {
+    const response = await axios.get<{ rate: number; source: string; fetchedAt: string }>(
+      `${API_BASE_URL}/viajes/tipo-cambio/usd-uyu`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      },
+    );
+    return response.data;
+  },
+
   /**
    * Obtener todos los viajes
    */

@@ -79,6 +79,11 @@ export class DashboardService {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
+  private getIngresoViajeUyu(viaje: Viaje | Record<string, unknown>): number {
+    const record = viaje as Record<string, unknown>;
+    return this.toNumber(record.valorViajeUyu ?? record.valor_viaje_uyu ?? record.valorViaje ?? record.valor_viaje);
+  }
+
   private formatChoferNombre(chofer?: Chofer): string {
     const nombreCompleto = `${chofer?.nombre || ''} ${chofer?.apellido || ''}`
       .replace(/\s+/g, ' ')
@@ -249,7 +254,7 @@ export class DashboardService {
 
       // Ingresos del período
       const ingresosDelMes = viajesMes.reduce(
-        (sum, v) => sum + this.toNumber(v.valorViaje),
+        (sum, v) => sum + this.getIngresoViajeUyu(v),
         0,
       );
 
@@ -359,7 +364,7 @@ export class DashboardService {
     const { start: primerDia, end: ultimoDia } = this.getDateRange(fechaInicio, fechaFin);
     const viajeColumns = await this.getTableColumns('viajes');
     const camionIdColumn = this.pickColumn(viajeColumns, ['camion_id', 'camionId']);
-    const valorViajeColumn = this.pickColumn(viajeColumns, ['valorViaje', 'valor_viaje']);
+    const valorViajeColumn = this.pickColumn(viajeColumns, ['valor_viaje_uyu', 'valorViajeUyu', 'valorViaje', 'valor_viaje']);
     const costoCombustibleColumn = this.pickColumn(viajeColumns, ['costoCombustible', 'costo_combustible']);
     const otrosGastosColumn = this.pickColumn(viajeColumns, ['otrosGastos', 'otros_gastos']);
     const kmRecorridosColumn = this.pickColumn(viajeColumns, ['kmRecorridos', 'kms_recorridos', 'km_recorridos']);
@@ -486,7 +491,7 @@ export class DashboardService {
     const comisionColumns = await this.getTableColumns('viajes_comisiones');
     const viajeIdColumn = this.pickColumn(viajeColumns, ['id']);
     const choferIdColumn = this.pickColumn(viajeColumns, ['chofer_id', 'choferId']);
-    const valorViajeColumn = this.pickColumn(viajeColumns, ['valorViaje', 'valor_viaje']);
+    const valorViajeColumn = this.pickColumn(viajeColumns, ['valor_viaje_uyu', 'valorViajeUyu', 'valorViaje', 'valor_viaje']);
     const estadoColumn = this.pickColumn(viajeColumns, ['estado']);
     const fechaInicioColumn = this.pickColumn(viajeColumns, ['fechaInicio', 'fecha_inicio']);
     const comisionViajeIdColumn = this.pickColumn(comisionColumns, ['viaje_id', 'viajeId']);

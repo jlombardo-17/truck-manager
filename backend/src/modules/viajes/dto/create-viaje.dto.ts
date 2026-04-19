@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested, IsIn } from 'class-validator';
 import { Type, Exclude } from 'class-transformer';
 
 class ViajRutaDTO {
@@ -111,6 +111,11 @@ export class CreateViajDTO {
 
   @IsNumber({ allowNaN: false, allowInfinity: false })
   valorViaje: number;
+
+  @IsString()
+  @IsIn(['UYU', 'USD', 'PYG'])
+  @IsOptional()
+  moneda?: string;
 
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
