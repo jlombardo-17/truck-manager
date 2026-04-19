@@ -58,11 +58,11 @@ const Dashboard: React.FC = () => {
   };
 
   const formatDateRangeLabel = (): string => {
-    const startDay = dateRange.startDate.toLocaleDateString('es-PY', { 
+    const startDay = dateRange.startDate.toLocaleDateString('es-UY', { 
       day: '2-digit', 
       month: 'short' 
     });
-    const endDay = dateRange.endDate.toLocaleDateString('es-PY', { 
+    const endDay = dateRange.endDate.toLocaleDateString('es-UY', { 
       day: '2-digit', 
       month: 'short', 
       year: 'numeric' 
@@ -74,6 +74,14 @@ const Dashboard: React.FC = () => {
     return new Intl.NumberFormat('es-UY', {
       style: 'currency',
       currency: 'UYU',
+    }).format(value);
+  };
+
+  const formatDashboardCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-UY', {
+      style: 'currency',
+      currency: 'UYU',
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -115,24 +123,24 @@ const Dashboard: React.FC = () => {
                 stats={[
                   {
                     label: `Ingresos - ${formatDateRangeLabel()}`,
-                    value: `$${Number(resumen.ingresosDelMes || 0).toFixed(0)}`,
-                    unit: 'USD',
+                    value: formatDashboardCurrency(Number(resumen.ingresosDelMes || 0)),
+                    unit: 'UYU',
                     icon: '💰',
                     color: 'green',
                     trend: { direction: 'up', percentage: 12 },
                   },
                   {
                     label: `Gastos - ${formatDateRangeLabel()}`,
-                    value: `$${Number(resumen.gastosDelMes || 0).toFixed(0)}`,
-                    unit: 'USD',
+                    value: formatDashboardCurrency(Number(resumen.gastosDelMes || 0)),
+                    unit: 'UYU',
                     icon: '📉',
                     color: 'red',
                     trend: { direction: 'down', percentage: 5 },
                   },
                   {
                     label: `Ganancia Neta - ${formatDateRangeLabel()}`,
-                    value: `$${Number(resumen.gananciaNetaDelMes || 0).toFixed(0)}`,
-                    unit: 'USD',
+                    value: formatDashboardCurrency(Number(resumen.gananciaNetaDelMes || 0)),
+                    unit: 'UYU',
                     icon: '📊',
                     color: 'blue',
                     trend: { direction: 'up', percentage: 18 },

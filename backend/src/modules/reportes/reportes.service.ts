@@ -647,7 +647,12 @@ export class ReportesService {
 
   private getIngresoViajeUyu(viaje: Viaje | Record<string, unknown>): number {
     const record = viaje as Record<string, unknown>;
-    return this.toNumber(record.valorViajeUyu ?? record.valor_viaje_uyu ?? record.valorViaje ?? record.valor_viaje);
+    const ingresoUyu = this.toNumber(record.valorViajeUyu ?? record.valor_viaje_uyu);
+    if (ingresoUyu > 0) {
+      return ingresoUyu;
+    }
+
+    return this.toNumber(record.valorViaje ?? record.valor_viaje);
   }
 
   private round2(value: number): number {
