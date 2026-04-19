@@ -52,35 +52,59 @@ export interface DesempenoChofer {
 
 export const dashboardService = {
   async getResumen(fechaInicio?: string, fechaFin?: string): Promise<DashboardResumen> {
-    const token = authService.getToken();
-    const params = new URLSearchParams();
-    if (fechaInicio) params.append('fechaInicio', fechaInicio);
-    if (fechaFin) params.append('fechaFin', fechaFin);
-    
-    const queryString = params.toString();
-    const url = queryString
-      ? `${DASHBOARD_BASE_PATH}/resumen?${queryString}`
-      : `${DASHBOARD_BASE_PATH}/resumen`;
-    
-    const response = await axios.get<unknown>(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const payload = normalizeObjectResponse<Partial<DashboardResumen>>(response.data);
-    return {
-      ingresosDelMes: Number(payload.ingresosDelMes) || 0,
-      gastosDelMes: Number(payload.gastosDelMes) || 0,
-      gananciaNetaDelMes: Number(payload.gananciaNetaDelMes) || 0,
-      camionesActivos: Number(payload.camionesActivos) || 0,
-      viajesCompletados: Number(payload.viajesCompletados) || 0,
-      detalleGastosDelMes: {
-        operativosViaje: Number(payload.detalleGastosDelMes?.operativosViaje) || 0,
-        sueldos: Number(payload.detalleGastosDelMes?.sueldos) || 0,
-        mantenimiento: Number(payload.detalleGastosDelMes?.mantenimiento) || 0,
-        documentosFijos: Number(payload.detalleGastosDelMes?.documentosFijos) || 0,
-      },
-      mantenimientoPendiente: normalizeArrayResponse(payload.mantenimientoPendiente, 'mantenimientoPendiente'),
-      documentosPorVencer: normalizeArrayResponse(payload.documentosPorVencer, 'documentosPorVencer'),
-    };
+    try {
+      const token = authService.getToken();
+      const params = new URLSearchParams();
+      if (fechaInicio) params.append('fechaInicio', fechaInicio);
+      if (fechaFin) params.append('fechaFin', fechaFin);
+
+      const queryString = params.toString();
+      const url = queryString
+        ? `${DASHBOARD_BASE_PATH}/resumen?${queryString}`
+        : `${DASHBOARD_BASE_PATH}/resumen`;
+
+      const response = await axios.get<unknown>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const normalizedPayload = normalizeObjectResponse<Partial<DashboardResumen>>(response?.data);
+      const payload = normalizedPayload && typeof normalizedPayload === 'object'
+        ? normalizedPayload
+        : {};
+
+      return {
+        ingresosDelMes: Number(payload.ingresosDelMes) || 0,
+        gastosDelMes: Number(payload.gastosDelMes) || 0,
+        gananciaNetaDelMes: Number(payload.gananciaNetaDelMes) || 0,
+        camionesActivos: Number(payload.camionesActivos) || 0,
+        viajesCompletados: Number(payload.viajesCompletados) || 0,
+        detalleGastosDelMes: {
+          operativosViaje: Number(payload.detalleGastosDelMes?.operativosViaje) || 0,
+          sueldos: Number(payload.detalleGastosDelMes?.sueldos) || 0,
+          mantenimiento: Number(payload.detalleGastosDelMes?.mantenimiento) || 0,
+          documentosFijos: Number(payload.detalleGastosDelMes?.documentosFijos) || 0,
+        },
+        mantenimientoPendiente: normalizeArrayResponse(payload.mantenimientoPendiente, 'mantenimientoPendiente'),
+        documentosPorVencer: normalizeArrayResponse(payload.documentosPorVencer, 'documentosPorVencer'),
+      };
+    } catch (error) {
+      console.error('Error normalizando dashboard/resumen:', error);
+      return {
+        ingresosDelMes: 0,
+        gastosDelMes: 0,
+        gananciaNetaDelMes: 0,
+        camionesActivos: 0,
+        viajesCompletados: 0,
+        detalleGastosDelMes: {
+          operativosViaje: 0,
+          sueldos: 0,
+          mantenimiento: 0,
+          documentosFijos: 0,
+        },
+        mantenimientoPendiente: [],
+        documentosPorVencer: [],
+      };
+    }
   },
 
   async getDesempenoCamiones(fechaInicio?: string, fechaFin?: string): Promise<DesempenoCamion[]> {
