@@ -180,28 +180,34 @@ export class DashboardService {
   }
 
   private async getGastoSueldos(periodStart: Date, periodEnd: Date): Promise<number> {
-    const pagosColumns = await this.getOptionalTableColumns('choferes_salarios_pagos');
-    const fechaPagoColumn = this.pickOptionalColumn(pagosColumns, ['fecha_pago', 'fechaPago']);
-    const montoColumn = this.pickOptionalColumn(pagosColumns, ['monto']);
+    try {
+      const pagosColumns = await this.getOptionalTableColumns('choferes_salarios_pagos');
+      const fechaPagoColumn = this.pickOptionalColumn(pagosColumns, ['fecha_pago', 'fechaPago']);
+      const montoColumn = this.pickOptionalColumn(pagosColumns, ['monto']);
 
-    if (!fechaPagoColumn || !montoColumn) {
+      if (!fechaPagoColumn || !montoColumn) {
+        return 0;
+      }
+
+      const pagosSueldosMes = await this.salarioPagoRepository.query(
+        `
+          SELECT ${montoColumn} AS monto
+          FROM choferes_salarios_pagos
+          WHERE ${fechaPagoColumn} >= ?
+            AND ${fechaPagoColumn} <= ?
+        `,
+        [periodStart, periodEnd],
+      );
+
+      return pagosSueldosMes.reduce(
+        (sum: number, pago: { monto: unknown }) => sum + this.toNumber(pago.monto),
+        0,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Error al calcular gasto de sueldos: ${message}`);
       return 0;
     }
-
-    const pagosSueldosMes = await this.salarioPagoRepository.query(
-      `
-        SELECT ${montoColumn} AS monto
-        FROM choferes_salarios_pagos
-        WHERE ${fechaPagoColumn} >= ?
-          AND ${fechaPagoColumn} <= ?
-      `,
-      [periodStart, periodEnd],
-    );
-
-    return pagosSueldosMes.reduce(
-      (sum: number, pago: { monto: unknown }) => sum + this.toNumber(pago.monto),
-      0,
-    );
   }
 
   private getDateRange(fechaInicio?: string, fechaFin?: string): { start: Date; end: Date } {
@@ -228,101 +234,125 @@ export class DashboardService {
   }
 
   async getResumen(fechaInicio?: string, fechaFin?: string): Promise<DashboardResumen> {
-    const ahora = new Date();
-    const { start: primerDia, end: ultimoDia } = this.getDateRange(fechaInicio, fechaFin);
+    try {
+      const ahora = new Date();
+      const { start: primerDia, end: ultimoDia } = this.getDateRange(fechaInicio, fechaFin);
 
-    // Viajes completados en el período
-    const viajesMes = await this.viajesRepository.find({
-      relations: ['camion', 'chofer'],
-      where: {
-        estado: 'completado' as any,
-        fechaInicio: Between(primerDia, ultimoDia) as any,
-      },
-    });
+      // Viajes completados en el período
+      const viajesMes = await this.viajesRepository.find({
+        relations: ['camion', 'chofer'],
+        where: {
+          estado: 'completado' as any,
+          fechaInicio: Between(primerDia, ultimoDia) as any,
+        },
+      });
 
-    // Ingresos del período
-    const ingresosDelMes = viajesMes.reduce(
-      (sum, v) => sum + this.toNumber(v.valorViaje),
-      0,
-    );
-
-    const gastosOperativosViajes = viajesMes.reduce(
-      (sum, viaje) => sum + this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos),
-      0,
-    );
-
-    const mantenimientoMes = await this.mantenimientoRepository.find({
-      relations: ['camion'],
-      where: {
-        fechaPrograma: Between(primerDia, ultimoDia) as any,
-      },
-    });
-
-    const gastoMantenimiento = mantenimientoMes.reduce(
-      (sum, m) => sum + this.toNumber(m.costoReal),
-      0,
-    );
-
-    const gastoSueldos = await this.getGastoSueldos(primerDia, ultimoDia);
-
-    const documentosCamion = await this.documentosCamionRepository.find();
-
-    const gastoDocumentosCamion = documentosCamion.reduce(
-      (sum, documento) => sum + this.getProjectedDocumentCostForPeriod(documento, primerDia, ultimoDia),
-      0,
-    );
-
-    const gastosDelMes =
-      gastosOperativosViajes +
-      gastoSueldos +
-      gastoMantenimiento +
-      gastoDocumentosCamion;
-
-    // Camiones activos: usar el estado operativo real del vehículo.
-    const camionesActivos = await this.camionesRepository
-      .createQueryBuilder('camion')
-      .where('LOWER(camion.estado) IN (:...estados)', { estados: ['activo', 'operativo'] })
-      .getCount();
-
-    // Documentos por vencer (próximos 30 días)
-    const proximosMes = new Date();
-    proximosMes.setDate(proximosMes.getDate() + 30);
-
-    const documentosPorVencer = await this.choferDocumentosRepository
-      .createQueryBuilder('doc')
-      .leftJoinAndSelect('doc.chofer', 'chofer')
-      .where('doc.fechaVencimiento <= :fecha', { fecha: proximosMes })
-      .andWhere('doc.fechaVencimiento > :ahora', { ahora })
-      .orderBy('doc.fechaVencimiento', 'ASC')
-      .take(5)
-      .getMany();
-
-    const documentosFormato = documentosPorVencer.map((doc) => {
-      const diasRestantes = Math.ceil(
-        (doc.fechaVencimiento.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24),
+      // Ingresos del período
+      const ingresosDelMes = viajesMes.reduce(
+        (sum, v) => sum + this.toNumber(v.valorViaje),
+        0,
       );
-      return {
-        choferNombre: doc.chofer?.nombre || 'Desconocido',
-        documentoTipo: doc.tipo,
-        diasRestantes,
-      };
-    });
 
-    return {
-      ingresosDelMes,
-      gastosDelMes,
-      gananciaNetaDelMes: ingresosDelMes - gastosDelMes,
-      camionesActivos,
-      viajesCompletados: viajesMes.length,
-      detalleGastosDelMes: {
-        operativosViaje: gastosOperativosViajes,
-        sueldos: gastoSueldos,
-        mantenimiento: gastoMantenimiento,
-        documentosFijos: gastoDocumentosCamion,
-      },
-      mantenimientoPendiente: [],
-      documentosPorVencer: documentosFormato,
-    };
+      const gastosOperativosViajes = viajesMes.reduce(
+        (sum, viaje) => sum + this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos),
+        0,
+      );
+
+      const mantenimientoMes = await this.mantenimientoRepository.find({
+        relations: ['camion'],
+        where: {
+          fechaPrograma: Between(primerDia, ultimoDia) as any,
+        },
+      });
+
+      const gastoMantenimiento = mantenimientoMes.reduce(
+        (sum, m) => sum + this.toNumber(m.costoReal),
+        0,
+      );
+
+      const gastoSueldos = await this.getGastoSueldos(primerDia, ultimoDia);
+
+      const documentosCamion = await this.documentosCamionRepository.find();
+
+      const gastoDocumentosCamion = documentosCamion.reduce(
+        (sum, documento) => sum + this.getProjectedDocumentCostForPeriod(documento, primerDia, ultimoDia),
+        0,
+      );
+
+      const gastosDelMes =
+        gastosOperativosViajes +
+        gastoSueldos +
+        gastoMantenimiento +
+        gastoDocumentosCamion;
+
+      // Camiones activos: usar el estado operativo real del vehículo.
+      const camionesActivos = await this.camionesRepository
+        .createQueryBuilder('camion')
+        .where('LOWER(camion.estado) IN (:...estados)', { estados: ['activo', 'operativo'] })
+        .getCount();
+
+      // Documentos por vencer (próximos 30 días)
+      const proximosMes = new Date();
+      proximosMes.setDate(proximosMes.getDate() + 30);
+
+      const documentosPorVencer = await this.choferDocumentosRepository
+        .createQueryBuilder('doc')
+        .leftJoinAndSelect('doc.chofer', 'chofer')
+        .where('doc.fechaVencimiento IS NOT NULL')
+        .andWhere('doc.fechaVencimiento <= :fecha', { fecha: proximosMes })
+        .andWhere('doc.fechaVencimiento > :ahora', { ahora })
+        .orderBy('doc.fechaVencimiento', 'ASC')
+        .take(5)
+        .getMany();
+
+      const documentosFormato = documentosPorVencer
+        .filter((doc) => doc.fechaVencimiento) // Validar que no sea null
+        .map((doc) => {
+          const diasRestantes = Math.ceil(
+            (doc.fechaVencimiento!.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          return {
+            choferNombre: doc.chofer?.nombre || 'Desconocido',
+            documentoTipo: doc.tipo,
+            diasRestantes,
+          };
+        });
+
+      return {
+        ingresosDelMes,
+        gastosDelMes,
+        gananciaNetaDelMes: ingresosDelMes - gastosDelMes,
+        camionesActivos,
+        viajesCompletados: viajesMes.length,
+        detalleGastosDelMes: {
+          operativosViaje: gastosOperativosViajes,
+          sueldos: gastoSueldos,
+          mantenimiento: gastoMantenimiento,
+          documentosFijos: gastoDocumentosCamion,
+        },
+        mantenimientoPendiente: [],
+        documentosPorVencer: documentosFormato,
+      };
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error en getResumen: ${mensaje}`, error instanceof Error ? error.stack : '');
+      // Retornar datos por defecto en caso de error
+      return {
+        ingresosDelMes: 0,
+        gastosDelMes: 0,
+        gananciaNetaDelMes: 0,
+        camionesActivos: 0,
+        viajesCompletados: 0,
+        detalleGastosDelMes: {
+          operativosViaje: 0,
+          sueldos: 0,
+          mantenimiento: 0,
+          documentosFijos: 0,
+        },
+        mantenimientoPendiente: [],
+        documentosPorVencer: [],
+      };
+    }
   }
 
   async getDesempenoCamiones(fechaInicio?: string, fechaFin?: string): Promise<DesempenoCamion[]> {
