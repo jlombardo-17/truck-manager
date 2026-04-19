@@ -149,6 +149,13 @@ const Viajes: React.FC = () => {
     }).format(equivalent);
   };
 
+  const formatViajeDate = (value?: string) => {
+    if (!value) return '-';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '-';
+    return parsed.toLocaleDateString('es-UY');
+  };
+
   return (
     <div className="viajes-page">
       <nav className="navbar">
@@ -304,6 +311,8 @@ const Viajes: React.FC = () => {
                 <th>Origen</th>
                 <th>Destino</th>
                 <th>Valor</th>
+                <th>Inicio</th>
+                <th>Fin</th>
                 <th>Pago</th>
                 <th>KM</th>
                 <th className="estado-header">Estado</th>
@@ -313,7 +322,7 @@ const Viajes: React.FC = () => {
             <tbody>
               {skeletonRows.map((row) => (
                 <tr key={row}>
-                  <td colSpan={10}>
+                  <td colSpan={12}>
                     <div className="skeleton-line" />
                   </td>
                 </tr>
@@ -339,6 +348,8 @@ const Viajes: React.FC = () => {
                 <th>Origen</th>
                 <th>Destino</th>
                 <th>Valor</th>
+                <th>Inicio</th>
+                <th>Fin</th>
                 <th>Pago</th>
                 <th>KM</th>
                 <th className="estado-header">Estado</th>
@@ -367,7 +378,9 @@ const Viajes: React.FC = () => {
                       </div>
                     )}
                   </td>
-                  <td>{viaje.fechaPago ? new Date(viaje.fechaPago).toLocaleDateString('es-UY') : 'Pendiente'}</td>
+                  <td>{formatViajeDate(viaje.fechaInicio)}</td>
+                  <td>{formatViajeDate(viaje.fechaFin)}</td>
+                  <td>{viaje.fechaPago ? formatViajeDate(viaje.fechaPago) : 'Pendiente'}</td>
                   <td className="km-cell">{Number(viaje.kmRecorridos || 0).toFixed(2)} km</td>
                   <td className="estado-cell">
                     <select
