@@ -88,6 +88,9 @@ const sanitizeViajePayload = (
     origen: viaje.origen,
     destino: viaje.destino,
     descripcionCarga: viaje.descripcionCarga,
+    documentoDescarga: viaje.documentoDescarga,
+    documentoDescargaNombre: viaje.documentoDescargaNombre,
+    documentoDescargaAdjunto: viaje.documentoDescargaAdjunto,
     notas: viaje.notas,
     fechaInicio: toDateString(viaje.fechaInicio),
     fechaFin: toDateString(viaje.fechaFin),
@@ -132,6 +135,9 @@ export interface Viaje {
   latitudDestino?: number;
   longitudDestino?: number;
   descripcionCarga?: string;
+  documentoDescarga?: string;
+  documentoDescargaNombre?: string;
+  documentoDescargaAdjunto?: string;
   pesoCargaKg?: number;
   valorViaje: number;
   moneda?: 'UYU' | 'USD';

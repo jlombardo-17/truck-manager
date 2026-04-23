@@ -13,6 +13,17 @@ import '../styles/ViajeForm.css';
 const ViajeForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const MAX_DOCUMENTO_SIZE_MB = 10;
+  const ALLOWED_DOCUMENTO_MIME_TYPES = [
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/gif',
+    'image/bmp',
+    'image/svg+xml',
+  ];
+  const ALLOWED_DOCUMENTO_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg'];
 
   const toDateInputValue = (value?: string) => {
     if (!value) return '';
@@ -32,6 +43,57 @@ const ViajeForm: React.FC = () => {
   const toNumberOrZero = (value: unknown): number => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const normalizeMimeType = (mimeType: string) => mimeType.toLowerCase().split(';')[0].trim();
+
+  const getFileExtension = (fileName: string) => {
+    const parts = fileName.toLowerCase().split('.');
+    return parts.length > 1 ? parts.pop() || '' : '';
+  };
+
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('No se pudo leer el archivo seleccionado'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleDocumentoAdjuntoChange = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+
+    const normalizedMimeType = normalizeMimeType(file.type);
+    const extension = getFileExtension(file.name);
+    const isMimeAllowed = normalizedMimeType
+      ? ALLOWED_DOCUMENTO_MIME_TYPES.map((item) => normalizeMimeType(item)).includes(normalizedMimeType)
+      : false;
+    const isExtensionAllowed = ALLOWED_DOCUMENTO_EXTENSIONS.includes(extension);
+
+    if (!isMimeAllowed && !isExtensionAllowed) {
+      setError('Solo se permiten archivos PDF o imagen (PNG, JPG, WEBP, GIF, BMP, SVG)');
+      return;
+    }
+
+    const sizeMb = file.size / (1024 * 1024);
+    if (sizeMb > MAX_DOCUMENTO_SIZE_MB) {
+      setError(`El archivo supera el límite de ${MAX_DOCUMENTO_SIZE_MB}MB`);
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setFormData((prev) => ({
+        ...prev,
+        documentoDescargaAdjunto: dataUrl,
+        documentoDescargaNombre: file.name,
+      }));
+      setError(null);
+    } catch (err) {
+      console.error('Error adjuntando documento de descarga:', err);
+      setError('No se pudo procesar el archivo del documento de descarga');
+    }
   };
 
   // Estado del formulario
@@ -577,6 +639,66 @@ const ViajeForm: React.FC = () => {
                 rows={3}
                 className="form-input"
               />
+            </div>
+
+            <div className="form-field full-width">
+              <label htmlFor="documentoDescarga">Documento de Descarga (URL o referencia)</label>
+              <input
+                type="text"
+                id="documentoDescarga"
+                name="documentoDescarga"
+                value={formData.documentoDescarga || ''}
+                onChange={handleInputChange}
+                placeholder="Ej: https://.../remito-123.pdf o REM-123"
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-field full-width">
+              <label htmlFor="documentoDescargaAdjunto">Adjuntar documento de descarga (PDF o imagen)</label>
+              <input
+                type="file"
+                id="documentoDescargaAdjunto"
+                accept="application/pdf,image/*"
+                onChange={(event) => handleDocumentoAdjuntoChange(event.target.files)}
+                className="form-input"
+              />
+              <small className="field-hint">
+                Tamaño máximo: {MAX_DOCUMENTO_SIZE_MB}MB. Formatos: PDF, PNG, JPG, WEBP, GIF, BMP, SVG.
+              </small>
+
+              {formData.documentoDescargaAdjunto && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span>{formData.documentoDescargaNombre || 'Adjunto listo para guardar'}</span>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => window.open(formData.documentoDescargaAdjunto, '_blank', 'noopener,noreferrer')}
+                  >
+                    Ver adjunto
+                  </button>
+                  <a
+                    className="btn-secondary"
+                    href={formData.documentoDescargaAdjunto}
+                    download={formData.documentoDescargaNombre || 'documento-descarga'}
+                  >
+                    Descargar
+                  </a>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        documentoDescargaAdjunto: '',
+                        documentoDescargaNombre: '',
+                      }))
+                    }
+                  >
+                    Quitar adjunto
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="form-field">

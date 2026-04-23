@@ -170,6 +170,16 @@ export class DashboardService {
     return candidates.find((candidate) => columns.has(candidate)) ?? null;
   }
 
+  private async safeQuery<T>(label: string, fallback: T, callback: () => Promise<T>): Promise<T> {
+    try {
+      return await callback();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Dashboard (${label}) omitido por error: ${message}`);
+      return fallback;
+    }
+  }
+
   private parseQueryDate(value: string | undefined, endOfDay = false): Date | null {
     if (!value) {
       return null;
@@ -248,14 +258,34 @@ export class DashboardService {
       const ahora = new Date();
       const { start: primerDia, end: ultimoDia } = this.getDateRange(fechaInicio, fechaFin);
 
-      // Viajes completados en el período
-      const viajesMes = await this.viajesRepository.find({
-        relations: ['camion', 'chofer'],
-        where: {
-          estado: 'completado' as any,
-          fechaInicio: Between(primerDia, ultimoDia) as any,
+      const viajeColumns = await this.getTableColumns('viajes');
+      const valorViajeColumn = this.pickColumn(viajeColumns, ['valor_viaje_uyu', 'valorViajeUyu', 'valorViaje', 'valor_viaje']);
+      const costoCombustibleColumn = this.pickColumn(viajeColumns, ['costoCombustible', 'costo_combustible']);
+      const otrosGastosColumn = this.pickColumn(viajeColumns, ['otrosGastos', 'otros_gastos']);
+      const estadoColumn = this.pickColumn(viajeColumns, ['estado']);
+      const fechaInicioColumn = this.pickColumn(viajeColumns, ['fechaInicio', 'fecha_inicio']);
+
+      const viajesMes = await this.safeQuery(
+        'viajes de resumen',
+        [] as Array<{ valorViaje: unknown; costoCombustible: unknown; otrosGastos: unknown }>,
+        async () => {
+          const rows = await this.viajesRepository.query(
+            `
+              SELECT
+                ${valorViajeColumn} AS valorViaje,
+                ${costoCombustibleColumn} AS costoCombustible,
+                ${otrosGastosColumn} AS otrosGastos
+              FROM viajes
+              WHERE LOWER(${estadoColumn}) = ?
+                AND ${fechaInicioColumn} >= ?
+                AND ${fechaInicioColumn} <= ?
+            `,
+            ['completado', primerDia, ultimoDia],
+          );
+
+          return Array.isArray(rows) ? rows : [];
         },
-      });
+      );
 
       // Ingresos del período
       const ingresosDelMes = viajesMes.reduce(
@@ -268,21 +298,41 @@ export class DashboardService {
         0,
       );
 
-      const mantenimientoMes = await this.mantenimientoRepository.find({
-        relations: ['camion'],
-        where: {
-          fechaPrograma: Between(primerDia, ultimoDia) as any,
-        },
-      });
+      const mantenimientoColumns = await this.getOptionalTableColumns('mantenimiento_registros');
+      const fechaProgramaColumn = this.pickOptionalColumn(mantenimientoColumns, ['fechaPrograma', 'fecha_programa']);
+      const costoRealColumn = this.pickOptionalColumn(mantenimientoColumns, ['costoReal', 'costo_real']);
 
-      const gastoMantenimiento = mantenimientoMes.reduce(
-        (sum, m) => sum + this.toNumber(m.costoReal),
+      const gastosMantenimientoRows = fechaProgramaColumn && costoRealColumn
+        ? await this.safeQuery(
+            'mantenimiento de resumen',
+            [] as Array<{ costoReal: unknown }>,
+            async () => {
+              const rows = await this.mantenimientoRepository.query(
+                `
+                  SELECT ${costoRealColumn} AS costoReal
+                  FROM mantenimiento_registros
+                  WHERE ${fechaProgramaColumn} >= ?
+                    AND ${fechaProgramaColumn} <= ?
+                `,
+                [primerDia, ultimoDia],
+              );
+              return Array.isArray(rows) ? rows : [];
+            },
+          )
+        : [];
+
+      const gastoMantenimiento = gastosMantenimientoRows.reduce(
+        (sum, row) => sum + this.toNumber(row.costoReal),
         0,
       );
 
       const gastoSueldos = await this.getGastoSueldos(primerDia, ultimoDia);
 
-      const documentosCamion = await this.documentosCamionRepository.find();
+      const documentosCamion = await this.safeQuery(
+        'documentos de camion para prorrateo',
+        [] as Documento[],
+        async () => this.documentosCamionRepository.find(),
+      );
 
       const gastoDocumentosCamion = documentosCamion.reduce(
         (sum, documento) => sum + this.getProjectedDocumentCostForPeriod(documento, primerDia, ultimoDia),
@@ -296,24 +346,32 @@ export class DashboardService {
         gastoDocumentosCamion;
 
       // Camiones activos: usar el estado operativo real del vehículo.
-      const camionesActivos = await this.camionesRepository
-        .createQueryBuilder('camion')
-        .where('LOWER(camion.estado) IN (:...estados)', { estados: ['activo', 'operativo'] })
-        .getCount();
+      const camionesActivos = await this.safeQuery(
+        'camiones activos',
+        0,
+        async () => this.camionesRepository
+          .createQueryBuilder('camion')
+          .where('LOWER(camion.estado) IN (:...estados)', { estados: ['activo', 'operativo'] })
+          .getCount(),
+      );
 
       // Documentos por vencer (próximos 30 días)
       const proximosMes = new Date();
       proximosMes.setDate(proximosMes.getDate() + 30);
 
-      const documentosPorVencer = await this.choferDocumentosRepository
-        .createQueryBuilder('doc')
-        .leftJoinAndSelect('doc.chofer', 'chofer')
-        .where('doc.fechaVencimiento IS NOT NULL')
-        .andWhere('doc.fechaVencimiento <= :fecha', { fecha: proximosMes })
-        .andWhere('doc.fechaVencimiento > :ahora', { ahora })
-        .orderBy('doc.fechaVencimiento', 'ASC')
-        .take(5)
-        .getMany();
+      const documentosPorVencer = await this.safeQuery(
+        'documentos por vencer',
+        [] as ChoferDocumento[],
+        async () => this.choferDocumentosRepository
+          .createQueryBuilder('doc')
+          .leftJoinAndSelect('doc.chofer', 'chofer')
+          .where('doc.fechaVencimiento IS NOT NULL')
+          .andWhere('doc.fechaVencimiento <= :fecha', { fecha: proximosMes })
+          .andWhere('doc.fechaVencimiento > :ahora', { ahora })
+          .orderBy('doc.fechaVencimiento', 'ASC')
+          .take(5)
+          .getMany(),
+      );
 
       const documentosFormato = documentosPorVencer
         .filter((doc) => doc.fechaVencimiento) // Validar que no sea null

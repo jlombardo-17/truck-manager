@@ -5,6 +5,7 @@ import {
   TipoCombustible,
   TipoCombustibleLabels,
 } from '../types/repostada';
+import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/Modal.css';
 
 interface RepostadaModalProps {
@@ -17,7 +18,7 @@ interface RepostadaModalProps {
 
 const getDefaultFormData = (): CreateRepostadaDto => ({
   tipoCombustible: TipoCombustible.DIESEL,
-  fechaRepostada: new Date().toISOString().split('T')[0],
+  fechaRepostada: getTodayLocalInputValue(),
   kmRecorridos: 0,
   litros: 0,
   consumoPromedio: 0,
@@ -25,7 +26,7 @@ const getDefaultFormData = (): CreateRepostadaDto => ({
 
 const mapRepostadaToFormData = (repostada: Repostada): CreateRepostadaDto => ({
   tipoCombustible: repostada.tipoCombustible,
-  fechaRepostada: repostada.fechaRepostada.split('T')[0],
+  fechaRepostada: toDateInputValue(repostada.fechaRepostada),
   kmRecorridos: Number(repostada.kmRecorridos) || 0,
   litros: Number(repostada.litros) || 0,
   consumoPromedio: Number(repostada.consumoPromedio) || 0,

@@ -13,6 +13,9 @@ export interface Viaje {
   latitudDestino?: number;
   longitudDestino?: number;
   descripcionCarga?: string;
+  documentoDescarga?: string;
+  documentoDescargaNombre?: string;
+  documentoDescargaAdjunto?: string;
   pesoCargaKg?: number;
   valorViaje: number;
   moneda?: 'UYU' | 'USD';

@@ -19,6 +19,7 @@ import { MantenimientoTab } from '../components/MantenimientoTab';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import BackButton from '../components/BackButton';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
+import { formatDateForDisplay } from '../utils/dateUtils';
 import '../styles/CamionDetalle.css';
 
 type DocumentCostProjectionWindow = '1y' | '5y';
@@ -765,7 +766,7 @@ const CamionDetalle: React.FC = () => {
             {repostadas.map((repostada) => (
               <div key={repostada.id} className="repostada-item">
                 <div className="repostada-header">
-                  <span className="fecha">{new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}</span>
+                  <span className="fecha">{formatDateForDisplay(repostada.fechaRepostada, 'es-AR')}</span>
                   <span className="tipo-combustible">{TipoCombustibleLabels[repostada.tipoCombustible]}</span>
                   <div className="repostada-actions">
                     <button
@@ -773,7 +774,7 @@ const CamionDetalle: React.FC = () => {
                       onClick={() => handleEditRepostada(repostada)}
                       className="repostada-action-btn repostada-edit-btn"
                       title="Editar repostada"
-                      aria-label={`Editar repostada del ${new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}`}
+                      aria-label={`Editar repostada del ${formatDateForDisplay(repostada.fechaRepostada, 'es-AR')}`}
                     >
                       ✏️ Editar
                     </button>
@@ -782,7 +783,7 @@ const CamionDetalle: React.FC = () => {
                       onClick={() => handleDeleteRepostada(repostada.id)}
                       className="repostada-action-btn repostada-delete-btn"
                       title="Eliminar repostada"
-                      aria-label={`Eliminar repostada del ${new Date(repostada.fechaRepostada).toLocaleDateString('es-AR')}`}
+                      aria-label={`Eliminar repostada del ${formatDateForDisplay(repostada.fechaRepostada, 'es-AR')}`}
                     >
                       🗑️ Eliminar
                     </button>

@@ -116,6 +116,18 @@ export class UpdateViajDTO {
   @IsOptional()
   descripcionCarga?: string;
 
+  @IsString()
+  @IsOptional()
+  documentoDescarga?: string;
+
+  @IsString()
+  @IsOptional()
+  documentoDescargaNombre?: string;
+
+  @IsString()
+  @IsOptional()
+  documentoDescargaAdjunto?: string;
+
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   pesoCargaKg?: number;

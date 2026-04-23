@@ -310,6 +310,7 @@ const Viajes: React.FC = () => {
                 <th>Chofer</th>
                 <th>Origen</th>
                 <th>Destino</th>
+                <th>Doc. Descarga</th>
                 <th>Valor</th>
                 <th>Inicio</th>
                 <th>Fin</th>
@@ -322,7 +323,7 @@ const Viajes: React.FC = () => {
             <tbody>
               {skeletonRows.map((row) => (
                 <tr key={row}>
-                  <td colSpan={12}>
+                  <td colSpan={13}>
                     <div className="skeleton-line" />
                   </td>
                 </tr>
@@ -347,6 +348,7 @@ const Viajes: React.FC = () => {
                 <th>Chofer</th>
                 <th>Origen</th>
                 <th>Destino</th>
+                <th>Doc. Descarga</th>
                 <th>Valor</th>
                 <th>Inicio</th>
                 <th>Fin</th>
@@ -370,6 +372,32 @@ const Viajes: React.FC = () => {
                   </td>
                   <td>{viaje.origen}</td>
                   <td>{viaje.destino}</td>
+                  <td>
+                    {viaje.documentoDescargaAdjunto ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span>{viaje.documentoDescargaNombre || 'Adjunto'}</span>
+                        <a href={viaje.documentoDescargaAdjunto} target="_blank" rel="noreferrer">
+                          Ver adjunto
+                        </a>
+                        <a
+                          href={viaje.documentoDescargaAdjunto}
+                          download={viaje.documentoDescargaNombre || `documento-descarga-${viaje.id}`}
+                        >
+                          Descargar
+                        </a>
+                      </div>
+                    ) : viaje.documentoDescarga ? (
+                      viaje.documentoDescarga.startsWith('http://') || viaje.documentoDescarga.startsWith('https://') ? (
+                        <a href={viaje.documentoDescarga} target="_blank" rel="noreferrer">
+                          Ver documento
+                        </a>
+                      ) : (
+                        viaje.documentoDescarga
+                      )
+                    ) : (
+                      '-'
+                    )}
+                  </td>
                   <td className="valor-cell">
                     {formatViajeAmount(viaje)}
                     {viaje.moneda === 'USD' && (

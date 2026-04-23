@@ -57,6 +57,15 @@ export class Viaje {
   @Column({ type: 'text', nullable: true })
   descripcionCarga: string;
 
+  @Column({ name: 'documento_descarga', type: 'text', nullable: true })
+  documentoDescarga: string;
+
+  @Column({ name: 'documento_descarga_nombre', type: 'varchar', length: 255, nullable: true })
+  documentoDescargaNombre: string;
+
+  @Column({ name: 'documento_descarga_adjunto', type: 'longtext', nullable: true })
+  documentoDescargaAdjunto: string;
+
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   pesoCargaKg: number;
 
