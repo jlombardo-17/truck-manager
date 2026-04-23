@@ -32,6 +32,7 @@ import { Chofer } from '../types/chofer';
 import { useAuth } from '../contexts/AuthContext';
 import BackButton from '../components/BackButton';
 import heroAnalyticsGreen from '../assets/hero-analytics-green.svg';
+import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/Reportes.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend);
@@ -101,7 +102,7 @@ const Reportes: React.FC = () => {
   const defaultDesdeDiario = useMemo(() => {
     const d = new Date(today);
     d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
+    return toDateInputValue(d);
   }, [today]);
 
   const [camiones, setCamiones] = useState<Camion[]>([]);
@@ -134,7 +135,7 @@ const Reportes: React.FC = () => {
   const [camionIds, setCamionIds] = useState<string[]>([]);
   const [choferIds, setChoferIds] = useState<string[]>([]);
   const [desde, setDesde] = useState<string>(defaultDesdeDiario);
-  const [hasta, setHasta] = useState<string>(today.toISOString().split('T')[0]);
+  const [hasta, setHasta] = useState<string>(getTodayLocalInputValue());
   const [usarFechaPagoRentabilidad, setUsarFechaPagoRentabilidad] = useState(false);
 
   const [compararPor, setCompararPor] = useState<'camion' | 'chofer'>('camion');
@@ -457,8 +458,8 @@ const Reportes: React.FC = () => {
   const handlePresetDateRange = (days: number) => {
     const newDesde = new Date(today);
     newDesde.setDate(newDesde.getDate() - days);
-    setDesde(newDesde.toISOString().split('T')[0]);
-    setHasta(today.toISOString().split('T')[0]);
+    setDesde(toDateInputValue(newDesde));
+    setHasta(toDateInputValue(today));
   };
 
   const escapeCsvValue = (value: string | number) => {

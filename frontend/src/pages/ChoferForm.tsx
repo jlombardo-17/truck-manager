@@ -9,6 +9,7 @@ import {
   TipoDocumentoChofer,
   TipoDocumentoChoferLabels,
 } from '../types/chofer-documento';
+import { getTodayLocalInputValue } from '../utils/dateUtils';
 import BackButton from '../components/BackButton';
 import '../styles/ChoferForm.css';
 
@@ -66,7 +67,7 @@ const ChoferForm: React.FC = () => {
     apellido: '',
     telefono: '',
     direccion: '',
-    fechaIngreso: new Date().toISOString().split('T')[0],
+    fechaIngreso: getTodayLocalInputValue(),
     fechaNacimiento: '',
     estado: EstadoChofer.ACTIVO,
     sueldoBase: '',

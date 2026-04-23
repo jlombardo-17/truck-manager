@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -10,10 +11,8 @@ const toNumberOrUndefined = (value: unknown): number | undefined => {
 
 const toDateString = (value?: string): string | undefined => {
   if (!value) return undefined;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  return parsed.toISOString().split('T')[0];
+  const normalized = toDateInputValue(value);
+  return normalized || undefined;
 };
 
 const normalizeArrayResponse = <T>(value: unknown, fieldName?: string): T[] => {
@@ -372,8 +371,7 @@ export const viajsService = {
    * Generar número de viaje (automático)
    */
   generateNroViaje: (): string => {
-    const today = new Date();
-    const yyyymmdd = today.toISOString().split('T')[0].replace(/-/g, '');
+    const yyyymmdd = getTodayLocalInputValue().replace(/-/g, '');
     const random = Math.floor(Math.random() * 10000)
       .toString()
       .padStart(4, '0');

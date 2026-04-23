@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import '../styles/MantenimientoPage.css';
 import { MantenimientoTipo, MantenimientoRegistro, EstadoMantenimiento } from '../types/mantenimiento';
 import { maintenanceService } from '../services/maintenanceService';
+import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 
 interface Props {
   camionId: number;
@@ -69,7 +70,7 @@ export const MantenimientoTab = ({ camionId }: Props) => {
       setEditingId(registro.id || null);
       setFormData({
         tipoId: registro.tipoId.toString(),
-        fechaPrograma: new Date(registro.fechaPrograma).toISOString().split('T')[0],
+        fechaPrograma: toDateInputValue(registro.fechaPrograma),
         kmActual: registro.kmActual.toString(),
         costoReal: registro.costoReal?.toString() || '',
         observaciones: registro.observaciones || '',
@@ -79,7 +80,7 @@ export const MantenimientoTab = ({ camionId }: Props) => {
       setEditingId(null);
       setFormData({
         tipoId: '',
-        fechaPrograma: new Date().toISOString().split('T')[0],
+        fechaPrograma: getTodayLocalInputValue(),
         kmActual: '',
         costoReal: '',
         observaciones: '',
@@ -264,8 +265,8 @@ export const MantenimientoTab = ({ camionId }: Props) => {
               {registros.map((registro) => (
                 <tr key={registro.id}>
                   <td>{registro.tipo?.nombre || `Tipo #${registro.tipoId}`}</td>
-                  <td>{new Date(registro.fechaPrograma).toLocaleDateString()}</td>
-                  <td>{registro.fechaRealizado ? new Date(registro.fechaRealizado).toLocaleDateString() : '-'}</td>
+                  <td>{formatDateForDisplay(registro.fechaPrograma, 'es-AR')}</td>
+                  <td>{registro.fechaRealizado ? formatDateForDisplay(registro.fechaRealizado, 'es-AR') : '-'}</td>
                   <td>{registro.kmActual}</td>
                   <td>
                     <span className={getEstadoBadgeClass(registro.estado)}>

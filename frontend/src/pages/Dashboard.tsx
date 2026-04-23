@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { dashboardService, DashboardResumen, DesempenoCamion, DesempenoChofer } from '../services/dashboardService';
 import StatsGrid from '../components/StatsGrid';
 import DateRangeSelector from '../components/DateRangeSelector';
+import { toDateInputValue } from '../utils/dateUtils';
 import '../styles/Dashboard.css';
 
 interface DateRange {
@@ -34,8 +35,8 @@ const Dashboard: React.FC = () => {
   const cargarDatos = async () => {
     try {
       setLoading(true);
-      const fechaInicio = dateRange.startDate.toISOString().split('T')[0];
-      const fechaFin = dateRange.endDate.toISOString().split('T')[0];
+      const fechaInicio = toDateInputValue(dateRange.startDate);
+      const fechaFin = toDateInputValue(dateRange.endDate);
 
       const [resumenData, camionesData, choferesData] = await Promise.all([
         dashboardService.getResumen(fechaInicio, fechaFin),

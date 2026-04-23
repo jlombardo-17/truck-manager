@@ -7,6 +7,7 @@ import choferDocumentosService from '../services/choferDocumentosService';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import BackButton from '../components/BackButton';
 import SalariosTab from '../components/SalariosTab';
+import { toDateInputValue } from '../utils/dateUtils';
 import '../styles/ChoferDetalle.css';
 
 interface ChoferEditFormData {
@@ -226,14 +227,9 @@ const ChoferDetalle: React.FC = () => {
         apellido: choferData.apellido || '',
         telefono: choferData.telefono || '',
         direccion: choferData.direccion || '',
-        fechaIngreso:
-          typeof choferData.fechaIngreso === 'string'
-            ? choferData.fechaIngreso.split('T')[0]
-            : new Date(choferData.fechaIngreso).toISOString().split('T')[0],
+        fechaIngreso: toDateInputValue(choferData.fechaIngreso),
         fechaNacimiento: choferData.fechaNacimiento
-          ? typeof choferData.fechaNacimiento === 'string'
-            ? choferData.fechaNacimiento.split('T')[0]
-            : new Date(choferData.fechaNacimiento).toISOString().split('T')[0]
+          ? toDateInputValue(choferData.fechaNacimiento)
           : '',
         estado: (choferData.estado as EstadoChofer) || EstadoChofer.ACTIVO,
         sueldoBase: choferData.sueldoBase ? String(choferData.sueldoBase) : '',

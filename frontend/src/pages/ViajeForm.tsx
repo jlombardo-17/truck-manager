@@ -8,6 +8,7 @@ import { Chofer } from '../types/chofer';
 import { MapEditor } from '../components/MapEditor';
 import CommissionsTable from '../components/CommissionsTable';
 import BackButton from '../components/BackButton';
+import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/ViajeForm.css';
 
 const ViajeForm: React.FC = () => {
@@ -24,15 +25,6 @@ const ViajeForm: React.FC = () => {
     'image/svg+xml',
   ];
   const ALLOWED_DOCUMENTO_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg'];
-
-  const toDateInputValue = (value?: string) => {
-    if (!value) return '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return '';
-    return parsed.toISOString().split('T')[0];
-  };
 
   const toNumberOrUndefined = (value: unknown): number | undefined => {
     if (value === null || value === undefined || value === '') return undefined;
@@ -101,7 +93,7 @@ const ViajeForm: React.FC = () => {
     numeroViaje: viajsService.generateNroViaje(),
     camionId: 0,
     choferId: 0,
-    fechaInicio: new Date().toISOString().split('T')[0],
+    fechaInicio: getTodayLocalInputValue(),
     origen: '',
     destino: '',
     valorViaje: 0,

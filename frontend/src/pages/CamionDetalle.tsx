@@ -19,7 +19,7 @@ import { MantenimientoTab } from '../components/MantenimientoTab';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
 import BackButton from '../components/BackButton';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
-import { formatDateForDisplay } from '../utils/dateUtils';
+import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/CamionDetalle.css';
 
 type DocumentCostProjectionWindow = '1y' | '5y';
@@ -901,7 +901,7 @@ const ServicioModal: React.FC<{
 }> = ({ camionId, servicio, onClose, onSave }) => {
   const isEditing = !!servicio;
   const [formData, setFormData] = useState({
-    fechaServicio: servicio?.fechaServicio ? servicio.fechaServicio.split('T')[0] : new Date().toISOString().split('T')[0],
+    fechaServicio: servicio?.fechaServicio ? toDateInputValue(servicio.fechaServicio) : getTodayLocalInputValue(),
     tipos: servicio?.tipos ?? ([] as TipoServicio[]),
     descripcion: servicio?.descripcion ?? '',
     costo: servicio?.costo != null ? String(servicio.costo) : '',
@@ -1051,7 +1051,7 @@ const DocumentoModal: React.FC<{
     descripcion: documento?.descripcion ?? '',
     costo: documento?.costo != null ? String(documento.costo) : '',
     fechaVencimiento: documento?.fechaVencimiento
-      ? documento.fechaVencimiento.split('T')[0]
+      ? toDateInputValue(documento.fechaVencimiento)
       : '',
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);

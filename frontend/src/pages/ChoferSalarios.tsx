@@ -14,6 +14,7 @@ import {
 } from '../types/salario';
 import { Chofer } from '../types/chofer';
 import BackButton from '../components/BackButton';
+import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/ChoferSalarios.css';
 
 const ChoferSalarios: React.FC = () => {
@@ -38,7 +39,7 @@ const ChoferSalarios: React.FC = () => {
   const [guardandoPago, setGuardandoPago] = useState(false);
   const [pagoForm, setPagoForm] = useState({
     monto: '',
-    fechaPago: new Date().toISOString().split('T')[0],
+    fechaPago: getTodayLocalInputValue(),
     metodoPago: 'transferencia',
     tipo: TipoPagoSalario.ADELANTO,
     comprobante: '',
@@ -51,7 +52,7 @@ const ChoferSalarios: React.FC = () => {
     totalComisiones: '0',
     bonos: '0',
     deducciones: '0',
-    fechaPago: new Date().toISOString().split('T')[0],
+    fechaPago: getTodayLocalInputValue(),
     metodoPago: 'transferencia',
     monto: '',
     tipo: TipoPagoSalario.ADELANTO,
@@ -60,7 +61,7 @@ const ChoferSalarios: React.FC = () => {
   });
   const [pagoEditarForm, setPagoEditarForm] = useState({
     monto: '',
-    fechaPago: new Date().toISOString().split('T')[0],
+    fechaPago: getTodayLocalInputValue(),
     metodoPago: 'transferencia',
     tipo: TipoPagoSalario.ADELANTO,
     comprobante: '',
@@ -125,7 +126,7 @@ const ChoferSalarios: React.FC = () => {
     setSalarioSeleccionado(salario);
     setPagoForm({
       monto: saldo > 0 ? saldo.toFixed(2) : '',
-      fechaPago: new Date().toISOString().split('T')[0],
+      fechaPago: getTodayLocalInputValue(),
       metodoPago: 'transferencia',
       tipo: TipoPagoSalario.ADELANTO,
       comprobante: salario.comprobante || '',
@@ -148,7 +149,7 @@ const ChoferSalarios: React.FC = () => {
       totalComisiones: '0',
       bonos: '0',
       deducciones: '0',
-      fechaPago: new Date().toISOString().split('T')[0],
+      fechaPago: getTodayLocalInputValue(),
       metodoPago: 'transferencia',
       monto: '',
       tipo: TipoPagoSalario.ADELANTO,
@@ -167,7 +168,7 @@ const ChoferSalarios: React.FC = () => {
     setPagoEditando({ salarioId, pagoId: pago.id });
     setPagoEditarForm({
       monto: Number(pago.monto || 0).toFixed(2),
-      fechaPago: pago.fechaPago ? new Date(pago.fechaPago).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      fechaPago: pago.fechaPago ? toDateInputValue(pago.fechaPago) : getTodayLocalInputValue(),
       metodoPago: pago.metodoPago || 'transferencia',
       tipo: pago.tipo || TipoPagoSalario.ADELANTO,
       comprobante: pago.comprobante || '',
