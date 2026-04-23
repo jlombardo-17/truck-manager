@@ -136,4 +136,19 @@ export class ReportesController {
       choferIds: parseIds(choferIds),
     });
   }
+
+  @Get('flujo-caja')
+  async getFlujoCaja(
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('camionIds') camionIds?: string,
+    @Query('choferIds') choferIds?: string,
+  ) {
+    return this.reportesService.getFlujoCaja({
+      desde: desde ? new Date(desde) : undefined,
+      hasta: hasta ? new Date(hasta) : undefined,
+      camionIds: parseIds(camionIds),
+      choferIds: parseIds(choferIds),
+    });
+  }
 }

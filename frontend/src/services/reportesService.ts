@@ -166,6 +166,40 @@ export interface IngresosMensualesResponse {
   }>;
 }
 
+export interface FlujoCajaResponse {
+  filtrosAplicados: {
+    desde: string;
+    hasta: string;
+    camionIds?: number[];
+    choferIds?: number[];
+  };
+  resumen: {
+    totalIngresos: number;
+    totalEgresos: number;
+    resultadoNeto: number;
+    detalleEgresos: {
+      operativosViaje: number;
+      combustibleRepostadas: number;
+      mantenimiento: number;
+      pagosChoferes: number;
+      documentosFijos: number;
+    };
+  };
+  series: Array<{
+    mes: string;
+    ingresos: number;
+    egresos: number;
+    resultadoNeto: number;
+    detalleEgresos: {
+      operativosViaje: number;
+      combustibleRepostadas: number;
+      mantenimiento: number;
+      pagosChoferes: number;
+      documentosFijos: number;
+    };
+  }>;
+}
+
 class ReportesService {
   private api: AxiosInstance;
 
@@ -300,6 +334,23 @@ class ReportesService {
     choferIds?: number[];
   }): Promise<IngresosMensualesResponse> {
     const response = await this.api.get<IngresosMensualesResponse>('/reportes/ingresos-mensuales', {
+      params: {
+        ...(filters.desde ? { desde: filters.desde } : {}),
+        ...(filters.hasta ? { hasta: filters.hasta } : {}),
+        ...(filters.camionIds?.length ? { camionIds: filters.camionIds.join(',') } : {}),
+        ...(filters.choferIds?.length ? { choferIds: filters.choferIds.join(',') } : {}),
+      },
+    });
+    return response.data;
+  }
+
+  async getFlujoCaja(filters: {
+    desde?: string;
+    hasta?: string;
+    camionIds?: number[];
+    choferIds?: number[];
+  }): Promise<FlujoCajaResponse> {
+    const response = await this.api.get<FlujoCajaResponse>('/reportes/flujo-caja', {
       params: {
         ...(filters.desde ? { desde: filters.desde } : {}),
         ...(filters.hasta ? { hasta: filters.hasta } : {}),

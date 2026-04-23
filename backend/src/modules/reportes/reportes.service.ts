@@ -6,6 +6,8 @@ import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity
 import { Chofer } from '../choferes/chofer.entity';
 import { Camion } from '../camiones/camion.entity';
 import { Documento } from '../camiones/documento.entity';
+import { Repostada } from '../camiones/repostada.entity';
+import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
 
 type Granularidad = 'diaria' | 'semanal' | 'mensual';
 type GranularidadOperacion = 'diaria' | 'semanal' | 'mensual';
@@ -48,7 +50,286 @@ export class ReportesService {
     private readonly camionRepository: Repository<Camion>,
     @InjectRepository(Documento)
     private readonly documentoRepository: Repository<Documento>,
+    @InjectRepository(Repostada)
+    private readonly repostadaRepository: Repository<Repostada>,
+    @InjectRepository(ChoferSalarioPago)
+    private readonly salarioPagoRepository: Repository<ChoferSalarioPago>,
   ) {}
+
+  async getFlujoCaja(filters: {
+    desde?: Date;
+    hasta?: Date;
+    camionIds?: number[];
+    choferIds?: number[];
+  }) {
+    const hasta = filters.hasta || new Date();
+    const desde = filters.desde || new Date(hasta.getFullYear(), hasta.getMonth(), 1);
+
+    const viajes = await this.getViajes({
+      granularidad: 'mensual',
+      desde,
+      hasta,
+      camionIds: filters.camionIds,
+      choferIds: filters.choferIds,
+    });
+
+    const monthKeys = this.getMonthlyKeysInRange(desde, hasta);
+    const flujoPorMes = new Map<
+      string,
+      {
+        mes: string;
+        ingresosViajes: number;
+        egresosOperativosViaje: number;
+        egresosCombustibleRepostadas: number;
+        egresosMantenimiento: number;
+        egresosPagosChoferes: number;
+        egresosDocumentosFijos: number;
+      }
+    >();
+
+    for (const key of monthKeys) {
+      flujoPorMes.set(key, {
+        mes: this.formatLabel(key, 'mensual'),
+        ingresosViajes: 0,
+        egresosOperativosViaje: 0,
+        egresosCombustibleRepostadas: 0,
+        egresosMantenimiento: 0,
+        egresosPagosChoferes: 0,
+        egresosDocumentosFijos: 0,
+      });
+    }
+
+    const viajesCamionIds = new Set<number>();
+    const viajesChoferIds = new Set<number>();
+
+    for (const viaje of viajes) {
+      const key = this.toBucketKey(viaje.fechaInicio, 'mensual');
+      if (!flujoPorMes.has(key)) {
+        continue;
+      }
+
+      const item = flujoPorMes.get(key)!;
+      item.ingresosViajes += this.getIngresoViajeUyu(viaje);
+      item.egresosOperativosViaje += this.toNumber(viaje.otrosGastos);
+
+      if (viaje.camionId) viajesCamionIds.add(viaje.camionId);
+      if (viaje.choferId) viajesChoferIds.add(viaje.choferId);
+    }
+
+    const effectiveCamionIds =
+      filters.camionIds && filters.camionIds.length > 0
+        ? filters.camionIds
+        : filters.choferIds && filters.choferIds.length > 0
+          ? Array.from(viajesCamionIds)
+          : undefined;
+
+    const effectiveChoferIds =
+      filters.choferIds && filters.choferIds.length > 0
+        ? filters.choferIds
+        : filters.camionIds && filters.camionIds.length > 0
+          ? Array.from(viajesChoferIds)
+          : undefined;
+
+    const repostadasQuery = this.repostadaRepository
+      .createQueryBuilder('repostada')
+      .where('repostada.fechaRepostada BETWEEN :desde AND :hasta', { desde, hasta });
+
+    if (effectiveCamionIds && effectiveCamionIds.length > 0) {
+      repostadasQuery.andWhere('repostada.camionId IN (:...camionIds)', {
+        camionIds: effectiveCamionIds,
+      });
+    }
+
+    const repostadas = await repostadasQuery.getMany();
+    for (const repostada of repostadas) {
+      const key = this.toBucketKey(new Date(repostada.fechaRepostada), 'mensual');
+      if (!flujoPorMes.has(key)) {
+        continue;
+      }
+
+      const costoRepostada =
+        this.toNumber(repostada.costo) ||
+        this.toNumber(repostada.litros) * this.toNumber(repostada.precioLitro);
+
+      if (costoRepostada <= 0) {
+        continue;
+      }
+
+      flujoPorMes.get(key)!.egresosCombustibleRepostadas += costoRepostada;
+    }
+
+    const mantenimientoQuery = this.mantenimientoRepository
+      .createQueryBuilder('mantenimiento')
+      .where('(mantenimiento.fechaRealizado BETWEEN :desde AND :hasta OR mantenimiento.fechaPrograma BETWEEN :desde AND :hasta)', {
+        desde,
+        hasta,
+      });
+
+    if (effectiveCamionIds && effectiveCamionIds.length > 0) {
+      mantenimientoQuery.andWhere('mantenimiento.camionId IN (:...camionIds)', {
+        camionIds: effectiveCamionIds,
+      });
+    }
+
+    const mantenimientos = await mantenimientoQuery.getMany();
+    for (const mantenimiento of mantenimientos) {
+      const fecha = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
+      if (!fecha) {
+        continue;
+      }
+
+      const key = this.toBucketKey(new Date(fecha), 'mensual');
+      if (!flujoPorMes.has(key)) {
+        continue;
+      }
+
+      const costo = this.toNumber(mantenimiento.costoReal);
+      if (costo <= 0) {
+        continue;
+      }
+
+      flujoPorMes.get(key)!.egresosMantenimiento += costo;
+    }
+
+    const pagosQuery = this.salarioPagoRepository
+      .createQueryBuilder('pago')
+      .innerJoinAndSelect('pago.salario', 'salario')
+      .where('pago.fecha_pago BETWEEN :desde AND :hasta', { desde, hasta });
+
+    if (effectiveChoferIds && effectiveChoferIds.length > 0) {
+      pagosQuery.andWhere('salario.chofer_id IN (:...choferIds)', {
+        choferIds: effectiveChoferIds,
+      });
+    }
+
+    const pagos = await pagosQuery.getMany();
+    for (const pago of pagos) {
+      const key = this.toBucketKey(new Date(pago.fechaPago), 'mensual');
+      if (!flujoPorMes.has(key)) {
+        continue;
+      }
+
+      const monto = this.toNumber(pago.monto);
+      if (monto <= 0) {
+        continue;
+      }
+
+      flujoPorMes.get(key)!.egresosPagosChoferes += monto;
+    }
+
+    const whereDocumentos: any = {};
+    if (effectiveCamionIds && effectiveCamionIds.length > 0) {
+      whereDocumentos.camionId = In(effectiveCamionIds);
+    }
+    const documentos = await this.documentoRepository.find({ where: whereDocumentos });
+    for (const documento of documentos) {
+      for (const key of monthKeys) {
+        const bucket = flujoPorMes.get(key);
+        if (!bucket) continue;
+
+        const { start, end } = this.getBucketDateRange(key, 'mensual');
+        const periodStart = new Date(Math.max(start.getTime(), desde.getTime()));
+        const periodEnd = new Date(Math.min(end.getTime(), hasta.getTime()));
+        if (periodStart > periodEnd) {
+          continue;
+        }
+
+        const projectedCost = this.getDocumentoProjectedCostForPeriod(documento, periodStart, periodEnd);
+        if (projectedCost <= 0) {
+          continue;
+        }
+
+        bucket.egresosDocumentosFijos += projectedCost;
+      }
+    }
+
+    const series = monthKeys
+      .map((key) => {
+        const item = flujoPorMes.get(key)!;
+        const totalEgresos =
+          item.egresosOperativosViaje +
+          item.egresosCombustibleRepostadas +
+          item.egresosMantenimiento +
+          item.egresosPagosChoferes +
+          item.egresosDocumentosFijos;
+
+        return {
+          mes: item.mes,
+          ingresos: this.round2(item.ingresosViajes),
+          egresos: this.round2(totalEgresos),
+          resultadoNeto: this.round2(item.ingresosViajes - totalEgresos),
+          detalleEgresos: {
+            operativosViaje: this.round2(item.egresosOperativosViaje),
+            combustibleRepostadas: this.round2(item.egresosCombustibleRepostadas),
+            mantenimiento: this.round2(item.egresosMantenimiento),
+            pagosChoferes: this.round2(item.egresosPagosChoferes),
+            documentosFijos: this.round2(item.egresosDocumentosFijos),
+          },
+        };
+      })
+      .filter((item) => item.ingresos > 0 || item.egresos > 0);
+
+    const resumen = series.reduce(
+      (acc, item) => {
+        acc.totalIngresos += item.ingresos;
+        acc.totalEgresos += item.egresos;
+        acc.resultadoNeto += item.resultadoNeto;
+        acc.detalleEgresos.operativosViaje += item.detalleEgresos.operativosViaje;
+        acc.detalleEgresos.combustibleRepostadas += item.detalleEgresos.combustibleRepostadas;
+        acc.detalleEgresos.mantenimiento += item.detalleEgresos.mantenimiento;
+        acc.detalleEgresos.pagosChoferes += item.detalleEgresos.pagosChoferes;
+        acc.detalleEgresos.documentosFijos += item.detalleEgresos.documentosFijos;
+        return acc;
+      },
+      {
+        totalIngresos: 0,
+        totalEgresos: 0,
+        resultadoNeto: 0,
+        detalleEgresos: {
+          operativosViaje: 0,
+          combustibleRepostadas: 0,
+          mantenimiento: 0,
+          pagosChoferes: 0,
+          documentosFijos: 0,
+        },
+      },
+    );
+
+    return {
+      filtrosAplicados: {
+        desde: desde.toISOString().split('T')[0],
+        hasta: hasta.toISOString().split('T')[0],
+        camionIds: filters.camionIds,
+        choferIds: filters.choferIds,
+      },
+      resumen: {
+        totalIngresos: this.round2(resumen.totalIngresos),
+        totalEgresos: this.round2(resumen.totalEgresos),
+        resultadoNeto: this.round2(resumen.resultadoNeto),
+        detalleEgresos: {
+          operativosViaje: this.round2(resumen.detalleEgresos.operativosViaje),
+          combustibleRepostadas: this.round2(resumen.detalleEgresos.combustibleRepostadas),
+          mantenimiento: this.round2(resumen.detalleEgresos.mantenimiento),
+          pagosChoferes: this.round2(resumen.detalleEgresos.pagosChoferes),
+          documentosFijos: this.round2(resumen.detalleEgresos.documentosFijos),
+        },
+      },
+      series,
+    };
+  }
+
+  private getMonthlyKeysInRange(desde: Date, hasta: Date): string[] {
+    const keys: string[] = [];
+    const cursor = new Date(desde.getFullYear(), desde.getMonth(), 1);
+    const end = new Date(hasta.getFullYear(), hasta.getMonth(), 1);
+
+    while (cursor <= end) {
+      keys.push(this.toBucketKey(cursor, 'mensual'));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    return keys;
+  }
 
   async getRentabilidad(filters: Partial<RentabilidadFilters>) {
     const granularidad: Granularidad = filters.granularidad || 'diaria';

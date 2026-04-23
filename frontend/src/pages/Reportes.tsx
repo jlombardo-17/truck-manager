@@ -21,6 +21,7 @@ import {
   DesempenoChoferesResponse,
   GastosDocumentalesResponse,
   GastosMantenimientoResponse,
+  FlujoCajaResponse,
   IngresosMensualesResponse,
   OperacionCamionResponse,
   RentabilidadComparativaResponse,
@@ -123,6 +124,7 @@ const Reportes: React.FC = () => {
   const [gastosMantenimiento, setGastosMantenimiento] = useState<GastosMantenimientoResponse | null>(null);
   const [gastosDocumentales, setGastosDocumentales] = useState<GastosDocumentalesResponse | null>(null);
   const [ingresosMensuales, setIngresosMensuales] = useState<IngresosMensualesResponse | null>(null);
+  const [flujoCaja, setFlujoCaja] = useState<FlujoCajaResponse | null>(null);
 
   const [granularidadIngresos, setGranularidadIngresos] = useState<'diaria' | 'semanal' | 'mensual'>('diaria');
   const [ingresosMode, setIngresosMode] = useState<'agregado' | 'por_camion'>('agregado');
@@ -420,7 +422,7 @@ const Reportes: React.FC = () => {
   const fetchReportesAdicionales = async () => {
     try {
       setLoadingAdicionales(true);
-      const [desempenoData, gastosData, gastosDocumentalesData, ingresosData] = await Promise.all([
+      const [desempenoData, gastosData, gastosDocumentalesData, ingresosData, flujoCajaData] = await Promise.all([
         reportesService.getDesempenoChoferes({
           desde,
           hasta,
@@ -442,12 +444,19 @@ const Reportes: React.FC = () => {
           camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
           choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
         }),
+        reportesService.getFlujoCaja({
+          desde,
+          hasta,
+          camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
+          choferIds: choferIds.length ? choferIds.map((id) => Number(id)) : undefined,
+        }),
       ]);
 
       setDesempenoChoferes(desempenoData);
       setGastosMantenimiento(gastosData);
-  setGastosDocumentales(gastosDocumentalesData);
+      setGastosDocumentales(gastosDocumentalesData);
       setIngresosMensuales(ingresosData);
+      setFlujoCaja(flujoCajaData);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'No se pudieron cargar los reportes adicionales');
     } finally {
@@ -720,6 +729,36 @@ const Reportes: React.FC = () => {
     downloadCsv(
       `ingresos_mensuales_${desde}_${hasta}.csv`,
       ['Mes', 'Viajes', 'Ingresos', 'Gastos', 'GananciaNeta', 'RentabilidadPct'],
+      rows,
+    );
+  };
+
+  const exportFlujoCajaCsv = () => {
+    const rows = (flujoCaja?.series || []).map((item) => [
+      item.mes,
+      item.ingresos.toFixed(2),
+      item.egresos.toFixed(2),
+      item.resultadoNeto.toFixed(2),
+      item.detalleEgresos.combustibleRepostadas.toFixed(2),
+      item.detalleEgresos.mantenimiento.toFixed(2),
+      item.detalleEgresos.pagosChoferes.toFixed(2),
+      item.detalleEgresos.operativosViaje.toFixed(2),
+      item.detalleEgresos.documentosFijos.toFixed(2),
+    ]);
+
+    downloadCsv(
+      `flujo_caja_real_${desde}_${hasta}.csv`,
+      [
+        'Mes',
+        'Ingresos',
+        'Egresos',
+        'ResultadoNeto',
+        'CombustibleRepostadas',
+        'Mantenimiento',
+        'PagosChoferes',
+        'OperativosViaje',
+        'DocumentosFijos',
+      ],
       rows,
     );
   };
@@ -1741,6 +1780,68 @@ const Reportes: React.FC = () => {
                 {(ingresosMensuales?.ingresos || []).length === 0 && (
                   <tr>
                     <td colSpan={6}>No hay ingresos mensuales para el filtro seleccionado.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
+      <div className="tabla-container">
+        <div className="section-header-inline">
+          <h3>Flujo de Caja Real (Ingresos y Egresos)</h3>
+          <button
+            className="btn-rapido btn-rapido--accent"
+            onClick={exportFlujoCajaCsv}
+            disabled={loadingAdicionales || !(flujoCaja?.series || []).length}
+          >
+            Exportar CSV
+          </button>
+        </div>
+        {loadingAdicionales ? (
+          <p>Cargando flujo de caja real...</p>
+        ) : (
+          <>
+            <div className="operacion-resumen">
+              <span>Ingresos: ${Number(flujoCaja?.resumen.totalIngresos || 0).toFixed(2)}</span>
+              <span>Egresos: ${Number(flujoCaja?.resumen.totalEgresos || 0).toFixed(2)}</span>
+              <span>Resultado Neto: ${Number(flujoCaja?.resumen.resultadoNeto || 0).toFixed(2)}</span>
+              <span>Combustible (repostadas): ${Number(flujoCaja?.resumen.detalleEgresos.combustibleRepostadas || 0).toFixed(2)}</span>
+              <span>Mantenimiento: ${Number(flujoCaja?.resumen.detalleEgresos.mantenimiento || 0).toFixed(2)}</span>
+              <span>Pagos choferes: ${Number(flujoCaja?.resumen.detalleEgresos.pagosChoferes || 0).toFixed(2)}</span>
+            </div>
+            <table className="reportes-table">
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Ingresos</th>
+                  <th>Egresos</th>
+                  <th>Resultado Neto</th>
+                  <th>Combustible</th>
+                  <th>Mantenimiento</th>
+                  <th>Pagos Choferes</th>
+                  <th>Operativos Viaje</th>
+                  <th>Documentos Fijos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(flujoCaja?.series || []).map((item) => (
+                  <tr key={item.mes}>
+                    <td>{item.mes}</td>
+                    <td>${item.ingresos.toFixed(2)}</td>
+                    <td>${item.egresos.toFixed(2)}</td>
+                    <td>${item.resultadoNeto.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.combustibleRepostadas.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.mantenimiento.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.pagosChoferes.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.operativosViaje.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.documentosFijos.toFixed(2)}</td>
+                  </tr>
+                ))}
+                {(flujoCaja?.series || []).length === 0 && (
+                  <tr>
+                    <td colSpan={9}>No hay datos de flujo de caja para el filtro seleccionado.</td>
                   </tr>
                 )}
               </tbody>
