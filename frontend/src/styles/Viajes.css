@@ -1,9 +1,10 @@
 /* Page Layout */
 .viajes-page {
-  padding: 1.6rem 1.2rem 2rem;
+  --viajes-content-max-width: min(1760px, 98vw);
+  padding: 1.2rem 0.7rem 2rem;
   background: var(--bg-page);
   min-height: 100vh;
-  max-width: var(--page-max-width);
+  max-width: var(--viajes-content-max-width);
   margin: 0 auto;
   overflow-x: clip;
 }
@@ -18,13 +19,13 @@
 }
 
 .navbar-content {
-  max-width: var(--page-max-width);
+  max-width: var(--viajes-content-max-width);
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 0 var(--page-gutter);
+  padding: 0 0.55rem;
 }
 
 .navbar-title {
@@ -126,15 +127,15 @@
 }
 
 .viajes-container-inner {
-  max-width: var(--page-max-width);
+  max-width: var(--viajes-content-max-width);
   margin: 0 auto;
-  padding: 0 var(--page-gutter);
+  padding: 0 0.55rem;
 }
 
 .viajes-page .page-back-button-container {
-  max-width: none;
+  max-width: var(--viajes-content-max-width);
   margin: 0 0 1rem;
-  padding: 0;
+  padding: 0 0.55rem;
 }
 
 /* Filters */
@@ -181,7 +182,7 @@
 .table-responsive {
   background: #ffffff;
   border-radius: 14px;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
   border: 1px solid var(--border-soft);
   box-shadow: var(--shadow-sm);
@@ -281,7 +282,8 @@
 
 .viajes-table th:nth-child(13),
 .viajes-table td:nth-child(13) {
-  width: 7%;
+  width: 11%;
+  min-width: 140px;
 }
 
 .skeleton-table tbody td {
@@ -420,6 +422,9 @@
   justify-content: center;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: initial;
 }
 
 .btn-icon {
@@ -562,6 +567,7 @@
 
 @media (max-width: 768px) {
   .viajes-page {
+    --viajes-content-max-width: 100%;
     padding: 1rem var(--page-gutter-mobile) 1.5rem;
   }
 
