@@ -130,6 +130,29 @@ const Viajes: React.FC = () => {
     return badges[estado] || 'badge-info';
   };
 
+  const hasDocumentoDescarga = (viaje: Viaje) => {
+    if (viaje.documentoDescargaAdjunto) {
+      return true;
+    }
+
+    return typeof viaje.documentoDescarga === 'string' && viaje.documentoDescarga.trim().length > 0;
+  };
+
+  const getDocumentoDescargaUrl = (viaje: Viaje) => {
+    if (viaje.documentoDescargaAdjunto) {
+      return viaje.documentoDescargaAdjunto;
+    }
+
+    if (
+      typeof viaje.documentoDescarga === 'string' &&
+      (viaje.documentoDescarga.startsWith('http://') || viaje.documentoDescarga.startsWith('https://'))
+    ) {
+      return viaje.documentoDescarga;
+    }
+
+    return null;
+  };
+
   const formatViajeAmount = (viaje: Viaje) => {
     const currency = viaje.moneda === 'USD' ? 'USD' : 'UYU';
     return new Intl.NumberFormat('es-UY', {
@@ -310,7 +333,7 @@ const Viajes: React.FC = () => {
                 <th>Chofer</th>
                 <th>Origen</th>
                 <th>Destino</th>
-                <th>Doc. Descarga</th>
+                <th>Doc.</th>
                 <th>Valor</th>
                 <th>Inicio</th>
                 <th>Fin</th>
@@ -348,7 +371,7 @@ const Viajes: React.FC = () => {
                 <th>Chofer</th>
                 <th>Origen</th>
                 <th>Destino</th>
-                <th>Doc. Descarga</th>
+                <th>Doc.</th>
                 <th>Valor</th>
                 <th>Inicio</th>
                 <th>Fin</th>
@@ -364,39 +387,47 @@ const Viajes: React.FC = () => {
                   <td className="numero-viaje">
                     <strong>{viaje.numeroViaje}</strong>
                   </td>
-                  <td>{camiones[viaje.camionId]?.patente || `ID: ${viaje.camionId}`}</td>
-                  <td>
+                  <td title={camiones[viaje.camionId]?.patente || `ID: ${viaje.camionId}`}>
+                    {camiones[viaje.camionId]?.patente || `ID: ${viaje.camionId}`}
+                  </td>
+                  <td
+                    title={
+                      choferes[viaje.choferId]
+                        ? `${choferes[viaje.choferId].nombre} ${choferes[viaje.choferId].apellido}`
+                        : `ID: ${viaje.choferId}`
+                    }
+                  >
                     {choferes[viaje.choferId]
                       ? `${choferes[viaje.choferId].nombre} ${choferes[viaje.choferId].apellido}`
                       : `ID: ${viaje.choferId}`}
                   </td>
-                  <td>{viaje.origen}</td>
-                  <td>{viaje.destino}</td>
-                  <td>
-                    {viaje.documentoDescargaAdjunto ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        <span>{viaje.documentoDescargaNombre || 'Adjunto'}</span>
-                        <a href={viaje.documentoDescargaAdjunto} target="_blank" rel="noreferrer">
-                          Ver adjunto
-                        </a>
-                        <a
-                          href={viaje.documentoDescargaAdjunto}
-                          download={viaje.documentoDescargaNombre || `documento-descarga-${viaje.id}`}
-                        >
-                          Descargar
-                        </a>
-                      </div>
-                    ) : viaje.documentoDescarga ? (
-                      viaje.documentoDescarga.startsWith('http://') || viaje.documentoDescarga.startsWith('https://') ? (
-                        <a href={viaje.documentoDescarga} target="_blank" rel="noreferrer">
-                          Ver documento
-                        </a>
-                      ) : (
-                        viaje.documentoDescarga
-                      )
-                    ) : (
-                      '-'
-                    )}
+                  <td title={viaje.origen}>{viaje.origen}</td>
+                  <td title={viaje.destino}>{viaje.destino}</td>
+                  <td className="doc-status-cell">
+                    {(() => {
+                      const documentoUrl = getDocumentoDescargaUrl(viaje);
+                      const documentoCargado = hasDocumentoDescarga(viaje);
+
+                      if (documentoUrl) {
+                        return (
+                          <a
+                            className="doc-status-badge has-doc doc-status-link"
+                            href={documentoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Abrir comprobante"
+                          >
+                            Cargado
+                          </a>
+                        );
+                      }
+
+                      return (
+                        <span className={`doc-status-badge ${documentoCargado ? 'has-doc' : 'no-doc'}`}>
+                          {documentoCargado ? 'Cargado' : 'No cargado'}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="valor-cell">
                     {formatViajeAmount(viaje)}

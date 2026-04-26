@@ -181,7 +181,8 @@
 .table-responsive {
   background: #ffffff;
   border-radius: 14px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid var(--border-soft);
   box-shadow: var(--shadow-sm);
   max-height: 70vh;
@@ -190,6 +191,7 @@
 .viajes-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .viajes-table thead {
@@ -198,23 +200,88 @@
 }
 
 .viajes-table th {
-  padding: 14px;
+  padding: 10px 8px;
   text-align: left;
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
   position: sticky;
   top: 0;
   z-index: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .viajes-table td {
-  padding: 0.75rem 0.9rem;
+  padding: 0.65rem 0.5rem;
   border-bottom: 1px solid #edf2f7;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viajes-table th:nth-child(1),
+.viajes-table td:nth-child(1) {
+  width: 8%;
+}
+
+.viajes-table th:nth-child(2),
+.viajes-table td:nth-child(2) {
+  width: 6%;
+}
+
+.viajes-table th:nth-child(3),
+.viajes-table td:nth-child(3) {
+  width: 10%;
+}
+
+.viajes-table th:nth-child(4),
+.viajes-table td:nth-child(4) {
+  width: 11%;
+}
+
+.viajes-table th:nth-child(5),
+.viajes-table td:nth-child(5) {
+  width: 11%;
+}
+
+.viajes-table th:nth-child(6),
+.viajes-table td:nth-child(6) {
+  width: 6%;
+}
+
+.viajes-table th:nth-child(7),
+.viajes-table td:nth-child(7) {
+  width: 8%;
+}
+
+.viajes-table th:nth-child(8),
+.viajes-table td:nth-child(8),
+.viajes-table th:nth-child(9),
+.viajes-table td:nth-child(9),
+.viajes-table th:nth-child(10),
+.viajes-table td:nth-child(10) {
+  width: 6%;
+}
+
+.viajes-table th:nth-child(11),
+.viajes-table td:nth-child(11) {
+  width: 6%;
+}
+
+.viajes-table th:nth-child(12),
+.viajes-table td:nth-child(12) {
+  width: 9%;
+}
+
+.viajes-table th:nth-child(13),
+.viajes-table td:nth-child(13) {
+  width: 7%;
 }
 
 .skeleton-table tbody td {
@@ -256,6 +323,49 @@
 .km-cell {
   color: #f57c00;
   font-weight: 600;
+}
+
+.doc-status-cell {
+  text-align: center;
+}
+
+.doc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.doc-status-badge.has-doc {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #81c784;
+}
+
+.doc-status-badge.no-doc {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #d1d5db;
+}
+
+.doc-status-link {
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.doc-status-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(46, 125, 50, 0.2);
+}
+
+.doc-status-link:focus-visible {
+  outline: 2px solid #2e7d32;
+  outline-offset: 2px;
 }
 
 .estado-select {
@@ -313,11 +423,11 @@
 }
 
 .btn-icon {
-  padding: 0.35rem 0.55rem;
+  padding: 0.3rem 0.45rem;
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 700;
   transition: all 0.2s ease;
 }
@@ -441,6 +551,7 @@
 
   .viajes-table {
     font-size: 13px;
+    table-layout: auto;
   }
 
   .viajes-table th,
@@ -478,6 +589,7 @@
   .viajes-table {
     min-width: 600px;
     font-size: 12px;
+    table-layout: auto;
   }
 
   .viajes-table th,
