@@ -7,7 +7,10 @@ import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
 import { MapEditor } from '../components/MapEditor';
 import CommissionsTable from '../components/CommissionsTable';
+import AppNavbar from '../components/AppNavbar';
+import HeroSection from '../components/HeroSection';
 import BackButton from '../components/BackButton';
+import heroRoutesViolet from '../assets/hero-routes-violet.svg';
 import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/ViajeForm.css';
 
@@ -397,13 +400,27 @@ const ViajeForm: React.FC = () => {
 
   return (
     <div className="viaje-form-page">
-      <div className="form-header">
-        <h1>{isEditing ? '✎ Editar Viaje' : '+ Nuevo Viaje'}</h1>
+      <AppNavbar />
+
+      <div className="page-back-button-container">
         <BackButton label="← Volver a Viajes" to="/viajes" variant="ghost" />
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-      {success && <div className="alert alert-success">{success}</div>}
+      <HeroSection
+        subtitle="Trip Management"
+        title={isEditing ? 'Editar Viaje' : 'Nuevo Viaje'}
+        description={
+          isEditing
+            ? 'Actualizá los datos del viaje seleccionado.'
+            : 'Registrá un nuevo viaje con su ruta, camión y chofer asignado.'
+        }
+        backgroundImage={`linear-gradient(135deg, rgba(155, 89, 182, 0.9) 0%, rgba(142, 68, 173, 0.88) 50%, rgba(195, 155, 211, 0.85) 100%), url(${heroRoutesViolet})`}
+        darkBg={true}
+      />
+
+      <div className="viaje-form-content">
+        {error && <div className="alert alert-error">{error}</div>}
+        {success && <div className="alert alert-success">{success}</div>}
 
       <form onSubmit={handleSubmit} className="viaje-form">
         {/* Sección 1: Información General */}
@@ -899,6 +916,7 @@ const ViajeForm: React.FC = () => {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 };

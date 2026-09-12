@@ -9,64 +9,6 @@
   overflow-x: clip;
 }
 
-/* Navbar */
-.navbar {
-  color: white;
-  padding: 0.95rem 0;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-.navbar-content {
-  max-width: var(--viajes-content-max-width);
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 0 0.55rem;
-}
-
-.navbar-title {
-  margin: 0;
-  font-size: 1.55rem;
-  font-weight: 800;
-  color: white;
-  cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.navbar-title:hover {
-  opacity: 0.9;
-}
-
-.navbar-user {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.user-name {
-  font-weight: 600;
-}
-
-.logout-button {
-  background: rgba(255, 255, 255, 0.18);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  padding: 0.5rem 1rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s;
-}
-
-.logout-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-}
 
 .page-header {
   display: flex;
@@ -427,63 +369,6 @@
   text-overflow: initial;
 }
 
-.btn-icon {
-  padding: 0.3rem 0.45rem;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.68rem;
-  font-weight: 700;
-  transition: all 0.2s ease;
-}
-
-.btn-edit {
-  background: #e8f2ff;
-  color: var(--brand-700);
-  border-color: rgba(47, 123, 182, 0.25);
-}
-
-.btn-edit:hover {
-  background: #d9eaff;
-  transform: translateY(-1px);
-}
-
-.btn-delete {
-  background: #ffebee;
-  color: #b42318;
-  border-color: rgba(239, 83, 80, 0.35);
-}
-
-.btn-delete:hover {
-  background: #ffdfe3;
-  transform: translateY(-1px);
-}
-
-/* Buttons */
-.btn-primary {
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary {
-  padding: 10px 20px;
-  background: #ffffff;
-  color: var(--text-primary);
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background: #f2f7ff;
-  border-color: var(--brand-500);
-}
 
 /* States */
 .loading {
@@ -608,7 +493,7 @@
     gap: 4px;
   }
 
-  .btn-icon {
+  .viajes-table .table-action-btn {
     padding: 0.3rem 0.45rem;
     font-size: 0.72rem;
   }

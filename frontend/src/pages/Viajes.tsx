@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { viajsService, Viaje } from '../services/viajsService';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
+import AppNavbar from '../components/AppNavbar';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
@@ -14,7 +14,6 @@ import '../styles/Viajes.css';
 
 const Viajes: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [camiones, setCamiones] = useState<Record<number, Camion>>({});
@@ -30,11 +29,6 @@ const Viajes: React.FC = () => {
     fechaPagoDesde: '',
     fechaPagoHasta: '',
   });
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   useEffect(() => {
     loadViajes();
@@ -181,22 +175,10 @@ const Viajes: React.FC = () => {
 
   return (
     <div className="viajes-page">
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
 
       <div className="page-back-button-container">
-        <BackButton label="Volver al Dashboard" to="/dashboard" />
+        <BackButton label="Volver al Dashboard" to="/dashboard" variant="ghost" />
       </div>
       
       <HeroSection
@@ -454,7 +436,7 @@ const Viajes: React.FC = () => {
                   </td>
                   <td className="acciones-cell">
                     <button
-                      className="btn-icon btn-edit"
+                      className="table-action-btn table-action-btn--edit"
                       onClick={() => handleEdit(viaje.id!)}
                       title="Editar"
                       aria-label={`Editar viaje ${viaje.numeroViaje}: ${viaje.origen} - ${viaje.destino}`}
@@ -462,7 +444,7 @@ const Viajes: React.FC = () => {
                       Editar
                     </button>
                     <button
-                      className="btn-icon btn-delete"
+                      className="table-action-btn table-action-btn--delete"
                       onClick={() => handleDelete(viaje.id!)}
                       title="Eliminar"
                       aria-label={`Eliminar viaje ${viaje.numeroViaje}: ${viaje.origen} - ${viaje.destino}`}

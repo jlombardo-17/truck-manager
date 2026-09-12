@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useParams } from 'react-router-dom';
 import camionesService from '../services/camionesService';
 import serviciosService from '../services/serviciosService';
 import documentosService from '../services/documentosService';
@@ -17,8 +16,11 @@ import {
 import { RepostadaModal } from '../components/RepostadaModal';
 import { MantenimientoTab } from '../components/MantenimientoTab';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
+import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
+import EstadoBadge from '../components/EstadoBadge';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
+import { estadoCamionLabel, estadoCamionTono } from '../utils/estadoCamion';
 import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/CamionDetalle.css';
 
@@ -32,8 +34,6 @@ const formatCurrency = (value: number) =>
   }).format(value);
 
 const CamionDetalle: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const { id } = useParams<{ id: string }>();
   const camionId = id ? parseInt(id) : 0;
 
@@ -150,11 +150,6 @@ const CamionDetalle: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   if (isLoading) {
     return (
       <div className="detalle-container">
@@ -266,7 +261,7 @@ const CamionDetalle: React.FC = () => {
         <button
           type="button"
           onClick={() => { setEditingDocumento(null); setShowDocumentoModal(true); }}
-          className="add-button"
+          className="btn-primary"
         >
           + Agregar Documento
         </button>
@@ -465,20 +460,7 @@ const CamionDetalle: React.FC = () => {
 
   return (
     <div className="detalle-container">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button type="button" onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
 
       <div className="detalle-content">
         <div className="page-header">
@@ -524,7 +506,7 @@ const CamionDetalle: React.FC = () => {
             </div>
             <div className="info-item">
               <label>Estado</label>
-              <span className="estado-badge">{camion.estado}</span>
+              <EstadoBadge label={estadoCamionLabel(camion.estado)} tono={estadoCamionTono(camion.estado)} />
             </div>
             <div className="info-item">
               <label>Odómetro (km)</label>
@@ -625,7 +607,7 @@ const CamionDetalle: React.FC = () => {
               setEditingServicio(null);
               setShowServicioModal(true);
             }}
-            className="add-button"
+            className="btn-primary"
           >
             + Agregar Servicio
           </button>
@@ -709,7 +691,7 @@ const CamionDetalle: React.FC = () => {
               setEditingRepostada(null);
               setShowRepostadaModal(true);
             }}
-            className="add-button"
+            className="btn-primary"
           >
             + Agregar Repostada
           </button>

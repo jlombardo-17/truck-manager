@@ -13,6 +13,7 @@ import {
   getEstadoSalarioColor,
 } from '../types/salario';
 import { Chofer } from '../types/chofer';
+import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/ChoferSalarios.css';
@@ -402,6 +403,8 @@ const ChoferSalarios: React.FC = () => {
 
   return (
     <div className="chofer-salarios-container">
+      <AppNavbar />
+
       {/* Header */}
       <div className="page-header">
         <BackButton

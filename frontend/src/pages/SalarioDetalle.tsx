@@ -13,6 +13,7 @@ import {
 import { Chofer } from '../types/chofer';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import '../styles/SalarioDetalle.css';
 
@@ -245,7 +246,7 @@ const SalarioDetalle: React.FC = () => {
         <BackButton
           label="← Volver a Salarios"
           to={`/choferes/${choferIdNum}/salarios`}
-          variant="compact"
+          variant="ghost"
         />
       </div>
     );
@@ -253,6 +254,8 @@ const SalarioDetalle: React.FC = () => {
 
   return (
     <div className="salario-detalle-container">
+      <AppNavbar />
+
       {/* Header */}
       <div className="page-header">
         <BackButton

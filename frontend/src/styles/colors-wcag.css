@@ -87,36 +87,6 @@
   }
 }
 
-/* === State Badges (Camiones/Choferes) === */
-.estado-activo {
-  background-color: var(--success-bg);
-  color: var(--success-text);
-  border: 1px solid var(--success-border);
-}
-
-.estado-inactivo {
-  background-color: var(--danger-bg);
-  color: var(--danger-text);
-  border: 1px solid var(--danger-border);
-}
-
-.estado-mantenimiento {
-  background-color: var(--warning-bg);
-  color: var(--warning-text);
-  border: 1px solid var(--warning-border);
-}
-
-.estado-fuera_de_servicio {
-  background-color: var(--neutral-bg);
-  color: var(--neutral-text);
-  border: 1px solid var(--neutral-border);
-}
-
-.estado-suspendido {
-  background-color: var(--danger-bg);
-  color: var(--danger-text);
-  border: 1px solid var(--danger-border);
-}
 
 /* === Button States === */
 .btn-primary {

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import camionesService from '../services/camionesService';
 import { Camion } from '../types/camion';
+import AppNavbar from '../components/AppNavbar';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
+import EstadoBadge from '../components/EstadoBadge';
+import { normalizeEstadoCamion, estadoCamionLabel, estadoCamionTono } from '../utils/estadoCamion';
 import heroFleetRed from '../assets/hero-fleet-red.svg';
 import '../styles/Camiones.css';
 
@@ -13,7 +15,6 @@ type TimeRangeOption = 'all' | '1y' | '5y';
 
 const Camiones: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   const [camiones, setCamiones] = useState<Camion[]>([]);
   const [filteredCamiones, setFilteredCamiones] = useState<Camion[]>([]);
@@ -21,11 +22,6 @@ const Camiones: React.FC = () => {
   const [timeRange, setTimeRange] = useState<TimeRangeOption>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   useEffect(() => {
     loadCamiones();
@@ -143,42 +139,10 @@ const Camiones: React.FC = () => {
     maximumFractionDigits: totalKilometros < 1000 ? 1 : 0,
   }).format(totalKilometros);
 
-  const normalizeEstadoCamion = (estado?: string) => {
-    const normalized = (estado || '').toLowerCase().trim().replace(/\s+/g, '_');
-
-    if (normalized === 'activo' || normalized === 'operativo') return 'activo';
-    if (normalized === 'mantenimiento' || normalized === 'en_mantenimiento') return 'mantenimiento';
-    if (normalized === 'fuera_de_servicio' || normalized === 'out_of_service') return 'fuera_de_servicio';
-    if (normalized === 'inactivo' || normalized === 'inactive') return 'inactivo';
-
-    return normalized || 'inactivo';
-  };
-
-  const estadoLabel = (estado?: string) => {
-    const normalized = normalizeEstadoCamion(estado);
-    if (normalized === 'activo') return 'Activo';
-    if (normalized === 'mantenimiento') return 'Mantenimiento';
-    if (normalized === 'fuera_de_servicio') return 'Fuera de Servicio';
-    if (normalized === 'inactivo') return 'Inactivo';
-    return normalized;
-  };
-
   if (isLoading) {
     return (
       <div className="camiones-container">
-        <nav className="navbar">
-          <div className="navbar-content">
-            <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
-            <div className="navbar-user">
-              <span className="user-name">
-                {user?.firstName} {user?.lastName}
-              </span>
-              <button onClick={handleLogout} className="logout-button">
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </nav>
+        <AppNavbar />
 
         <div className="camiones-content">
           <div className="camiones-header">
@@ -186,7 +150,7 @@ const Camiones: React.FC = () => {
               <h1>Gestión de Camiones</h1>
               <p>Control de flota, estado operativo y datos clave de cada unidad.</p>
             </div>
-            <button onClick={handleCreate} className="create-button" disabled>
+            <button onClick={handleCreate} className="btn-primary" disabled>
               + Nuevo Camión
             </button>
           </div>
@@ -223,24 +187,11 @@ const Camiones: React.FC = () => {
 
   return (
     <div className="camiones-container">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
 
       <div className="camiones-content">
         <div className="page-back-button-container">
-          <BackButton label="Volver al Dashboard" to="/dashboard" />
+          <BackButton label="Volver al Dashboard" to="/dashboard" variant="ghost" />
         </div>
         
         <HeroSection
@@ -371,15 +322,13 @@ const Camiones: React.FC = () => {
                   <td>{camion.modelo}</td>
                   <td>{camion.anio}</td>
                   <td>
-                    <span className={`estado-badge ${normalizeEstadoCamion(camion.estado)}`}>
-                      {estadoLabel(camion.estado)}
-                    </span>
+                    <EstadoBadge label={estadoCamionLabel(camion.estado)} tono={estadoCamionTono(camion.estado)} />
                   </td>
                   <td>{Number(camion.odometroKm).toLocaleString('es-AR')}</td>
                   <td className="actions-cell">
-                    <button 
-                      onClick={() => handleEdit(camion.id)} 
-                      className="edit-button" 
+                    <button
+                      onClick={() => handleEdit(camion.id)}
+                      className="table-action-btn table-action-btn--edit"
                       title="Editar"
                       aria-label={`Editar camión ${camion.patente}`}
                     >
@@ -387,7 +336,7 @@ const Camiones: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleDelete(camion.id, camion.patente)}
-                      className="delete-button"
+                      className="table-action-btn table-action-btn--delete"
                       title="Eliminar"
                       aria-label={`Eliminar camión ${camion.patente}`}
                     >

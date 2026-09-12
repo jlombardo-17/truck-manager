@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import choferesService from '../services/choferesService';
 import choferDocumentosService from '../services/choferDocumentosService';
 import { EstadoChofer } from '../types/chofer';
@@ -10,7 +9,10 @@ import {
   TipoDocumentoChoferLabels,
 } from '../types/chofer-documento';
 import { getTodayLocalInputValue } from '../utils/dateUtils';
+import AppNavbar from '../components/AppNavbar';
+import HeroSection from '../components/HeroSection';
 import BackButton from '../components/BackButton';
+import heroTeamTeal from '../assets/hero-team-teal.svg';
 import '../styles/ChoferForm.css';
 
 interface FormData {
@@ -54,13 +56,6 @@ const createEmptyDocumentoDraft = (): DocumentoDraft => ({
 
 const ChoferForm: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   const [formData, setFormData] = useState<FormData>({
     numeroDocumento: '',
     nombre: '',
@@ -257,25 +252,19 @@ const ChoferForm: React.FC = () => {
 
   return (
     <div className="chofer-form-container">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button type="button" onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
 
-      <div className="page-header">
+      <div className="page-back-button-container">
         <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
-        <h1>➕ Nuevo Chofer</h1>
       </div>
+
+      <HeroSection
+        subtitle="Team Management"
+        title="Nuevo Chofer"
+        description="Completá los datos personales y laborales para dar de alta a un conductor."
+        backgroundImage={`linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(26, 188, 156, 0.88) 50%, rgba(22, 160, 133, 0.85) 100%), url(${heroTeamTeal})`}
+        darkBg={true}
+      />
 
       <form onSubmit={handleSubmit} className="chofer-form">
         <div className="form-grid">

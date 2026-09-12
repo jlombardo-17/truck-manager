@@ -1,24 +1,14 @@
 /* Page Layout */
 .viaje-form-page {
-  padding: 1.6rem var(--page-gutter) 2rem;
   background: #f5f5f5;
   min-height: 100vh;
+}
+
+.viaje-form-content {
+  padding: 1.6rem var(--page-gutter) 2rem;
   max-width: var(--page-max-width);
   margin: 0 auto;
   width: 100%;
-}
-
-.form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.form-header h1 {
-  margin: 0;
-  font-size: 28px;
-  color: #333;
 }
 
 .btn-back {
@@ -211,18 +201,8 @@ select.form-input {
 }
 
 @media (max-width: 768px) {
-  .viaje-form-page {
+  .viaje-form-content {
     padding: 12px;
-  }
-
-  .form-header {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-
-  .form-header h1 {
-    font-size: 22px;
   }
 
   .form-grid {

@@ -10,65 +10,6 @@
   overflow-x: clip;
 }
 
-/* Navbar */
-.navbar {
-  color: white;
-  padding: 0.95rem 0;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-.navbar-content {
-  max-width: var(--page-max-width);
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 0 var(--page-gutter);
-}
-
-.navbar-title {
-  margin: 0;
-  font-size: 1.55rem;
-  font-weight: 800;
-  color: white;
-  cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.navbar-title:hover {
-  opacity: 0.9;
-}
-
-.navbar-user {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.user-name {
-  font-weight: 600;
-}
-
-.logout-button {
-  background: rgba(255, 255, 255, 0.18);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  padding: 0.5rem 1rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s;
-}
-
-.logout-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-}
-
 /* KPI Section */
 .camiones-kpi-section {
   background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 100%);
@@ -107,20 +48,6 @@
 .header-copy p {
   margin: 0.3rem 0 0;
   color: var(--text-secondary);
-}
-
-.create-button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.create-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
 }
 
 .camiones-content {
@@ -299,62 +226,10 @@
   border-bottom: none;
 }
 
-.estado-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.estado-badge.activo {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.estado-badge.inactivo {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.estado-badge.mantenimiento {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.estado-badge.fuera_de_servicio {
-  background-color: #e2e3e5;
-  color: #383d41;
-}
-
 .actions-cell {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-start;
-}
-
-.edit-button,
-.delete-button {
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0.4rem 0.65rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-soft);
-  transition: background-color 0.2s, transform 0.1s, border-color 0.2s;
-}
-
-.edit-button:hover {
-  background-color: #e8f2ff;
-  border-color: var(--brand-500);
-  transform: translateY(-1px);
-}
-
-.delete-button:hover {
-  background-color: #ffebee;
-  border-color: #ef5350;
-  transform: translateY(-1px);
 }
 
 .patente-link {
@@ -417,8 +292,7 @@
     padding: 0.5rem;
   }
 
-  .edit-button,
-  .delete-button {
+  .camiones-table .table-action-btn {
     padding: 0.35rem 0.55rem;
     font-size: 0.75rem;
   }

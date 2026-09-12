@@ -444,28 +444,8 @@ textarea {
   font-family: var(--font-sans);
 }
 
-/* 🎨 NAVBAR IMPROVEMENTS */
-.navbar {
-  background: linear-gradient(120deg, var(--primary-navy) 0%, var(--primary-blue) 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 30px rgba(12, 58, 102, 0.15);
-  padding: 1rem 0;
-}
-
-.navbar-title {
-  font-family: var(--font-display);
-  letter-spacing: -0.02em;
-  color: white;
-  font-size: 1.375rem;
-  font-weight: 700;
-}
-
 /* 🎯 BUTTON STYLES - GEOTAB */
-.btn-primary,
-.create-button,
-.logout-button,
-.feature-button,
-.login-button {
+.btn-primary {
   background: linear-gradient(120deg, var(--primary-navy) 0%, var(--primary-blue) 100%);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
@@ -477,21 +457,13 @@ textarea {
   box-shadow: 0 4px 12px rgba(12, 58, 102, 0.2);
 }
 
-.btn-primary:hover,
-.create-button:hover,
-.logout-button:hover,
-.feature-button:hover,
-.login-button:hover {
+.btn-primary:hover {
   opacity: 0.95;
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(12, 58, 102, 0.3);
 }
 
-.btn-primary:active,
-.create-button:active,
-.logout-button:active,
-.feature-button:active,
-.login-button:active {
+.btn-primary:active {
   transform: translateY(0);
   box-shadow: 0 4px 12px rgba(12, 58, 102, 0.2);
 }
@@ -541,6 +513,52 @@ textarea {
   background: var(--accent-yellow);
   border: none;
   color: white;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-success:disabled,
+.btn-danger:disabled,
+.btn-warning:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 🎨 TABLE ROW ACTIONS */
+.table-action-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.table-action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.table-action-btn--edit:hover,
+.table-action-btn--view:hover {
+  background: #e8f2ff;
+  border-color: var(--brand-500);
+}
+
+.table-action-btn--delete {
+  color: #b42318;
+}
+
+.table-action-btn--delete:hover {
+  background: #ffebee;
+  border-color: #ef5350;
 }
 
 .table-container,

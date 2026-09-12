@@ -5,8 +5,11 @@ import { ChoferDocumento, TipoDocumentoChofer, TipoDocumentoChoferLabels } from 
 import choferesService from '../services/choferesService';
 import choferDocumentosService from '../services/choferDocumentosService';
 import DocumentoEstadoBadge from '../components/DocumentoEstadoBadge';
+import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import SalariosTab from '../components/SalariosTab';
+import EstadoBadge from '../components/EstadoBadge';
+import { estadoChoferTono } from '../utils/estadoChofer';
 import { toDateInputValue } from '../utils/dateUtils';
 import '../styles/ChoferDetalle.css';
 
@@ -433,13 +436,15 @@ const ChoferDetalle: React.FC = () => {
     return (
       <div className="error-container">
         <p>{error || 'Chofer no encontrado'}</p>
-        <BackButton label="← Volver a Choferes" to="/choferes" variant="compact" />
+        <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
       </div>
     );
   }
 
   return (
     <div className="chofer-detalle-page">
+      <AppNavbar />
+
       <div className="page-header">
         <BackButton label="← Volver a Choferes" to="/choferes" variant="ghost" />
         <h1>📋 Detalle del Chofer</h1>
@@ -620,9 +625,10 @@ const ChoferDetalle: React.FC = () => {
                 )}
                 <div className="info-item">
                   <label>Estado:</label>
-                  <span className={`estado-${chofer.estado}`}>
-                    {estadoChoferLabels[chofer.estado as EstadoChofer] || chofer.estado}
-                  </span>
+                  <EstadoBadge
+                    label={estadoChoferLabels[chofer.estado as EstadoChofer] || chofer.estado}
+                    tono={estadoChoferTono(chofer.estado)}
+                  />
                 </div>
               </div>
 

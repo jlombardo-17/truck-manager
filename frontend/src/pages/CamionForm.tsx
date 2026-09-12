@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import camionesService from '../services/camionesService';
 import { CreateCamionDto } from '../types/camion';
+import AppNavbar from '../components/AppNavbar';
+import HeroSection from '../components/HeroSection';
 import BackButton from '../components/BackButton';
+import heroFleetRed from '../assets/hero-fleet-red.svg';
 import '../styles/CamionForm.css';
 
 const CamionForm: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
 
@@ -81,11 +82,6 @@ const CamionForm: React.FC = () => {
     navigate('/camiones');
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   if (isLoading && isEditing) {
     return (
       <div className="form-container">
@@ -96,27 +92,25 @@ const CamionForm: React.FC = () => {
 
   return (
     <div className="form-container">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>🚚 Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button type="button" onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
+
+      <div className="page-back-button-container">
+        <BackButton label="← Volver a Camiones" onClick={handleCancel} variant="ghost" />
+      </div>
+
+      <HeroSection
+        subtitle="Fleet Management"
+        title={isEditing ? 'Editar Camión' : 'Nuevo Camión'}
+        description={
+          isEditing
+            ? 'Actualizá los datos del vehículo seleccionado.'
+            : 'Cargá los datos del vehículo para sumarlo a la flota.'
+        }
+        backgroundImage={`linear-gradient(135deg, rgba(231, 76, 60, 0.9) 0%, rgba(230, 126, 34, 0.88) 50%, rgba(243, 156, 18, 0.85) 100%), url(${heroFleetRed})`}
+        darkBg={true}
+      />
 
       <div className="form-content">
-        <div className="page-header">
-          <BackButton label="← Volver a Camiones" onClick={handleCancel} variant="ghost" />
-          <h1>{isEditing ? '✏️ Editar Camión' : '➕ Nuevo Camión'}</h1>
-        </div>
-
         <div className="form-card">
           {error && <div className="error-message">{error}</div>}
 
@@ -233,10 +227,10 @@ const CamionForm: React.FC = () => {
           </div>
 
           <div className="form-actions">
-            <button type="button" onClick={handleCancel} className="cancel-button" disabled={isLoading}>
+            <button type="button" onClick={handleCancel} className="btn-secondary" disabled={isLoading}>
               Cancelar
             </button>
-            <button type="submit" className="submit-button" disabled={isLoading}>
+            <button type="submit" className="btn-primary" disabled={isLoading}>
               {isLoading ? 'Guardando...' : isEditing ? 'Guardar Cambios' : 'Crear Camión'}
             </button>
           </div>

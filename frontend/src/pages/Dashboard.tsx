@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { dashboardService, DashboardResumen, DesempenoCamion, DesempenoChofer } from '../services/dashboardService';
+import AppNavbar from '../components/AppNavbar';
 import StatsGrid from '../components/StatsGrid';
 import DateRangeSelector from '../components/DateRangeSelector';
 import { toDateInputValue } from '../utils/dateUtils';
@@ -14,7 +14,6 @@ interface DateRange {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const [resumen, setResumen] = useState<DashboardResumen | null>(null);
   const [desempenoCamiones, setDesempenoCamiones] = useState<DesempenoCamion[]>([]);
   const [desempenoChoferes, setDesempenoChoferes] = useState<DesempenoChofer[]>([]);
@@ -51,11 +50,6 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   const formatDateRangeLabel = (): string => {
@@ -95,20 +89,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title">Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
 
       {/* Main Content */}
       <div className="dashboard-content">
@@ -318,31 +299,31 @@ const Dashboard: React.FC = () => {
             <div className="feature-card clickable" onClick={() => navigate('/camiones')}>
               <h3>Gestión de Camiones</h3>
               <p>Administra tu flota de vehículos</p>
-              <button className="feature-button">Ver Camiones →</button>
+              <button className="btn-secondary feature-button">Ver Camiones →</button>
             </div>
 
             <div className="feature-card clickable" onClick={() => navigate('/choferes')}>
               <h3>Gestión de Choferes</h3>
               <p>Administra la información de tus conductores</p>
-              <button className="feature-button">Ver Choferes →</button>
+              <button className="btn-secondary feature-button">Ver Choferes →</button>
             </div>
 
             <div className="feature-card clickable" onClick={() => navigate('/viajes')}>
               <h3>Viajes y Rutas</h3>
               <p>Planifica y controla tus entregas con rutas en mapas</p>
-              <button className="feature-button">Ver Viajes →</button>
+              <button className="btn-secondary feature-button">Ver Viajes →</button>
             </div>
 
             <div className="feature-card clickable" onClick={() => navigate('/reportes')}>
               <h3>Reportes</h3>
               <p>Visualiza rentabilidad diaria y mensual por camión o chofer</p>
-              <button className="feature-button">Ver Reportes →</button>
+              <button className="btn-secondary feature-button">Ver Reportes →</button>
             </div>
 
             <div className="feature-card clickable" onClick={() => navigate('/clima')}>
               <h3>Clima</h3>
               <p>Consulta el mapa climático interactivo y pronóstico por ciudad</p>
-              <button className="feature-button">Ver Clima →</button>
+              <button className="btn-secondary feature-button">Ver Clima →</button>
             </div>
           </div>
         </div>

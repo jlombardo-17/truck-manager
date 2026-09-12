@@ -59,7 +59,7 @@ const Login: React.FC = () => {
             />
           </div>
 
-          <button type="submit" disabled={isLoading} className="login-button">
+          <button type="submit" disabled={isLoading} className="btn-primary login-button">
             {isLoading ? 'Iniciando...' : 'Iniciar Sesión'}
           </button>
         </form>

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import choferesService from '../services/choferesService';
 import { Chofer, estadoChoferLabels } from '../types/chofer';
+import AppNavbar from '../components/AppNavbar';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
+import EstadoBadge from '../components/EstadoBadge';
+import { estadoChoferTono } from '../utils/estadoChofer';
 import heroTeamTeal from '../assets/hero-team-teal.svg';
 import '../styles/Choferes.css';
 
@@ -16,12 +18,6 @@ const Choferes: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   useEffect(() => {
     loadChoferes();
@@ -77,35 +73,10 @@ const Choferes: React.FC = () => {
     }
   };
 
-  const getEstadoBadgeClass = (estado: string) => {
-    switch (estado.toLowerCase()) {
-      case 'activo':
-        return 'badge-success';
-      case 'inactivo':
-        return 'badge-secondary';
-      case 'suspendido':
-        return 'badge-warning';
-      default:
-        return 'badge-default';
-    }
-  };
-
   if (loading) {
     return (
       <div className="choferes-container">
-        <nav className="navbar">
-          <div className="navbar-content">
-            <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
-            <div className="navbar-user">
-              <span className="user-name">
-                {user?.firstName} {user?.lastName}
-              </span>
-              <button onClick={handleLogout} className="logout-button">
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </nav>
+        <AppNavbar />
 
         <div className="choferes-header">
           <div className="header-copy">
@@ -149,22 +120,10 @@ const Choferes: React.FC = () => {
   return (
     <div className="choferes-container">
       {/* Navbar */}
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
 
       <div className="page-back-button-container">
-        <BackButton label="Volver al Dashboard" to="/dashboard" />
+        <BackButton label="Volver al Dashboard" to="/dashboard" variant="ghost" />
       </div>
 
       <HeroSection
@@ -269,14 +228,15 @@ const Choferes: React.FC = () => {
                     {chofer.porcentajeComision ? `${chofer.porcentajeComision}%` : '-'}
                   </td>
                   <td>
-                    <span className={`badge ${getEstadoBadgeClass(chofer.estado)}`}>
-                      {estadoChoferLabels[chofer.estado as keyof typeof estadoChoferLabels] || chofer.estado}
-                    </span>
+                    <EstadoBadge
+                      label={estadoChoferLabels[chofer.estado as keyof typeof estadoChoferLabels] || chofer.estado}
+                      tono={estadoChoferTono(chofer.estado)}
+                    />
                   </td>
                   <td className="actions">
                     <Link
                       to={`/choferes/${chofer.id}`}
-                      className="btn-view"
+                      className="table-action-btn table-action-btn--view"
                       title="Ver Detalle"
                       aria-label={`Ver detalle de ${chofer.nombre} ${chofer.apellido}`}
                     >
@@ -284,7 +244,7 @@ const Choferes: React.FC = () => {
                     </Link>
                     <Link
                       to={`/choferes/${chofer.id}?mode=edit`}
-                      className="btn-edit"
+                      className="table-action-btn table-action-btn--edit"
                       title="Editar"
                       aria-label={`Editar información de ${chofer.nombre} ${chofer.apellido}`}
                     >
@@ -294,7 +254,7 @@ const Choferes: React.FC = () => {
                       onClick={() =>
                         handleDelete(chofer.id, `${chofer.nombre} ${chofer.apellido}`)
                       }
-                      className="btn-delete"
+                      className="table-action-btn table-action-btn--delete"
                       title="Eliminar"
                       aria-label={`Eliminar chofer ${chofer.nombre} ${chofer.apellido}`}
                     >

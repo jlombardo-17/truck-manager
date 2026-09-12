@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -30,7 +29,7 @@ import {
 } from '../services/reportesService';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
-import { useAuth } from '../contexts/AuthContext';
+import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import heroAnalyticsGreen from '../assets/hero-analytics-green.svg';
 import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
@@ -97,8 +96,6 @@ type ComparativaEntityOption = {
 };
 
 const Reportes: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const today = useMemo(() => new Date(), []);
   const defaultDesdeDiario = useMemo(() => {
     const d = new Date(today);
@@ -198,11 +195,6 @@ const Reportes: React.FC = () => {
     () => limitList(comparativaEntitiesDisponibles, comparativaLimitEnabled, comparativaLimitCount),
     [comparativaEntitiesDisponibles, comparativaLimitEnabled, comparativaLimitCount],
   );
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   useEffect(() => {
     const loadCatalogs = async () => {
@@ -1102,22 +1094,10 @@ const Reportes: React.FC = () => {
 
   return (
     <div className="reportes-page">
-      <nav className="navbar">
-        <div className="navbar-content">
-          <h1 className="navbar-title" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>Truck Manager</h1>
-          <div className="navbar-user">
-            <span className="user-name">
-              {user?.firstName} {user?.lastName}
-            </span>
-            <button onClick={handleLogout} className="logout-button">
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+      <AppNavbar />
 
       <div className="page-back-button-container">
-        <BackButton label="Volver al Dashboard" to="/dashboard" />
+        <BackButton label="Volver al Dashboard" to="/dashboard" variant="ghost" />
       </div>
       
       {/* Hero Section */}
