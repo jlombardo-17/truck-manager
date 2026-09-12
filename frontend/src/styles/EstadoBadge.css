@@ -1,0 +1,33 @@
+.estado-badge-chip {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado-badge-chip--success {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+}
+
+.estado-badge-chip--warning {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.estado-badge-chip--danger {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.estado-badge-chip--neutral {
+  background-color: var(--neutral-bg);
+  color: var(--neutral-text);
+}
+
+.estado-badge-chip--info {
+  background-color: var(--info-bg);
+  color: var(--info-text);
+}
