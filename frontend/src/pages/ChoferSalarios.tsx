@@ -343,11 +343,12 @@ const ChoferSalarios: React.FC = () => {
       (acc, s) => ({
         salarioBase: acc.salarioBase + parseFloat(s.salarioBase.toString()),
         comisiones: acc.comisiones + parseFloat(s.totalComisiones.toString()),
+        viaticos: acc.viaticos + Number(s.totalViaticos ?? 0),
         bonos: acc.bonos + parseFloat(s.bonos.toString()),
         deducciones: acc.deducciones + parseFloat(s.deducciones.toString()),
         salarioNeto: acc.salarioNeto + parseFloat(s.salarioNeto.toString()),
       }),
-      { salarioBase: 0, comisiones: 0, bonos: 0, deducciones: 0, salarioNeto: 0 },
+      { salarioBase: 0, comisiones: 0, viaticos: 0, bonos: 0, deducciones: 0, salarioNeto: 0 },
     );
     return totales;
   };
@@ -567,6 +568,7 @@ const ChoferSalarios: React.FC = () => {
                   <th>Período</th>
                   <th>Salario Base</th>
                   <th>Comisiones</th>
+                  <th>Viáticos</th>
                   <th>Bonos</th>
                   <th>Deducciones</th>
                   <th>Salario Neto</th>
@@ -587,6 +589,7 @@ const ChoferSalarios: React.FC = () => {
                     <td className="comisiones">
                       {formatCurrency(salario.totalComisiones)}
                     </td>
+                    <td>{formatCurrency(salario.totalViaticos ?? 0)}</td>
                     <td className="bonos">{formatCurrency(salario.bonos)}</td>
                     <td className="deducciones">
                       {formatCurrency(salario.deducciones)}
@@ -672,6 +675,9 @@ const ChoferSalarios: React.FC = () => {
                   </td>
                   <td>
                     <strong>{formatCurrency(totales.comisiones)}</strong>
+                  </td>
+                  <td>
+                    <strong>{formatCurrency(totales.viaticos)}</strong>
                   </td>
                   <td>
                     <strong>{formatCurrency(totales.bonos)}</strong>

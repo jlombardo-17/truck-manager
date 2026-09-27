@@ -19,6 +19,7 @@ interface ChoferEditFormData {
   apellido: string;
   telefono: string;
   direccion: string;
+  localidadResidencia: string;
   fechaIngreso: string;
   fechaNacimiento: string;
   estado: EstadoChofer;
@@ -47,6 +48,7 @@ const ChoferDetalle: React.FC = () => {
     apellido: '',
     telefono: '',
     direccion: '',
+    localidadResidencia: '',
     fechaIngreso: '',
     fechaNacimiento: '',
     estado: EstadoChofer.ACTIVO,
@@ -230,6 +232,7 @@ const ChoferDetalle: React.FC = () => {
         apellido: choferData.apellido || '',
         telefono: choferData.telefono || '',
         direccion: choferData.direccion || '',
+        localidadResidencia: choferData.localidadResidencia || '',
         fechaIngreso: toDateInputValue(choferData.fechaIngreso),
         fechaNacimiento: choferData.fechaNacimiento
           ? toDateInputValue(choferData.fechaNacimiento)
@@ -411,6 +414,7 @@ const ChoferDetalle: React.FC = () => {
         apellido: editFormData.apellido,
         telefono: editFormData.telefono,
         direccion: editFormData.direccion || undefined,
+        localidadResidencia: editFormData.localidadResidencia.trim(),
         fechaIngreso: editFormData.fechaIngreso,
         fechaNacimiento: editFormData.fechaNacimiento || undefined,
         estado: editFormData.estado,
@@ -564,6 +568,11 @@ const ChoferDetalle: React.FC = () => {
                     <input type="number" min="0" max="100" step="0.01" name="porcentajeComision" value={editFormData.porcentajeComision} onChange={handleEditChange} />
                   </div>
 
+                  <div className="form-group">
+                    <label>Localidad de residencia</label>
+                    <input type="text" name="localidadResidencia" value={editFormData.localidadResidencia} onChange={handleEditChange} placeholder="Ej: Mercedes" />
+                  </div>
+
                   <div className="form-group full-width">
                     <label>Dirección</label>
                     <textarea name="direccion" rows={3} value={editFormData.direccion} onChange={handleEditChange} />
@@ -595,6 +604,12 @@ const ChoferDetalle: React.FC = () => {
                   <div className="info-item">
                     <label>Fecha de Nacimiento:</label>
                     <span>{new Date(chofer.fechaNacimiento).toLocaleDateString('es-AR')}</span>
+                  </div>
+                )}
+                {chofer.localidadResidencia && (
+                  <div className="info-item">
+                    <label>Localidad de residencia:</label>
+                    <span>{chofer.localidadResidencia}</span>
                   </div>
                 )}
                 {chofer.direccion && (

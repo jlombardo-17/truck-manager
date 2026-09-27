@@ -45,6 +45,10 @@ export class ChoferSalario {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   totalComisiones: number;
 
+  // Total de viáticos registrados en las jornadas del mes
+  @Column({ name: 'total_viaticos', type: 'decimal', precision: 12, scale: 2, default: 0 })
+  totalViaticos: number;
+
   // Bonos adicionales (productividad, puntualidad, etc.)
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   bonos: number;
@@ -53,7 +57,7 @@ export class ChoferSalario {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   deducciones: number;
 
-  // Salario neto = salario_base + total_comisiones + bonos - deducciones
+  // Salario neto = salario_base + total_comisiones + total_viaticos + bonos - deducciones
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   salarioNeto: number;
 

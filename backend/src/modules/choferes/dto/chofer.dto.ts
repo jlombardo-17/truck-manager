@@ -22,6 +22,10 @@ export class CreateChoferDto {
   @IsString()
   direccion?: string;
 
+  @IsOptional()
+  @IsString()
+  localidadResidencia?: string;
+
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
@@ -66,6 +70,10 @@ export class UpdateChoferDto {
   @IsOptional()
   @IsString()
   direccion?: string;
+
+  @IsOptional()
+  @IsString()
+  localidadResidencia?: string;
 
   @IsOptional()
   @IsDate()

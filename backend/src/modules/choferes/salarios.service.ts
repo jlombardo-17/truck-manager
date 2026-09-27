@@ -6,6 +6,7 @@ import { ChoferSalarioPago, TipoPagoSalario } from './chofer-salario-pago.entity
 import { Chofer } from './chofer.entity';
 import { Viaje } from '../viajes/viaje.entity';
 import { ViajComision } from '../viajes/viaje-comision.entity';
+import { ChoferViatico } from '../jornadas/chofer-viatico.entity';
 import {
   CreateSalarioDto,
   UpdateSalarioDto,
@@ -25,10 +26,65 @@ export class SalariosService {
     private readonly choferRepository: Repository<Chofer>,
     @InjectRepository(Viaje)
     private readonly viajeRepository: Repository<Viaje>,
+    @InjectRepository(ChoferViatico)
+    private readonly viaticoRepository: Repository<ChoferViatico>,
   ) {}
 
   private toNumber(value: any): number {
     return parseFloat((value ?? 0).toString()) || 0;
+  }
+
+  private calcularNeto(salario: ChoferSalario): number {
+    return (
+      this.toNumber(salario.salarioBase) +
+      this.toNumber(salario.totalComisiones) +
+      this.toNumber(salario.totalViaticos) +
+      this.toNumber(salario.bonos) -
+      this.toNumber(salario.deducciones)
+    );
+  }
+
+  /**
+   * Suma los viáticos registrados en las jornadas del chofer para el período
+   */
+  async sumarViaticos(choferId: number, mes: number, anio: number): Promise<number> {
+    const mm = String(mes).padStart(2, '0');
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    const raw = await this.viaticoRepository
+      .createQueryBuilder('v')
+      .innerJoin('v.jornada', 'j')
+      .select('COALESCE(SUM(v.monto), 0)', 'total')
+      .where('j.choferId = :choferId', { choferId })
+      .andWhere('j.fecha BETWEEN :desde AND :hasta', {
+        desde: `${anio}-${mm}-01`,
+        hasta: `${anio}-${mm}-${String(ultimoDia).padStart(2, '0')}`,
+      })
+      .getRawOne<{ total: string }>();
+    return this.toNumber(raw?.total);
+  }
+
+  /**
+   * Recalcula los viáticos del salario del período si está pendiente.
+   * Devuelve el estado del salario tras el intento (o null si no existe).
+   */
+  async recalcularViaticos(
+    choferId: number,
+    mes: number,
+    anio: number,
+  ): Promise<{ salarioId: number; estado: EstadoSalario; actualizado: boolean } | null> {
+    const salario = await this.salarioRepository.findOne({ where: { choferId, mes, anio } });
+    if (!salario) {
+      return null;
+    }
+    if (salario.estado !== EstadoSalario.PENDIENTE) {
+      return { salarioId: salario.id, estado: salario.estado, actualizado: false };
+    }
+
+    salario.totalViaticos = await this.sumarViaticos(choferId, mes, anio);
+    salario.salarioNeto = this.calcularNeto(salario);
+    const saved = await this.salarioRepository.save(salario);
+    const actualizado = await this.actualizarEstadoSegunPagos(saved);
+    return { salarioId: actualizado.id, estado: actualizado.estado, actualizado: true };
   }
 
   private async sumarPagos(salarioId: number): Promise<number> {
@@ -193,17 +249,19 @@ export class SalariosService {
       totalComisiones = resultado.totalComisiones;
     }
 
+    const totalViaticos = await this.sumarViaticos(dto.choferId, dto.mes, dto.anio);
     const bonos = dto.bonos || 0;
     const deducciones = dto.deducciones || 0;
 
     // Calcular salario neto
-    const salarioNeto = salarioBase + totalComisiones + bonos - deducciones;
+    const salarioNeto = salarioBase + totalComisiones + totalViaticos + bonos - deducciones;
 
     // Crear el registro
     const nuevoSalario = this.salarioRepository.create({
       ...dto,
       salarioBase,
       totalComisiones,
+      totalViaticos,
       bonos,
       deducciones,
       salarioNeto,
@@ -245,11 +303,7 @@ export class SalariosService {
     Object.assign(salario, dto);
 
     // Recalcular salario neto
-    salario.salarioNeto =
-      parseFloat(salario.salarioBase.toString()) +
-      parseFloat(salario.totalComisiones.toString()) +
-      parseFloat(salario.bonos.toString()) -
-      parseFloat(salario.deducciones.toString());
+    salario.salarioNeto = this.calcularNeto(salario);
 
     const saved = await this.salarioRepository.save(salario);
     await this.actualizarEstadoSegunPagos(saved);
@@ -440,7 +494,8 @@ export class SalariosService {
 
         // Crear salario
         const salarioBase = parseFloat(chofer.sueldoBase?.toString() || '0');
-        const salarioNeto = salarioBase + totalComisiones;
+        const totalViaticos = await this.sumarViaticos(chofer.id, dto.mes, dto.anio);
+        const salarioNeto = salarioBase + totalComisiones + totalViaticos;
 
         const nuevoSalario = this.salarioRepository.create({
           choferId: chofer.id,
@@ -448,6 +503,7 @@ export class SalariosService {
           anio: dto.anio,
           salarioBase,
           totalComisiones,
+          totalViaticos,
           bonos: 0,
           deducciones: 0,
           salarioNeto,

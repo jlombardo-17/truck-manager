@@ -119,6 +119,7 @@ const SalarioDetalle: React.FC = () => {
     const detalles = [
       ['Salario Base', formatCurrency(salario.salarioBase)],
       ['Comisiones por Viajes', formatCurrency(salario.totalComisiones)],
+      ['Viáticos', formatCurrency(salario.totalViaticos ?? 0)],
       ['Bonos', formatCurrency(salario.bonos)],
       ['Deducciones', `- ${formatCurrency(salario.deducciones)}`],
       ['', ''],
@@ -290,6 +291,10 @@ const SalarioDetalle: React.FC = () => {
           <div className="resumen-item comisiones">
             <span className="label">Comisiones</span>
             <span className="value">+ {formatCurrency(salario.totalComisiones)}</span>
+          </div>
+          <div className="resumen-item viaticos">
+            <span className="label">Viáticos</span>
+            <span className="value">+ {formatCurrency(salario.totalViaticos ?? 0)}</span>
           </div>
           <div className="resumen-item bonos">
             <span className="label">Bonos</span>

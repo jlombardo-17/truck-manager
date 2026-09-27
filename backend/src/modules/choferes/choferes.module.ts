@@ -13,6 +13,8 @@ import { SalariosController } from './salarios.controller';
 import { Viaje } from '../viajes/viaje.entity';
 import { ViajComision } from '../viajes/viaje-comision.entity';
 import { ChoferSalarioPago } from './chofer-salario-pago.entity';
+import { ChoferJornada } from '../jornadas/chofer-jornada.entity';
+import { ChoferViatico } from '../jornadas/chofer-viatico.entity';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { ChoferSalarioPago } from './chofer-salario-pago.entity';
       ChoferSalarioPago,
       Viaje,
       ViajComision,
+      ChoferJornada,
+      ChoferViatico,
     ]),
     AuthModule,
   ],

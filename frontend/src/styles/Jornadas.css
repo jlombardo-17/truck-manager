@@ -1,0 +1,455 @@
+.jornadas-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-page);
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 1.6rem 1.2rem 2rem;
+  overflow-x: clip;
+}
+
+.jornadas-container .page-back-button-container {
+  max-width: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.jornadas-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.jornadas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.jornadas-header h1 {
+  margin: 0;
+}
+
+.jornadas-header p {
+  margin: 0.25rem 0 0;
+  color: #556b7e;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.4rem;
+  color: var(--brand-600);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn-link:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+}
+
+/* Filtros */
+.jornadas-filtros {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--bg-elevated);
+  border: 1px solid #e0e7ef;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
+
+.jornadas-filtros__choferes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chofer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.3rem;
+  border-radius: 999px;
+  border: 1px solid #cbd5e0;
+  background: var(--bg-subtle);
+  color: #556b7e;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.chofer-toggle.is-activo {
+  border-color: var(--brand-600);
+  background: var(--info-bg, #eff6ff);
+  color: #2c3e50;
+}
+
+.chofer-toggle__iniciales {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: #e0e7ef;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.chofer-toggle.is-activo .chofer-toggle__iniciales {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.jornadas-filtros__mes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.jornadas-filtros__mes .btn-secondary {
+  padding: 0.4rem 0.75rem;
+}
+
+.jornadas-filtros__mes-label {
+  min-width: 9.5rem;
+  text-align: center;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.jornadas-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.jornadas-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* Calendario */
+.jornadas-calendario {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.jornadas-calendario__dow {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #556b7e;
+  padding: 0.25rem 0;
+}
+
+.jornadas-calendario__dia {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  min-height: 6.5rem;
+  padding: 0.35rem;
+  border: 1px solid #e0e7ef;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-width: 0;
+}
+
+.jornadas-calendario__dia:hover {
+  border-color: var(--brand-600);
+}
+
+.jornadas-calendario__dia:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 1px;
+}
+
+.jornadas-calendario__dia.is-finde {
+  background: var(--bg-subtle);
+}
+
+.jornadas-calendario__dia.is-fuera {
+  opacity: 0.45;
+}
+
+.jornadas-calendario__dia.is-hoy .jornadas-calendario__numero {
+  background: var(--brand-600);
+  color: #fff;
+}
+
+.jornadas-calendario__dia.is-seleccionado {
+  border-color: var(--brand-600);
+  box-shadow: inset 0 0 0 2px var(--brand-600);
+}
+
+.jornadas-calendario__numero {
+  align-self: flex-start;
+  min-width: 1.5rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.jornadas-calendario__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.jornada-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  background: var(--neutral-bg, #f3f4f6);
+  color: var(--neutral-text, #1f2937);
+}
+
+.jornada-chip__cat {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jornada-chip__viatico {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.jornada-chip--sugerido {
+  background: transparent;
+  border: 1px dashed var(--border-strong, #9ca3af);
+  color: #556b7e;
+}
+
+.jornada-chip--mas {
+  justify-content: center;
+}
+
+/* Alertas y ayudas */
+.jornada-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.jornada-alert ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.jornada-alert--info {
+  background: var(--info-bg, #eff6ff);
+  border-color: var(--info-border, #bfdbfe);
+  color: var(--info-text, #1e3a8a);
+}
+
+.jornada-alert--warning {
+  background: var(--warning-bg, #fffbeb);
+  border-color: var(--warning-border, #fde68a);
+  color: var(--warning-text, #78350f);
+}
+
+.jornada-alert--error {
+  background: var(--danger-bg, #fef2f2);
+  border-color: var(--danger-border, #fecaca);
+  color: var(--danger-text, #7f1d1d);
+}
+
+.jornada-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: #556b7e;
+}
+
+/* Diálogo de día */
+.jornada-dialog {
+  max-width: 760px;
+}
+
+.jornada-dialog__chofer {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.jornada-dialog__chofer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.jornada-dialog__chofer-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.jornada-dialog__residencia {
+  font-size: 0.85rem;
+  color: #556b7e;
+}
+
+.jornada-dialog .form-group {
+  margin-bottom: 0.75rem;
+}
+
+.jornada-viaticos {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+
+.jornada-viaticos__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.jornada-viaticos__row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1.5fr) minmax(6rem, 1fr) auto;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.jornada-viaticos__row input,
+.jornada-viaticos__row select,
+.viatico-tipos-table input {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font: inherit;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.jornada-viaticos__remove {
+  border: none;
+  background: none;
+  color: var(--danger-strong, #b91c1c);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 0.4rem;
+}
+
+/* Tipos de viático */
+.viatico-tipos-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.viatico-tipos-table th,
+.viatico-tipos-table td {
+  padding: 0.45rem;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.viatico-tipos-table tr.is-inactivo td {
+  color: #8395a7;
+}
+
+.viatico-tipos-table__acciones {
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Resumen */
+.jornadas-resumen h2 {
+  font-size: 1.15rem;
+  text-transform: capitalize;
+  margin: 1rem 0 0.5rem;
+}
+
+.jornadas-resumen__scroll {
+  overflow-x: auto;
+}
+
+.jornadas-resumen__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.jornadas-resumen__table th,
+.jornadas-resumen__table td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid #e0e7ef;
+  text-align: center;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.jornadas-resumen__table th:first-child,
+.jornadas-resumen__table td:first-child {
+  text-align: left;
+}
+
+.jornadas-resumen__table tfoot td {
+  font-weight: 700;
+}
+
+.jornadas-resumen__table .bold {
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .jornadas-calendario__dia {
+    min-height: 4.5rem;
+  }
+
+  .jornada-chip__cat,
+  .jornada-chip__viatico {
+    display: none;
+  }
+
+  .jornada-viaticos__row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

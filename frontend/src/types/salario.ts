@@ -5,6 +5,7 @@ export interface ChoferSalario {
   anio: number;
   salarioBase: number;
   totalComisiones: number;
+  totalViaticos?: number;
   bonos: number;
   deducciones: number;
   salarioNeto: number;

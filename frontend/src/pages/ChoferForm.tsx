@@ -21,6 +21,7 @@ interface FormData {
   apellido: string;
   telefono: string;
   direccion: string;
+  localidadResidencia: string;
   fechaIngreso: string;
   fechaNacimiento: string;
   estado: EstadoChofer;
@@ -62,6 +63,7 @@ const ChoferForm: React.FC = () => {
     apellido: '',
     telefono: '',
     direccion: '',
+    localidadResidencia: '',
     fechaIngreso: getTodayLocalInputValue(),
     fechaNacimiento: '',
     estado: EstadoChofer.ACTIVO,
@@ -198,6 +200,7 @@ const ChoferForm: React.FC = () => {
         ...formData,
         fechaNacimiento: formData.fechaNacimiento || undefined,
         direccion: formData.direccion || undefined,
+        localidadResidencia: formData.localidadResidencia.trim() || undefined,
         sueldoBase: formData.sueldoBase ? parseFloat(formData.sueldoBase) : undefined,
         porcentajeComision: formData.porcentajeComision ? parseFloat(formData.porcentajeComision) : undefined,
       };
@@ -410,6 +413,20 @@ const ChoferForm: React.FC = () => {
               placeholder="Ej: 15.00"
               disabled={loading}
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="localidadResidencia">Localidad de residencia</label>
+            <input
+              type="text"
+              id="localidadResidencia"
+              name="localidadResidencia"
+              value={formData.localidadResidencia}
+              onChange={handleChange}
+              placeholder="Ej: Mercedes"
+              disabled={loading}
+            />
+            <small>Se usa para sugerir viáticos cuando trabaja fuera de esta localidad.</small>
           </div>
 
           <div className="form-group full-width">

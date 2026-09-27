@@ -938,6 +938,107 @@ Response (200):
 
 ---
 
+## 📅 Jornadas y Viáticos (`/jornadas`, `/viatico-tipos`)
+
+Registro diario por chofer (categoría del día + viáticos). Los viáticos del mes se suman a `ChoferSalario.totalViaticos` y al `salarioNeto`; al modificar jornadas se recalcula el salario del mes **solo si está `pendiente`**. Montos en UYU.
+
+Categorías: `trabajado`, `licencia`, `licencia_medica`, `sin_trabajar`, `mantenimiento`, `feriado`, `otro`.
+
+### Listar jornadas de un rango
+```http
+GET /jornadas?choferIds=1,2&desde=2026-09-01&hasta=2026-09-30
+Authorization: Bearer <token>
+
+Response (200):
+{
+  "jornadas": [
+    {
+      "id": 8, "choferId": 4, "fecha": "2026-09-25", "categoria": "trabajado",
+      "lugarTrabajo": "Mercedes", "viajeId": 13, "observaciones": null,
+      "viaticos": [{ "id": 5, "viaticoTipoId": 1, "concepto": "Almuerzo", "monto": "450.00" }]
+    }
+  ],
+  "viajesSugeridos": [
+    { "choferId": 4, "fecha": "2026-09-24", "viajeId": 12, "numeroViaje": "VIAJE-20260924-2486", "origen": "Nuevo Berlin", "destino": "Montevideo, Pinar" }
+  ]
+}
+```
+`viajesSugeridos`: días sin jornada en los que el chofer tenía un viaje en curso. Rango máximo: 62 días.
+
+### Crear / actualizar jornada (upsert por chofer + fecha)
+```http
+PUT /jornadas
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "choferId": 4,
+  "fecha": "2026-09-25",
+  "categoria": "trabajado",
+  "lugarTrabajo": "Mercedes",
+  "viajeId": 13,
+  "viaticos": [
+    { "viaticoTipoId": 1, "concepto": "Almuerzo", "monto": 450 },
+    { "concepto": "Pernocte", "monto": 1200 }
+  ]
+}
+
+Response (200):
+{
+  "jornada": { ... },
+  "salario": { "choferId": 4, "mes": 9, "anio": 2026, "salarioId": 12, "estado": "pendiente", "actualizado": true }
+}
+```
+`viaticos` reemplaza la lista completa; si se omite, no se tocan los existentes; `[]` los elimina. `salario` es `null` si no hay salario generado para ese mes, y `actualizado: false` si está pagado o cancelado.
+
+### Marcar un rango de días
+```http
+POST /jornadas/bulk
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "choferIds": [1, 2], "desde": "2026-09-14", "hasta": "2026-09-18", "categoria": "licencia" }
+
+Response (200):
+{ "procesadas": 10, "salarios": [ ... ] }
+```
+Conserva los viáticos ya registrados.
+
+### Eliminar jornada
+```http
+DELETE /jornadas/:id
+Authorization: Bearer <token>
+
+Response (200):
+{ "salario": { ... } | null }
+```
+
+### Resumen mensual
+```http
+GET /jornadas/resumen?choferIds=1,2&anio=2026&mes=9
+Authorization: Bearer <token>
+
+Response (200):
+[
+  {
+    "choferId": 1, "nombre": "Matias", "apellido": "Velazquez",
+    "dias": { "trabajado": 18, "licencia": 2, "licencia_medica": 0, "sin_trabajar": 0, "mantenimiento": 1, "feriado": 0, "otro": 0 },
+    "diasRegistrados": 21, "cantidadViaticos": 6, "totalViaticos": 4200
+  }
+]
+```
+
+### Tipos de viático
+```http
+GET  /viatico-tipos            # activos (?todos=true incluye inactivos)
+GET  /viatico-tipos/:id
+POST /viatico-tipos            { "nombre": "Almuerzo", "montoDefault": 450 }
+PUT  /viatico-tipos/:id        { "montoDefault": 500 } | { "activo": false }
+```
+No hay borrado físico: se desactivan con `activo: false`.
+
+---
+
 ## 📌 Códigos de Estado HTTP
 
 | Código | Significado | Ejemplo |

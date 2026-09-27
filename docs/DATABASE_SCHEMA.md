@@ -261,6 +261,50 @@ CREATE TABLE choferes_salarios_mensuales (
 );
 ```
 
+### 6b. JORNADAS Y VIÁTICOS
+
+```sql
+-- Registro diario por chofer (una fila por chofer y día)
+CREATE TABLE chofer_jornada (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  chofer_id INT NOT NULL,                -- FK choferes(id) ON DELETE CASCADE
+  fecha DATE NOT NULL,
+  categoria ENUM('trabajado','licencia','licencia_medica','sin_trabajar','mantenimiento','feriado','otro') NOT NULL,
+  lugar_trabajo VARCHAR(255) NULL,       -- localidad del día (para sugerir viático)
+  viaje_id INT NULL,                     -- FK viajes(id) ON DELETE SET NULL
+  observaciones TEXT NULL,
+  created_at DATETIME, updated_at DATETIME,
+  UNIQUE KEY UQ_chofer_jornada_chofer_fecha (chofer_id, fecha)
+);
+
+-- Tipos de viático con monto sugerido (UYU)
+CREATE TABLE viatico_tipo (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  nombre VARCHAR(255) NOT NULL UNIQUE,
+  monto_default DECIMAL(12,2) NOT NULL DEFAULT 0,
+  activo BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME, updated_at DATETIME
+);
+
+-- Viáticos de una jornada (0..n), montos en UYU
+CREATE TABLE chofer_viatico (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  jornada_id INT NOT NULL,               -- FK chofer_jornada(id) ON DELETE CASCADE
+  viatico_tipo_id INT NULL,              -- FK viatico_tipo(id) ON DELETE SET NULL
+  concepto VARCHAR(255) NOT NULL,
+  monto DECIMAL(12,2) NOT NULL,
+  observaciones TEXT NULL,
+  created_at DATETIME
+);
+
+-- Columnas nuevas en tablas existentes
+ALTER TABLE choferes ADD COLUMN localidadResidencia VARCHAR(255) NULL;
+ALTER TABLE choferes_salarios ADD COLUMN total_viaticos DECIMAL(12,2) NOT NULL DEFAULT 0;
+-- salario_neto = salario_base + total_comisiones + total_viaticos + bonos - deducciones
+```
+
+> **Deploy en producción (Railway):** `synchronize` está apagado en prod. Para crear estas tablas/columnas, desplegar una vez con `DB_SYNC=true` y luego volver a `false` (o aplicar el SQL equivalente a mano).
+
 ### 7. MANTENIMIENTO
 
 ```sql

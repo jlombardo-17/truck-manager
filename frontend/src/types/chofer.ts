@@ -5,6 +5,7 @@ export interface Chofer {
   apellido: string;
   telefono: string;
   direccion?: string;
+  localidadResidencia?: string;
   fechaIngreso: Date | string;
   fechaNacimiento?: Date | string;
   estado: EstadoChofer;
@@ -25,6 +26,7 @@ export interface CreateChoferDto {
   apellido: string;
   telefono: string;
   direccion?: string;
+  localidadResidencia?: string;
   fechaIngreso: Date | string;
   fechaNacimiento?: Date | string;
   estado?: EstadoChofer;
@@ -39,6 +41,7 @@ export interface UpdateChoferDto {
   apellido?: string;
   telefono?: string;
   direccion?: string;
+  localidadResidencia?: string;
   fechaIngreso?: Date | string;
   fechaNacimiento?: Date | string;
   estado?: EstadoChofer;

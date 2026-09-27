@@ -21,6 +21,10 @@ export class Chofer {
   @Column({ type: 'text', nullable: true })
   direccion: string;
 
+  // Localidad donde reside; si trabaja fuera de ella corresponde viático
+  @Column({ nullable: true })
+  localidadResidencia: string;
+
   @Column({ type: 'date' })
   fechaIngreso: Date;
 
