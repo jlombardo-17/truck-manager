@@ -348,9 +348,16 @@
 
 .jornada-viaticos__row {
   display: grid;
-  grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1.5fr) minmax(6rem, 1fr) auto;
+  grid-template-columns: minmax(7rem, 1fr) minmax(8rem, 1.5fr) 4.5rem minmax(6rem, 1fr) auto;
   gap: 0.4rem;
   margin-bottom: 0.4rem;
+}
+
+.jornada-viaticos__row--head {
+  margin-bottom: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #556b7e;
 }
 
 .jornada-viaticos__row input,
@@ -439,6 +446,37 @@
   font-weight: 600;
 }
 
+/* Reporte de viáticos */
+.jornadas-reporte__filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.jornadas-reporte__filtros label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #556b7e;
+}
+
+.jornadas-reporte__filtros input {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.jornadas-reporte__detalle {
+  text-align: left !important;
+  white-space: normal !important;
+  color: #556b7e;
+}
+
 @media (max-width: 720px) {
   .jornadas-calendario__dia {
     min-height: 4.5rem;
@@ -451,5 +489,9 @@
 
   .jornada-viaticos__row {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .jornada-viaticos__row--head {
+    display: none;
   }
 }

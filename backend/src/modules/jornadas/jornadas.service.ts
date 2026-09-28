@@ -11,6 +11,7 @@ import { EstadoSalario } from '../choferes/chofer-salario.entity';
 import { BulkJornadaDto, UpsertJornadaDto } from './dto/jornada.dto';
 
 const MAX_DIAS_RANGO = 62;
+const MAX_DIAS_REPORTE = 366;
 
 export interface ViajeSugerido {
   choferId: number;
@@ -28,6 +29,15 @@ export interface SalarioAfectado {
   salarioId: number;
   estado: EstadoSalario;
   actualizado: boolean;
+}
+
+export interface ReporteViaticosChofer {
+  choferId: number;
+  nombre: string;
+  apellido: string;
+  cantidad: number;
+  total: number;
+  detalle: { concepto: string; montoUnitario: number; cantidad: number; total: number }[];
 }
 
 export interface ResumenChofer {
@@ -80,13 +90,13 @@ export class JornadasService {
     return fechas;
   }
 
-  private validarRango(desde: string, hasta: string): string[] {
+  private validarRango(desde: string, hasta: string, maxDias = MAX_DIAS_RANGO): string[] {
     if (desde > hasta) {
       throw new BadRequestException('La fecha desde no puede ser posterior a la fecha hasta');
     }
     const fechas = this.fechasEntre(desde, hasta);
-    if (fechas.length > MAX_DIAS_RANGO) {
-      throw new BadRequestException(`El rango no puede superar ${MAX_DIAS_RANGO} días`);
+    if (fechas.length > maxDias) {
+      throw new BadRequestException(`El rango no puede superar ${maxDias} días`);
     }
     return fechas;
   }
@@ -209,8 +219,8 @@ export class JornadasService {
       .createQueryBuilder('v')
       .innerJoin('v.jornada', 'j')
       .select('j.choferId', 'choferId')
-      .addSelect('COUNT(v.id)', 'cantidad')
-      .addSelect('COALESCE(SUM(v.monto), 0)', 'total')
+      .addSelect('COALESCE(SUM(v.cantidad), 0)', 'cantidad')
+      .addSelect('COALESCE(SUM(v.cantidad * v.monto), 0)', 'total')
       .where('j.choferId IN (:...choferIds)', { choferIds })
       .andWhere('j.fecha BETWEEN :desde AND :hasta', { desde, hasta })
       .groupBy('j.choferId')
@@ -234,6 +244,58 @@ export class JornadasService {
         diasRegistrados: Object.values(dias).reduce((a, b) => a + b, 0),
         cantidadViaticos: Number(v?.cantidad ?? 0),
         totalViaticos: parseFloat(v?.total ?? '0') || 0,
+      };
+    });
+  }
+
+  /**
+   * Cantidad y monto de viáticos por chofer en una ventana de tiempo,
+   * desglosado por concepto y monto unitario.
+   */
+  async reporteViaticos(choferIds: number[], desde: string, hasta: string): Promise<ReporteViaticosChofer[]> {
+    desde = this.normalizarFecha(desde);
+    hasta = this.normalizarFecha(hasta);
+    this.validarRango(desde, hasta, MAX_DIAS_REPORTE);
+    if (choferIds.length === 0) return [];
+
+    const choferes = await this.choferRepository.find({
+      where: { id: In(choferIds) },
+      order: { nombre: 'ASC', apellido: 'ASC' },
+    });
+
+    const filas = await this.viaticoRepository
+      .createQueryBuilder('v')
+      .innerJoin('v.jornada', 'j')
+      .select('j.choferId', 'choferId')
+      .addSelect('v.concepto', 'concepto')
+      .addSelect('v.monto', 'montoUnitario')
+      .addSelect('SUM(v.cantidad)', 'cantidad')
+      .addSelect('SUM(v.cantidad * v.monto)', 'total')
+      .where('j.choferId IN (:...choferIds)', { choferIds })
+      .andWhere('j.fecha BETWEEN :desde AND :hasta', { desde, hasta })
+      .groupBy('j.choferId')
+      .addGroupBy('v.concepto')
+      .addGroupBy('v.monto')
+      .orderBy('v.concepto', 'ASC')
+      .addOrderBy('v.monto', 'DESC')
+      .getRawMany<{ choferId: string; concepto: string; montoUnitario: string; cantidad: string; total: string }>();
+
+    return choferes.map((chofer) => {
+      const detalle = filas
+        .filter((f) => Number(f.choferId) === chofer.id)
+        .map((f) => ({
+          concepto: f.concepto,
+          montoUnitario: parseFloat(f.montoUnitario) || 0,
+          cantidad: Number(f.cantidad),
+          total: parseFloat(f.total) || 0,
+        }));
+      return {
+        choferId: chofer.id,
+        nombre: chofer.nombre,
+        apellido: chofer.apellido,
+        cantidad: detalle.reduce((acc, d) => acc + d.cantidad, 0),
+        total: detalle.reduce((acc, d) => acc + d.total, 0),
+        detalle,
       };
     });
   }
@@ -273,6 +335,7 @@ export class JornadasService {
                 jornadaId: jornada.id,
                 viaticoTipoId: v.viaticoTipoId ?? null,
                 concepto: v.concepto.trim(),
+                cantidad: v.cantidad ?? 1,
                 monto: v.monto,
                 observaciones: v.observaciones?.trim() || null,
               }),

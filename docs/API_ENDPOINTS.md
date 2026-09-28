@@ -955,7 +955,7 @@ Response (200):
     {
       "id": 8, "choferId": 4, "fecha": "2026-09-25", "categoria": "trabajado",
       "lugarTrabajo": "Mercedes", "viajeId": 13, "observaciones": null,
-      "viaticos": [{ "id": 5, "viaticoTipoId": 1, "concepto": "Almuerzo", "monto": "450.00" }]
+      "viaticos": [{ "id": 5, "viaticoTipoId": 1, "concepto": "Almuerzo", "cantidad": 1, "monto": "450.00" }]
     }
   ],
   "viajesSugeridos": [
@@ -978,8 +978,8 @@ Content-Type: application/json
   "lugarTrabajo": "Mercedes",
   "viajeId": 13,
   "viaticos": [
-    { "viaticoTipoId": 1, "concepto": "Almuerzo", "monto": 450 },
-    { "concepto": "Pernocte", "monto": 1200 }
+    { "viaticoTipoId": 1, "concepto": "Viático", "cantidad": 1, "monto": 400 },
+    { "concepto": "Viático", "cantidad": 2, "monto": 300 }
   ]
 }
 
@@ -989,7 +989,7 @@ Response (200):
   "salario": { "choferId": 4, "mes": 9, "anio": 2026, "salarioId": 12, "estado": "pendiente", "actualizado": true }
 }
 ```
-`viaticos` reemplaza la lista completa; si se omite, no se tocan los existentes; `[]` los elimina. `salario` es `null` si no hay salario generado para ese mes, y `actualizado: false` si está pagado o cancelado.
+Cada viático tiene `cantidad` (entero 1–99, por defecto 1) y `monto` **unitario**; el total de la línea es `cantidad * monto`. `viaticos` reemplaza la lista completa; si se omite, no se tocan los existentes; `[]` los elimina. `salario` es `null` si no hay salario generado para ese mes, y `actualizado: false` si está pagado o cancelado.
 
 ### Marcar un rango de días
 ```http
@@ -1027,6 +1027,25 @@ Response (200):
   }
 ]
 ```
+
+### Reporte de viáticos por período
+```http
+GET /jornadas/reporte-viaticos?choferIds=1,2&desde=2026-01-01&hasta=2026-06-30
+Authorization: Bearer <token>
+
+Response (200):
+[
+  {
+    "choferId": 1, "nombre": "Matias", "apellido": "Velazquez",
+    "cantidad": 4, "total": 1500,
+    "detalle": [
+      { "concepto": "Viático", "montoUnitario": 400, "cantidad": 3, "total": 1200 },
+      { "concepto": "Viático", "montoUnitario": 300, "cantidad": 1, "total": 300 }
+    ]
+  }
+]
+```
+`cantidad` es la suma de las cantidades (no el monto). Ventana máxima: 366 días. El `GET /jornadas/resumen` también devuelve `cantidadViaticos` como suma de cantidades.
 
 ### Tipos de viático
 ```http

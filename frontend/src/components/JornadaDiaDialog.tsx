@@ -17,7 +17,8 @@ import '../styles/Modal.css';
 interface ViaticoForm {
   viaticoTipoId: number | '';
   concepto: string;
-  monto: string;
+  cantidad: string;
+  monto: string; // unitario
 }
 
 interface JornadaForm {
@@ -47,6 +48,7 @@ const formDesdeJornada = (jornada?: ChoferJornada): JornadaForm => ({
   viaticos: (jornada?.viaticos ?? []).map((v) => ({
     viaticoTipoId: v.viaticoTipoId ?? '',
     concepto: v.concepto,
+    cantidad: String(v.cantidad ?? 1),
     monto: String(Number(v.monto)),
   })),
   dirty: false,
@@ -83,8 +85,8 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
   const agregarViatico = (choferId: number) => {
     const tipo = tiposActivos[0];
     const nuevo: ViaticoForm = tipo
-      ? { viaticoTipoId: tipo.id, concepto: tipo.nombre, monto: String(Number(tipo.montoDefault)) }
-      : { viaticoTipoId: '', concepto: '', monto: '' };
+      ? { viaticoTipoId: tipo.id, concepto: tipo.nombre, cantidad: '1', monto: String(Number(tipo.montoDefault)) }
+      : { viaticoTipoId: '', concepto: '', cantidad: '1', monto: '' };
     updateForm(choferId, { viaticos: [...forms[choferId].viaticos, nuevo] });
   };
 
@@ -119,6 +121,10 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
       }
       for (const v of form.viaticos) {
         if (!v.concepto.trim()) return `${chofer.nombre} ${chofer.apellido}: todos los viáticos necesitan un concepto.`;
+        const cantidad = Number(v.cantidad);
+        if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 99) {
+          return `${chofer.nombre} ${chofer.apellido}: la cantidad de cada viático debe ser un entero entre 1 y 99.`;
+        }
         if (!(Number(v.monto) > 0)) return `${chofer.nombre} ${chofer.apellido}: el monto de cada viático debe ser mayor a 0.`;
       }
     }
@@ -159,6 +165,7 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
           viaticos: form.viaticos.map((v) => ({
             viaticoTipoId: v.viaticoTipoId === '' ? undefined : v.viaticoTipoId,
             concepto: v.concepto.trim(),
+            cantidad: Number(v.cantidad),
             monto: Number(v.monto),
           })),
         });
@@ -192,7 +199,11 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
             const sugiereViatico =
               correspondeViatico(form.categoria || CategoriaJornada.OTRO, form.lugarTrabajo, chofer.localidadResidencia) &&
               form.viaticos.length === 0;
-            const totalViaticos = form.viaticos.reduce((acc, v) => acc + (Number(v.monto) || 0), 0);
+            const cantidadViaticos = form.viaticos.reduce((acc, v) => acc + (Number(v.cantidad) || 0), 0);
+            const totalViaticos = form.viaticos.reduce(
+              (acc, v) => acc + (Number(v.cantidad) || 0) * (Number(v.monto) || 0),
+              0,
+            );
 
             return (
               <section key={chofer.id} className="jornada-dialog__chofer">
@@ -260,11 +271,23 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
                 {form.categoria && (
                   <div className="jornada-viaticos">
                     <div className="jornada-viaticos__header">
-                      <span>Viáticos {form.viaticos.length > 0 && `· ${formatUYU(totalViaticos)}`}</span>
+                      <span>
+                        Viáticos
+                        {form.viaticos.length > 0 && ` · ${cantidadViaticos} · ${formatUYU(totalViaticos)}`}
+                      </span>
                       <button type="button" className="btn-link" onClick={() => agregarViatico(chofer.id)}>
                         + Agregar
                       </button>
                     </div>
+                    {form.viaticos.length > 0 && (
+                      <div className="jornada-viaticos__row jornada-viaticos__row--head" aria-hidden="true">
+                        <span>Tipo</span>
+                        <span>Concepto</span>
+                        <span>Cant.</span>
+                        <span>Monto c/u</span>
+                        <span />
+                      </div>
+                    )}
                     {form.viaticos.map((v, i) => {
                       const opciones = tiposViatico.filter((t) => t.activo || t.id === v.viaticoTipoId);
                       return (
@@ -289,12 +312,23 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
                             onChange={(e) => updateViatico(chofer.id, i, { concepto: e.target.value })}
                           />
                           <input
-                            aria-label="Monto (UYU)"
+                            aria-label="Cantidad"
+                            title="Cantidad"
+                            type="number"
+                            min="1"
+                            max="99"
+                            step="1"
+                            value={v.cantidad}
+                            onChange={(e) => updateViatico(chofer.id, i, { cantidad: e.target.value })}
+                          />
+                          <input
+                            aria-label="Monto unitario (UYU)"
+                            title="Monto unitario (UYU)"
                             type="number"
                             min="0"
                             step="0.01"
                             value={v.monto}
-                            placeholder="Monto UYU"
+                            placeholder="Monto c/u"
                             onChange={(e) => updateViatico(chofer.id, i, { monto: e.target.value })}
                           />
                           <button

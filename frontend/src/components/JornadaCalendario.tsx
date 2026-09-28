@@ -87,7 +87,7 @@ const JornadaCalendario: React.FC<JornadaCalendarioProps> = ({
               {visibles.slice(0, MAX_CHIPS).map(({ chofer, jornada, sugerido }) => {
                 if (jornada) {
                   const color = categoriaJornadaColors[jornada.categoria];
-                  const cantViaticos = jornada.viaticos?.length ?? 0;
+                  const cantViaticos = (jornada.viaticos ?? []).reduce((acc, v) => acc + (v.cantidad ?? 1), 0);
                   return (
                     <span
                       key={chofer.id}

@@ -43,7 +43,8 @@ export interface ChoferViatico {
   jornadaId: number;
   viaticoTipoId?: number | null;
   concepto: string;
-  monto: number | string;
+  cantidad: number;
+  monto: number | string; // unitario; total de la línea = cantidad * monto
   observaciones?: string | null;
 }
 
@@ -75,6 +76,7 @@ export interface JornadasRango {
 export interface ViaticoItemDto {
   viaticoTipoId?: number;
   concepto: string;
+  cantidad?: number;
   monto: number;
   observaciones?: string;
 }
@@ -115,6 +117,15 @@ export interface ResumenJornadasChofer {
   diasRegistrados: number;
   cantidadViaticos: number;
   totalViaticos: number;
+}
+
+export interface ReporteViaticosChofer {
+  choferId: number;
+  nombre: string;
+  apellido: string;
+  cantidad: number;
+  total: number;
+  detalle: { concepto: string; montoUnitario: number; cantidad: number; total: number }[];
 }
 
 export interface CreateViaticoTipoDto {

@@ -24,7 +24,11 @@ export class ChoferViatico {
   @Column()
   concepto: string;
 
-  // Monto en UYU
+  // Cantidad de viáticos de este concepto en el día
+  @Column({ type: 'int', default: 1 })
+  cantidad: number;
+
+  // Monto unitario en UYU (total de la línea = cantidad * monto)
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   monto: number;
 

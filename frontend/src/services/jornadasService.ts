@@ -3,6 +3,7 @@ import {
   BulkJornadaDto,
   ChoferJornada,
   JornadasRango,
+  ReporteViaticosChofer,
   ResumenJornadasChofer,
   SalarioAfectado,
   UpsertJornadaDto,
@@ -54,6 +55,16 @@ class JornadasService {
       params: { choferIds: choferIds.join(','), anio, mes },
     });
     return normalizeArrayResponse<ResumenJornadasChofer>(response.data);
+  }
+
+  /**
+   * Cantidad y monto de viáticos por chofer en una ventana de tiempo (máx. 366 días)
+   */
+  async getReporteViaticos(choferIds: number[], desde: string, hasta: string): Promise<ReporteViaticosChofer[]> {
+    const response = await this.api.get<unknown>('/jornadas/reporte-viaticos', {
+      params: { choferIds: choferIds.join(','), desde, hasta },
+    });
+    return normalizeArrayResponse<ReporteViaticosChofer>(response.data);
   }
 
   /**

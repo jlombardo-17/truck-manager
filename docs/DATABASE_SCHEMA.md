@@ -292,7 +292,8 @@ CREATE TABLE chofer_viatico (
   jornada_id INT NOT NULL,               -- FK chofer_jornada(id) ON DELETE CASCADE
   viatico_tipo_id INT NULL,              -- FK viatico_tipo(id) ON DELETE SET NULL
   concepto VARCHAR(255) NOT NULL,
-  monto DECIMAL(12,2) NOT NULL,
+  cantidad INT NOT NULL DEFAULT 1,       -- cantidad de viáticos de este concepto
+  monto DECIMAL(12,2) NOT NULL,          -- monto unitario; total = cantidad * monto
   observaciones TEXT NULL,
   created_at DATETIME
 );
@@ -300,6 +301,7 @@ CREATE TABLE chofer_viatico (
 -- Columnas nuevas en tablas existentes
 ALTER TABLE choferes ADD COLUMN localidadResidencia VARCHAR(255) NULL;
 ALTER TABLE choferes_salarios ADD COLUMN total_viaticos DECIMAL(12,2) NOT NULL DEFAULT 0;
+-- total_viaticos = SUM(cantidad * monto) de las jornadas del mes
 -- salario_neto = salario_base + total_comisiones + total_viaticos + bonos - deducciones
 ```
 

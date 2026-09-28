@@ -14,6 +14,7 @@ import { Chofer, EstadoChofer } from '../types/chofer';
 import {
   CategoriaJornada,
   ChoferJornada,
+  ReporteViaticosChofer,
   ResumenJornadasChofer,
   SalarioAfectado,
   ViajeSugerido,
@@ -21,7 +22,7 @@ import {
   categoriaJornadaColors,
   categoriaJornadaLabels,
 } from '../types/jornada';
-import { formatDateForDisplay } from '../utils/dateUtils';
+import { formatDateForDisplay, getTodayLocalInputValue } from '../utils/dateUtils';
 import '../styles/Modal.css';
 import '../styles/Jornadas.css';
 
@@ -55,6 +56,11 @@ const Jornadas: React.FC = () => {
   const [bulk, setBulk] = useState<BulkForm | null>(null);
   const [bulkSaving, setBulkSaving] = useState(false);
   const [showTipos, setShowTipos] = useState(false);
+
+  const [reporteDesde, setReporteDesde] = useState(() => `${getTodayLocalInputValue().slice(0, 8)}01`);
+  const [reporteHasta, setReporteHasta] = useState(getTodayLocalInputValue);
+  const [reporte, setReporte] = useState<ReporteViaticosChofer[] | null>(null);
+  const [reporteLoading, setReporteLoading] = useState(false);
 
   const choferesSeleccionados = useMemo(
     () => choferes.filter((c) => seleccionados.includes(c.id)),
@@ -185,6 +191,22 @@ const Jornadas: React.FC = () => {
       handleError(err, 'Error al aplicar la categoría');
     } finally {
       setBulkSaving(false);
+    }
+  };
+
+  const consultarReporte = async () => {
+    if (seleccionados.length === 0) {
+      setError('Seleccioná al menos un chofer.');
+      return;
+    }
+    setReporteLoading(true);
+    try {
+      setError('');
+      setReporte(await jornadasService.getReporteViaticos(seleccionados, reporteDesde, reporteHasta));
+    } catch (err) {
+      handleError(err, 'Error al obtener el reporte de viáticos');
+    } finally {
+      setReporteLoading(false);
     }
   };
 
@@ -356,6 +378,74 @@ const Jornadas: React.FC = () => {
                       <td colSpan={Object.values(CategoriaJornada).length + 1}>Total</td>
                       <td>{resumenTotales.cantidad}</td>
                       <td>{formatUYU(resumenTotales.viaticos)}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="jornadas-resumen">
+          <h2>Reporte de viáticos por período</h2>
+          <p className="jornada-hint">
+            Cantidad de viáticos (y su monto) de los choferes seleccionados entre dos fechas, hasta un año.
+          </p>
+          <div className="jornadas-reporte__filtros">
+            <label>
+              Desde
+              <input type="date" value={reporteDesde} onChange={(e) => setReporteDesde(e.target.value)} />
+            </label>
+            <label>
+              Hasta
+              <input type="date" value={reporteHasta} onChange={(e) => setReporteHasta(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={consultarReporte}
+              disabled={reporteLoading || !reporteDesde || !reporteHasta || reporteDesde > reporteHasta}
+            >
+              {reporteLoading ? 'Consultando…' : 'Consultar'}
+            </button>
+          </div>
+
+          {reporte && (
+            <div className="jornadas-resumen__scroll">
+              <table className="jornadas-resumen__table">
+                <thead>
+                  <tr>
+                    <th>Chofer</th>
+                    <th>Cantidad de viáticos</th>
+                    <th>Monto total</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reporte.map((r) => (
+                    <tr key={r.choferId}>
+                      <td className="bold">
+                        {r.nombre.trim()} {r.apellido}
+                      </td>
+                      <td>{r.cantidad}</td>
+                      <td>{formatUYU(r.total)}</td>
+                      <td className="jornadas-reporte__detalle">
+                        {r.detalle.length === 0
+                          ? '—'
+                          : r.detalle
+                              .map((d) => `${d.cantidad} × ${d.concepto} de ${formatUYU(d.montoUnitario)}`)
+                              .join(' · ')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {reporte.length > 1 && (
+                  <tfoot>
+                    <tr>
+                      <td>Total</td>
+                      <td>{reporte.reduce((acc, r) => acc + r.cantidad, 0)}</td>
+                      <td>{formatUYU(reporte.reduce((acc, r) => acc + r.total, 0))}</td>
+                      <td />
                     </tr>
                   </tfoot>
                 )}

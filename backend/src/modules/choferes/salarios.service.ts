@@ -53,7 +53,7 @@ export class SalariosService {
     const raw = await this.viaticoRepository
       .createQueryBuilder('v')
       .innerJoin('v.jornada', 'j')
-      .select('COALESCE(SUM(v.monto), 0)', 'total')
+      .select('COALESCE(SUM(v.cantidad * v.monto), 0)', 'total')
       .where('j.choferId = :choferId', { choferId })
       .andWhere('j.fecha BETWEEN :desde AND :hasta', {
         desde: `${anio}-${mm}-01`,

@@ -46,6 +46,18 @@ export class JornadasController {
   }
 
   /**
+   * Cantidad y monto de viáticos por chofer en una ventana de tiempo (máx. 366 días)
+   */
+  @Get('reporte-viaticos')
+  async reporteViaticos(@Query() query: JornadasQueryDto) {
+    return await this.jornadasService.reporteViaticos(
+      this.jornadasService.parseIds(query.choferIds),
+      query.desde,
+      query.hasta,
+    );
+  }
+
+  /**
    * Crear o actualizar la jornada de un chofer en una fecha (reemplaza sus viáticos si se envían)
    */
   @Put()

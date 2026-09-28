@@ -30,6 +30,13 @@ export class ViaticoItemDto {
   @IsString({ message: 'El concepto debe ser texto' })
   concepto: string;
 
+  @IsOptional()
+  @IsInt({ message: 'La cantidad debe ser un número entero' })
+  @Type(() => Number)
+  @Min(1, { message: 'La cantidad debe ser al menos 1' })
+  @Max(99, { message: 'La cantidad no puede superar 99' })
+  cantidad?: number;
+
   @IsNotEmpty({ message: 'El monto del viático es requerido' })
   @IsNumber({}, { message: 'El monto debe ser un número' })
   @Type(() => Number)
