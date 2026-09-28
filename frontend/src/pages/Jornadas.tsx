@@ -23,6 +23,7 @@ import {
   categoriaJornadaLabels,
 } from '../types/jornada';
 import { formatDateForDisplay, getTodayLocalInputValue } from '../utils/dateUtils';
+import { exportReporteViaticosCsv, exportReporteViaticosPdf } from '../utils/reporteViaticosExport';
 import '../styles/Modal.css';
 import '../styles/Jornadas.css';
 
@@ -194,7 +195,11 @@ const Jornadas: React.FC = () => {
     }
   };
 
-  const consultarReporte = async () => {
+  /**
+   * Consulta el reporte con los filtros actuales y, opcionalmente, lo descarga.
+   * Siempre se vuelve a consultar para que el archivo refleje exactamente lo que se ve.
+   */
+  const consultarReporte = async (descargar?: 'pdf' | 'csv') => {
     if (seleccionados.length === 0) {
       setError('Seleccioná al menos un chofer.');
       return;
@@ -202,13 +207,18 @@ const Jornadas: React.FC = () => {
     setReporteLoading(true);
     try {
       setError('');
-      setReporte(await jornadasService.getReporteViaticos(seleccionados, reporteDesde, reporteHasta));
+      const data = await jornadasService.getReporteViaticos(seleccionados, reporteDesde, reporteHasta);
+      setReporte(data);
+      if (descargar === 'pdf') exportReporteViaticosPdf(data, reporteDesde, reporteHasta);
+      if (descargar === 'csv') exportReporteViaticosCsv(data, reporteDesde, reporteHasta);
     } catch (err) {
       handleError(err, 'Error al obtener el reporte de viáticos');
     } finally {
       setReporteLoading(false);
     }
   };
+
+  const reporteDeshabilitado = reporteLoading || !reporteDesde || !reporteHasta || reporteDesde > reporteHasta;
 
   const seleccionActual = bulk
     ? { desde: bulk.desde, hasta: bulk.hasta }
@@ -400,13 +410,26 @@ const Jornadas: React.FC = () => {
               Hasta
               <input type="date" value={reporteHasta} onChange={(e) => setReporteHasta(e.target.value)} />
             </label>
+            <button type="button" className="btn-primary" onClick={() => consultarReporte()} disabled={reporteDeshabilitado}>
+              {reporteLoading ? 'Consultando…' : 'Consultar'}
+            </button>
             <button
               type="button"
-              className="btn-primary"
-              onClick={consultarReporte}
-              disabled={reporteLoading || !reporteDesde || !reporteHasta || reporteDesde > reporteHasta}
+              className="btn-secondary"
+              onClick={() => consultarReporte('pdf')}
+              disabled={reporteDeshabilitado}
+              title="Resumen por chofer y desglose por día"
             >
-              {reporteLoading ? 'Consultando…' : 'Consultar'}
+              ⬇ Descargar PDF
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => consultarReporte('csv')}
+              disabled={reporteDeshabilitado}
+              title="Una fila por chofer, día y concepto (para Excel)"
+            >
+              ⬇ Descargar CSV
             </button>
           </div>
 
@@ -416,6 +439,7 @@ const Jornadas: React.FC = () => {
                 <thead>
                   <tr>
                     <th>Chofer</th>
+                    <th>Días con viáticos</th>
                     <th>Cantidad de viáticos</th>
                     <th>Monto total</th>
                     <th>Detalle</th>
@@ -427,6 +451,7 @@ const Jornadas: React.FC = () => {
                       <td className="bold">
                         {r.nombre.trim()} {r.apellido}
                       </td>
+                      <td>{r.dias.length || '—'}</td>
                       <td>{r.cantidad}</td>
                       <td>{formatUYU(r.total)}</td>
                       <td className="jornadas-reporte__detalle">
@@ -443,6 +468,7 @@ const Jornadas: React.FC = () => {
                   <tfoot>
                     <tr>
                       <td>Total</td>
+                      <td>{reporte.reduce((acc, r) => acc + r.dias.length, 0)}</td>
                       <td>{reporte.reduce((acc, r) => acc + r.cantidad, 0)}</td>
                       <td>{formatUYU(reporte.reduce((acc, r) => acc + r.total, 0))}</td>
                       <td />

@@ -31,13 +31,23 @@ export interface SalarioAfectado {
   actualizado: boolean;
 }
 
+export interface DetalleViatico {
+  concepto: string;
+  montoUnitario: number;
+  cantidad: number;
+  total: number;
+}
+
 export interface ReporteViaticosChofer {
   choferId: number;
   nombre: string;
   apellido: string;
   cantidad: number;
   total: number;
-  detalle: { concepto: string; montoUnitario: number; cantidad: number; total: number }[];
+  // Agrupado por concepto y monto unitario en todo el período
+  detalle: DetalleViatico[];
+  // Solo días con viáticos, ordenados por fecha
+  dias: { fecha: string; lugarTrabajo: string | null; cantidad: number; total: number; detalle: DetalleViatico[] }[];
 }
 
 export interface ResumenChofer {
@@ -263,39 +273,97 @@ export class JornadasService {
       order: { nombre: 'ASC', apellido: 'ASC' },
     });
 
+    // Una fila por chofer / día / concepto / monto unitario
     const filas = await this.viaticoRepository
       .createQueryBuilder('v')
       .innerJoin('v.jornada', 'j')
       .select('j.choferId', 'choferId')
+      .addSelect("DATE_FORMAT(j.fecha, '%Y-%m-%d')", 'fecha')
+      .addSelect('j.lugarTrabajo', 'lugarTrabajo')
       .addSelect('v.concepto', 'concepto')
       .addSelect('v.monto', 'montoUnitario')
       .addSelect('SUM(v.cantidad)', 'cantidad')
       .addSelect('SUM(v.cantidad * v.monto)', 'total')
       .where('j.choferId IN (:...choferIds)', { choferIds })
       .andWhere('j.fecha BETWEEN :desde AND :hasta', { desde, hasta })
-      .groupBy('j.choferId')
+      .groupBy('j.id')
+      .addGroupBy('j.choferId')
+      .addGroupBy('j.fecha')
+      .addGroupBy('j.lugarTrabajo')
       .addGroupBy('v.concepto')
       .addGroupBy('v.monto')
-      .orderBy('v.concepto', 'ASC')
+      .orderBy('j.fecha', 'ASC')
+      .addOrderBy('v.concepto', 'ASC')
       .addOrderBy('v.monto', 'DESC')
-      .getRawMany<{ choferId: string; concepto: string; montoUnitario: string; cantidad: string; total: string }>();
+      .getRawMany<{
+        choferId: string;
+        fecha: string;
+        lugarTrabajo: string | null;
+        concepto: string;
+        montoUnitario: string;
+        cantidad: string;
+        total: string;
+      }>();
+
+    const sumar = (items: { cantidad: number; total: number }[]) => ({
+      cantidad: items.reduce((acc, d) => acc + d.cantidad, 0),
+      total: items.reduce((acc, d) => acc + d.total, 0),
+    });
 
     return choferes.map((chofer) => {
-      const detalle = filas
+      const lineas = filas
         .filter((f) => Number(f.choferId) === chofer.id)
         .map((f) => ({
+          fecha: f.fecha,
+          lugarTrabajo: f.lugarTrabajo,
           concepto: f.concepto,
           montoUnitario: parseFloat(f.montoUnitario) || 0,
           cantidad: Number(f.cantidad),
           total: parseFloat(f.total) || 0,
         }));
+
+      const porConcepto = new Map<string, DetalleViatico>();
+      const porDia = new Map<string, ReporteViaticosChofer['dias'][number]>();
+      for (const l of lineas) {
+        const item: DetalleViatico = {
+          concepto: l.concepto,
+          montoUnitario: l.montoUnitario,
+          cantidad: l.cantidad,
+          total: l.total,
+        };
+
+        const key = `${l.concepto}|${l.montoUnitario}`;
+        const acumulado = porConcepto.get(key);
+        if (acumulado) {
+          acumulado.cantidad += l.cantidad;
+          acumulado.total += l.total;
+        } else {
+          porConcepto.set(key, { ...item });
+        }
+
+        const dia = porDia.get(l.fecha) ?? {
+          fecha: l.fecha,
+          lugarTrabajo: l.lugarTrabajo,
+          cantidad: 0,
+          total: 0,
+          detalle: [],
+        };
+        dia.detalle.push(item);
+        dia.cantidad += l.cantidad;
+        dia.total += l.total;
+        porDia.set(l.fecha, dia);
+      }
+
+      const detalle = [...porConcepto.values()].sort(
+        (a, b) => a.concepto.localeCompare(b.concepto) || b.montoUnitario - a.montoUnitario,
+      );
       return {
         choferId: chofer.id,
         nombre: chofer.nombre,
         apellido: chofer.apellido,
-        cantidad: detalle.reduce((acc, d) => acc + d.cantidad, 0),
-        total: detalle.reduce((acc, d) => acc + d.total, 0),
+        ...sumar(detalle),
         detalle,
+        dias: [...porDia.values()],
       };
     });
   }

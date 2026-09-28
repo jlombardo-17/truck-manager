@@ -119,13 +119,29 @@ export interface ResumenJornadasChofer {
   totalViaticos: number;
 }
 
+export interface DetalleViatico {
+  concepto: string;
+  montoUnitario: number;
+  cantidad: number;
+  total: number;
+}
+
+export interface ReporteViaticosDia {
+  fecha: string; // YYYY-MM-DD
+  lugarTrabajo: string | null;
+  cantidad: number;
+  total: number;
+  detalle: DetalleViatico[];
+}
+
 export interface ReporteViaticosChofer {
   choferId: number;
   nombre: string;
   apellido: string;
   cantidad: number;
   total: number;
-  detalle: { concepto: string; montoUnitario: number; cantidad: number; total: number }[];
+  detalle: DetalleViatico[]; // agrupado por concepto y monto unitario
+  dias: ReporteViaticosDia[]; // solo días con viáticos
 }
 
 export interface CreateViaticoTipoDto {

@@ -1041,11 +1041,24 @@ Response (200):
     "detalle": [
       { "concepto": "Viático", "montoUnitario": 400, "cantidad": 3, "total": 1200 },
       { "concepto": "Viático", "montoUnitario": 300, "cantidad": 1, "total": 300 }
+    ],
+    "dias": [
+      {
+        "fecha": "2026-01-10", "lugarTrabajo": "Rivera", "cantidad": 2, "total": 700,
+        "detalle": [
+          { "concepto": "Viático", "montoUnitario": 400, "cantidad": 1, "total": 400 },
+          { "concepto": "Viático", "montoUnitario": 300, "cantidad": 1, "total": 300 }
+        ]
+      },
+      {
+        "fecha": "2026-01-12", "lugarTrabajo": "Salto", "cantidad": 2, "total": 800,
+        "detalle": [{ "concepto": "Viático", "montoUnitario": 400, "cantidad": 2, "total": 800 }]
+      }
     ]
   }
 ]
 ```
-`cantidad` es la suma de las cantidades (no el monto). Ventana máxima: 366 días. El `GET /jornadas/resumen` también devuelve `cantidadViaticos` como suma de cantidades.
+`cantidad` es la suma de las cantidades (no el monto). `detalle` agrupa todo el período por concepto y monto unitario; `dias` trae solo los días con viáticos, ordenados por fecha. El frontend exporta este reporte a PDF (resumen + desglose por día) y CSV (una fila por chofer/día/concepto). Ventana máxima: 366 días. El `GET /jornadas/resumen` también devuelve `cantidadViaticos` como suma de cantidades.
 
 ### Tipos de viático
 ```http

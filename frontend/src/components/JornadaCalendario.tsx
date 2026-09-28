@@ -99,7 +99,9 @@ const JornadaCalendario: React.FC<JornadaCalendarioProps> = ({
                     >
                       <strong>{iniciales(chofer)}</strong>
                       <span className="jornada-chip__cat">{categoriaJornadaLabels[jornada.categoria]}</span>
-                      {cantViaticos > 0 && <span className="jornada-chip__viatico">$ {cantViaticos}</span>}
+                      {cantViaticos > 0 && <span className="jornada-chip__viatico" aria-label={`${cantViaticos} viático(s)`}>
+                          #{cantViaticos}
+                        </span>}
                     </span>
                   );
                 }
