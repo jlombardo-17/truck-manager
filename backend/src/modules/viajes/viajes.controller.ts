@@ -4,6 +4,7 @@ import { CreateViajDTO } from './dto/create-viaje.dto';
 import { UpdateViajDTO } from './dto/update-viaje.dto';
 import { SaveViajRutasDTO } from './dto/create-viaje-ruta.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { toDateOnly } from '../../common/utils/date-only';
 
 @Controller('viajes')
 export class ViajsController {
@@ -37,8 +38,9 @@ export class ViajsController {
       ...(choferId && { choferId: parseInt(choferId) }),
       ...(fechaInicio && { fechaInicio: new Date(fechaInicio) }),
       ...(fechaFin && { fechaFin: new Date(fechaFin) }),
-      ...(fechaPagoDesde && { fechaPagoDesde: new Date(fechaPagoDesde) }),
-      ...(fechaPagoHasta && { fechaPagoHasta: new Date(fechaPagoHasta) }),
+      // fechaPago es DATE: se filtra con 'YYYY-MM-DD' para no correr el día por zona horaria
+      ...(toDateOnly(fechaPagoDesde) && { fechaPagoDesde: toDateOnly(fechaPagoDesde)! }),
+      ...(toDateOnly(fechaPagoHasta) && { fechaPagoHasta: toDateOnly(fechaPagoHasta)! }),
     };
 
     return this.viajsService.findAll(filters);

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChoferDocumento } from './chofer-documento.entity';
 import { CreateChoferDocumentoDto, UpdateChoferDocumentoDto } from './dto/chofer-documento.dto';
+import { addDaysDateOnly, diffDaysDateOnly, todayDateOnly } from '../../common/utils/date-only';
 
 @Injectable()
 export class ChoferDocumentosService {
@@ -109,14 +110,14 @@ export class ChoferDocumentosService {
    * Obtiene documentos próximos a vencer (dentro de X días)
    */
   async findProximosAVencer(dias: number = 30): Promise<ChoferDocumento[]> {
-    const fechaLimite = new Date();
-    fechaLimite.setDate(fechaLimite.getDate() + dias);
+    const hoy = todayDateOnly();
+    const fechaLimite = addDaysDateOnly(hoy, dias);
 
     const documentos = await this.documentoRepository
       .createQueryBuilder('documento')
       .where('documento.fechaVencimiento IS NOT NULL')
       .andWhere('documento.fechaVencimiento <= :fechaLimite', { fechaLimite })
-      .andWhere('documento.fechaVencimiento >= :hoy', { hoy: new Date() })
+      .andWhere('documento.fechaVencimiento >= :hoy', { hoy })
       .orderBy('documento.fechaVencimiento', 'ASC')
       .getMany();
 
@@ -130,7 +131,7 @@ export class ChoferDocumentosService {
     const documentos = await this.documentoRepository
       .createQueryBuilder('documento')
       .where('documento.fechaVencimiento IS NOT NULL')
-      .andWhere('documento.fechaVencimiento < :hoy', { hoy: new Date() })
+      .andWhere('documento.fechaVencimiento < :hoy', { hoy: todayDateOnly() })
       .orderBy('documento.fechaVencimiento', 'DESC')
       .getMany();
 
@@ -145,9 +146,7 @@ export class ChoferDocumentosService {
       return 'sin_vencimiento';
     }
 
-    const hoy = new Date();
-    const fechaVencimiento = new Date(documento.fechaVencimiento);
-    const diasRestantes = Math.floor((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const diasRestantes = diffDaysDateOnly(todayDateOnly(), documento.fechaVencimiento);
 
     if (diasRestantes < 0) {
       return 'vencido';

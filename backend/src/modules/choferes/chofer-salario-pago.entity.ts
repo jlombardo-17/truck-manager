@@ -29,7 +29,7 @@ export class ChoferSalarioPago {
   monto: number;
 
   @Column({ type: 'date', name: 'fecha_pago' })
-  fechaPago: Date;
+  fechaPago: string; // YYYY-MM-DD
 
   @Column({ name: 'metodo_pago' })
   metodoPago: string;

@@ -5,7 +5,7 @@ import serviciosService from '../services/serviciosService';
 import documentosService from '../services/documentosService';
 import { repostadasService } from '../services/repostadasService';
 import { Camion } from '../types/camion';
-import { Servicio, TipoServicio, TipoServicioLabels } from '../types/servicio';
+import { Servicio, TipoServicio, TipoServicioLabels, CreateServicioDto } from '../types/servicio';
 import { Documento, TipoDocumento, TipoDocumentoLabels } from '../types/servicio';
 import {
   CreateRepostadaDto,
@@ -21,7 +21,7 @@ import BackButton from '../components/BackButton';
 import EstadoBadge from '../components/EstadoBadge';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
 import { estadoCamionLabel, estadoCamionTono } from '../utils/estadoCamion';
-import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
+import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue, getDaysUntil, parseDatePreservingDay } from '../utils/dateUtils';
 import '../styles/CamionDetalle.css';
 
 type DocumentCostProjectionWindow = '1y' | '5y';
@@ -169,11 +169,11 @@ const CamionDetalle: React.FC = () => {
   const ultimoServicio = servicios.length > 0 ? servicios[0] : null;
 
   const documentosVencidos = documentos.filter(
-    (d) => d.fechaVencimiento && new Date(d.fechaVencimiento) < new Date()
+    (d) => d.fechaVencimiento && (getDaysUntil(d.fechaVencimiento) as number) < 0
   );
   const documentosProximos = documentos.filter((d) => {
     if (!d.fechaVencimiento) return false;
-    const dias = Math.floor((new Date(d.fechaVencimiento).getTime() - Date.now()) / 86400000);
+    const dias = getDaysUntil(d.fechaVencimiento) as number;
     return dias >= 0 && dias <= 30;
   });
 
@@ -186,8 +186,8 @@ const CamionDetalle: React.FC = () => {
       return 'Sin fecha';
     }
 
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
+    const parsed = parseDatePreservingDay(value);
+    if (!parsed) {
       return 'Sin fecha';
     }
 
@@ -199,7 +199,7 @@ const CamionDetalle: React.FC = () => {
     const start = Number.isNaN(rawStart.getTime()) ? new Date() : rawStart;
     start.setHours(0, 0, 0, 0);
 
-    const rawEnd = documento.fechaVencimiento ? new Date(documento.fechaVencimiento) : null;
+    const rawEnd = parseDatePreservingDay(documento.fechaVencimiento);
     const hasValidEnd = rawEnd && !Number.isNaN(rawEnd.getTime());
     const end = hasValidEnd ? new Date(rawEnd) : new Date(start);
 
@@ -378,7 +378,7 @@ const CamionDetalle: React.FC = () => {
                 .sort((a, b) => {
                   const getOrder = (doc: Documento) => {
                     if (!doc.fechaVencimiento) return 3;
-                    const dias = Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000);
+                    const dias = getDaysUntil(doc.fechaVencimiento) as number;
                     if (dias < 0) return 0;
                     if (dias <= 30) return 1;
                     return 2;
@@ -387,7 +387,7 @@ const CamionDetalle: React.FC = () => {
                 })
                 .map((doc) => {
                   const dias = doc.fechaVencimiento
-                    ? Math.floor((new Date(doc.fechaVencimiento).getTime() - Date.now()) / 86400000)
+                    ? getDaysUntil(doc.fechaVencimiento)
                     : null;
                   const cardStatus =
                     dias === null ? 'sin-fecha' : dias < 0 ? 'vencido' : dias <= 30 ? 'proximo' : 'vigente';
@@ -425,7 +425,7 @@ const CamionDetalle: React.FC = () => {
                         )}
                         {doc.fechaVencimiento && (
                           <p className="doc-vencimiento">
-                            📅 Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
+                            📅 Vence: {formatDateForDisplay(doc.fechaVencimiento, 'es-AR')}
                           </p>
                         )}
                       </div>
@@ -546,7 +546,7 @@ const CamionDetalle: React.FC = () => {
           </div>
           {collapsed['ultimo-servicio'] ? (
             <div className="section-summary-line">
-              <span>{new Date(ultimoServicio.fechaServicio).toLocaleDateString('es-AR')}</span>
+              <span>{formatDateForDisplay(ultimoServicio.fechaServicio, 'es-AR')}</span>
               <span className="summary-sep">·</span>
               {ultimoServicio.tipos.slice(0, 2).map((t) => (
                 <span key={t} className="summary-tag">{TipoServicioLabels[t]}</span>
@@ -559,7 +559,7 @@ const CamionDetalle: React.FC = () => {
               <div className="info-grid">
                 <div className="info-item">
                   <label>Fecha</label>
-                  <span>{new Date(ultimoServicio.fechaServicio).toLocaleDateString('es-AR')}</span>
+                  <span>{formatDateForDisplay(ultimoServicio.fechaServicio, 'es-AR')}</span>
                 </div>
                 <div className="info-item">
                   <label>Tipos de Servicio</label>
@@ -618,7 +618,7 @@ const CamionDetalle: React.FC = () => {
             <div className="section-summary-line"><span className="summary-empty">Sin servicios registrados</span></div>
           ) : (
             <div className="section-summary-line">
-              <span>Último: {new Date(servicios[0].fechaServicio).toLocaleDateString('es-AR')}</span>
+              <span>Último: {formatDateForDisplay(servicios[0].fechaServicio, 'es-AR')}</span>
               <span className="summary-sep">·</span>
               {servicios[0].tipos.slice(0, 2).map((t) => (
                 <span key={t} className="summary-tag">{TipoServicioLabels[t]}</span>
@@ -636,14 +636,14 @@ const CamionDetalle: React.FC = () => {
                 {servicios.map((servicio) => (
                   <div key={servicio.id} className="servicio-item">
                     <div className="servicio-header">
-                      <span className="fecha">{new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}</span>
+                      <span className="fecha">{formatDateForDisplay(servicio.fechaServicio, 'es-AR')}</span>
                       <div className="servicio-actions">
                         <button
                           type="button"
                           onClick={() => handleEditServicio(servicio)}
                           className="servicio-action-btn servicio-edit-btn"
                           title="Editar servicio"
-                          aria-label={`Editar servicio del ${new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}`}
+                          aria-label={`Editar servicio del ${formatDateForDisplay(servicio.fechaServicio, 'es-AR')}`}
                         >
                           ✏️ Editar
                         </button>
@@ -652,7 +652,7 @@ const CamionDetalle: React.FC = () => {
                           onClick={() => handleDeleteServicio(servicio.id)}
                           className="servicio-action-btn servicio-delete-btn"
                           title="Eliminar servicio"
-                          aria-label={`Eliminar servicio del ${new Date(servicio.fechaServicio).toLocaleDateString('es-AR')}`}
+                          aria-label={`Eliminar servicio del ${formatDateForDisplay(servicio.fechaServicio, 'es-AR')}`}
                         >
                           🗑️ Eliminar
                         </button>
@@ -910,18 +910,20 @@ const ServicioModal: React.FC<{
     setError(null);
 
     try {
+      // Al editar, los campos vaciados se envían como null para que el backend los limpie
+      const empty = isEditing ? null : undefined;
       const payload = {
         fechaServicio: formData.fechaServicio,
         tipos: formData.tipos,
-        descripcion: formData.descripcion || undefined,
-        costo: formData.costo ? Number(formData.costo) : undefined,
-        kilometraje: formData.kilometraje ? Number(formData.kilometraje) : undefined,
+        descripcion: formData.descripcion || empty,
+        costo: formData.costo ? Number(formData.costo) : empty,
+        kilometraje: formData.kilometraje ? Number(formData.kilometraje) : empty,
       };
 
       if (isEditing && servicio) {
         await serviciosService.update(servicio.id, camionId, payload);
       } else {
-        await serviciosService.create(camionId, payload);
+        await serviciosService.create(camionId, payload as CreateServicioDto);
       }
       onSave();
     } catch (err: any) {
@@ -1377,7 +1379,7 @@ const DocumentoViewModal: React.FC<{
           {documento.fechaVencimiento && (
             <div className="doc-view-field">
               <label>Fecha de Vencimiento</label>
-              <span>{new Date(documento.fechaVencimiento).toLocaleDateString('es-AR')}</span>
+              <span>{formatDateForDisplay(documento.fechaVencimiento, 'es-AR')}</span>
             </div>
           )}
           <div className="doc-view-field">

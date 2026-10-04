@@ -50,7 +50,7 @@ export class Documento {
   costo?: number;
 
   @Column({ type: 'date', nullable: true })
-  fechaVencimiento: Date;
+  fechaVencimiento: string; // YYYY-MM-DD
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

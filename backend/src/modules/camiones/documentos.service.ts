@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Documento } from './documento.entity';
 import { CreateDocumentoDto, UpdateDocumentoDto } from './dto/documento.dto';
+import { addDaysDateOnly, diffDaysDateOnly, todayDateOnly } from '../../common/utils/date-only';
 
 @Injectable()
 export class DocumentosService {
@@ -100,14 +101,14 @@ export class DocumentosService {
    * Obtiene documentos próximos a vencer (dentro de X días)
    */
   async findProximosAVencer(dias: number = 30): Promise<Documento[]> {
-    const fechaLimite = new Date();
-    fechaLimite.setDate(fechaLimite.getDate() + dias);
+    const hoy = todayDateOnly();
+    const fechaLimite = addDaysDateOnly(hoy, dias);
 
     const documentos = await this.documentosRepository
       .createQueryBuilder('documento')
       .where('documento.fechaVencimiento IS NOT NULL')
       .andWhere('documento.fechaVencimiento <= :fechaLimite', { fechaLimite })
-      .andWhere('documento.fechaVencimiento >= :hoy', { hoy: new Date() })
+      .andWhere('documento.fechaVencimiento >= :hoy', { hoy })
       .orderBy('documento.fechaVencimiento', 'ASC')
       .getMany();
 
@@ -121,7 +122,7 @@ export class DocumentosService {
     const documentos = await this.documentosRepository
       .createQueryBuilder('documento')
       .where('documento.fechaVencimiento IS NOT NULL')
-      .andWhere('documento.fechaVencimiento < :hoy', { hoy: new Date() })
+      .andWhere('documento.fechaVencimiento < :hoy', { hoy: todayDateOnly() })
       .orderBy('documento.fechaVencimiento', 'DESC')
       .getMany();
 
@@ -136,9 +137,7 @@ export class DocumentosService {
       return 'sin_vencimiento';
     }
 
-    const hoy = new Date();
-    const fechaVencimiento = new Date(documento.fechaVencimiento);
-    const diasRestantes = Math.floor((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const diasRestantes = diffDaysDateOnly(todayDateOnly(), documento.fechaVencimiento);
 
     if (diasRestantes < 0) {
       return 'vencido';

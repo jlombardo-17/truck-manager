@@ -71,7 +71,7 @@ export class ChoferSalario {
 
   // Fecha en que se realizó el pago
   @Column({ type: 'date', nullable: true, name: 'fecha_pago' })
-  fechaPago: Date;
+  fechaPago: string; // YYYY-MM-DD
 
   // Observaciones del período
   @Column({ type: 'text', nullable: true })

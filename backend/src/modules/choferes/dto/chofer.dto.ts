@@ -1,5 +1,5 @@
-import { IsDate, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 
 export class CreateChoferDto {
   @IsNotEmpty()
@@ -27,14 +27,12 @@ export class CreateChoferDto {
   localidadResidencia?: string;
 
   @IsNotEmpty()
-  @IsDate()
-  @Type(() => Date)
-  fechaIngreso: Date;
+  @IsDateOnly()
+  fechaIngreso: string;
 
   @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  fechaNacimiento?: Date;
+  @IsDateOnly()
+  fechaNacimiento?: string;
 
   @IsOptional()
   @IsString()
@@ -76,14 +74,12 @@ export class UpdateChoferDto {
   localidadResidencia?: string;
 
   @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  fechaIngreso?: Date;
+  @IsDateOnly()
+  fechaIngreso?: string;
 
   @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  fechaNacimiento?: Date;
+  @IsDateOnly()
+  fechaNacimiento?: string;
 
   @IsOptional()
   @IsString()

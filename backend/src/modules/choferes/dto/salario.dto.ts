@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsEnum, IsDateString, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsEnum, Min, Max } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 import { Type } from 'class-transformer';
 import { EstadoSalario } from '../chofer-salario.entity';
 import { TipoPagoSalario } from '../chofer-salario-pago.entity';
@@ -44,7 +45,7 @@ export class CreateSalarioDto {
   estado?: EstadoSalario;
 
   @IsOptional()
-  @IsDateString({}, { message: 'La fecha de pago debe ser una fecha válida' })
+  @IsDateOnly('La fecha de pago debe ser una fecha válida')
   fechaPago?: string;
 
   @IsOptional()
@@ -86,7 +87,7 @@ export class UpdateSalarioDto {
   estado?: EstadoSalario;
 
   @IsOptional()
-  @IsDateString({}, { message: 'La fecha de pago debe ser una fecha válida' })
+  @IsDateOnly('La fecha de pago debe ser una fecha válida')
   fechaPago?: string;
 
   @IsOptional()
@@ -123,7 +124,7 @@ export class RegistrarPagoSalarioDto {
   monto: number;
 
   @IsNotEmpty({ message: 'La fecha de pago es requerida' })
-  @IsDateString({}, { message: 'La fecha de pago debe ser una fecha válida' })
+  @IsDateOnly('La fecha de pago debe ser una fecha válida')
   fechaPago: string;
 
   @IsNotEmpty({ message: 'El método de pago es requerido' })
@@ -155,7 +156,7 @@ export class UpdatePagoSalarioDto {
   monto: number;
 
   @IsNotEmpty({ message: 'La fecha de pago es requerida' })
-  @IsDateString({}, { message: 'La fecha de pago debe ser una fecha válida' })
+  @IsDateOnly('La fecha de pago debe ser una fecha válida')
   fechaPago: string;
 
   @IsNotEmpty({ message: 'El método de pago es requerido' })

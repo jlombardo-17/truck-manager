@@ -30,16 +30,12 @@ export class ServiciosService {
     const servicio = this.serviciosRepository.create({
       ...createServicioDto,
       camionId,
-      fechaServicio: new Date(createServicioDto.fechaServicio),
     });
     return this.serviciosRepository.save(servicio);
   }
 
   async update(id: number, updateServicioDto: UpdateServicioDto): Promise<Servicio> {
     const servicio = await this.findOne(id);
-    if (updateServicioDto.fechaServicio) {
-      updateServicioDto.fechaServicio = new Date(updateServicioDto.fechaServicio);
-    }
     Object.assign(servicio, updateServicioDto);
     return this.serviciosRepository.save(servicio);
   }

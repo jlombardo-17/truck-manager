@@ -10,6 +10,7 @@ import EstadoBadge from '../components/EstadoBadge';
 import { estadoChoferTono } from '../utils/estadoChofer';
 import heroTeamTeal from '../assets/hero-team-teal.svg';
 import '../styles/Choferes.css';
+import { formatDateForDisplay } from '../utils/dateUtils';
 
 const Choferes: React.FC = () => {
   const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
@@ -219,7 +220,7 @@ const Choferes: React.FC = () => {
                   <td>{chofer.numeroDocumento}</td>
                   <td>{chofer.telefono}</td>
                   <td>
-                    {new Date(chofer.fechaIngreso).toLocaleDateString('es-UY')}
+                    {formatDateForDisplay(chofer.fechaIngreso, 'es-UY')}
                   </td>
                   <td>
                     {chofer.sueldoBase ? `$${chofer.sueldoBase.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}

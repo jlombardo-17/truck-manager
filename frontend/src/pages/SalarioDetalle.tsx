@@ -16,6 +16,7 @@ import 'jspdf-autotable';
 import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import '../styles/SalarioDetalle.css';
+import { formatDateForDisplay } from '../utils/dateUtils';
 
 const SalarioDetalle: React.FC = () => {
   const { choferId, salarioId } = useParams<{ choferId: string; salarioId: string }>();
@@ -199,7 +200,7 @@ const SalarioDetalle: React.FC = () => {
     if (salario.fechaPago) {
       yPos += 6;
       doc.text(
-        `Fecha de Pago: ${new Date(salario.fechaPago).toLocaleDateString('es-CL')}`,
+        `Fecha de Pago: ${formatDateForDisplay(salario.fechaPago, 'es-CL')}`,
         20,
         yPos,
       );
@@ -321,7 +322,7 @@ const SalarioDetalle: React.FC = () => {
           </span>
           {salario.fechaPago && (
             <span className="fecha-pago">
-              Pagado el: {new Date(salario.fechaPago).toLocaleDateString('es-CL')}
+              Pagado el: {formatDateForDisplay(salario.fechaPago, 'es-CL')}
             </span>
           )}
           {salario.metodoPago && (

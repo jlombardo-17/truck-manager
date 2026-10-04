@@ -160,7 +160,7 @@ export class ViajsService {
         chofer: { id: createViajDTO.choferId } as Chofer,
         fechaInicio: new Date(createViajDTO.fechaInicio),
         fechaFin: createViajDTO.fechaFin ? new Date(createViajDTO.fechaFin) : null,
-        fechaPago: createViajDTO.fechaPago ? new Date(createViajDTO.fechaPago) : null,
+        fechaPago: createViajDTO.fechaPago || null,
         origen: createViajDTO.origen,
         destino: createViajDTO.destino,
         latitudOrigen: createViajDTO.latitudOrigen as any || null,
@@ -228,8 +228,8 @@ export class ViajsService {
     choferId?: number;
     fechaInicio?: Date;
     fechaFin?: Date;
-    fechaPagoDesde?: Date;
-    fechaPagoHasta?: Date;
+    fechaPagoDesde?: string; // YYYY-MM-DD
+    fechaPagoHasta?: string; // YYYY-MM-DD
   }): Promise<Viaje[]> {
     let query = this.viajRepository.createQueryBuilder('viaje')
       .leftJoinAndSelect('viaje.camion', 'camion')
@@ -373,7 +373,7 @@ export class ViajsService {
         fechaInicio: viajeChanges.fechaInicio ? new Date(viajeChanges.fechaInicio) : viaje.fechaInicio,
         fechaFin: viajeChanges.fechaFin ? new Date(viajeChanges.fechaFin) : viaje.fechaFin,
         fechaPago: Object.prototype.hasOwnProperty.call(viajeChanges, 'fechaPago')
-          ? (viajeChanges.fechaPago ? new Date(viajeChanges.fechaPago) : null)
+          ? (viajeChanges.fechaPago || null)
           : viaje.fechaPago,
       });
 

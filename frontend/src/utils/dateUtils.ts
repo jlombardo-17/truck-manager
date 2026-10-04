@@ -43,6 +43,21 @@ export const toDateInputValue = (value?: string | Date | null): string => {
   return `${year}-${month}-${day}`;
 };
 
+/**
+ * Días calendario desde hoy hasta la fecha dada (negativo si ya pasó).
+ * Compara a medianoche local, así una fecha 'YYYY-MM-DD' de hoy devuelve 0.
+ */
+export const getDaysUntil = (value?: string | Date | null): number | null => {
+  const parsed = parseDatePreservingDay(value);
+  if (!parsed) return null;
+
+  const target = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
 export const getTodayLocalInputValue = (): string => {
   const now = new Date();
   const year = now.getFullYear();

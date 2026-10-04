@@ -24,8 +24,9 @@ export class Servicio {
   @Column()
   camionId: number;
 
+  // Fecha del servicio (YYYY-MM-DD). Se maneja como string para evitar corrimientos por zona horaria.
   @Column({ type: 'date' })
-  fechaServicio: Date;
+  fechaServicio: string;
 
   @Column({ type: 'json' })
   tipos: TipoServicio[];

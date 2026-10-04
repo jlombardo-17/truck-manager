@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { Servicio, CreateServicioDto } from '../types/servicio';
+import { Servicio, CreateServicioDto, UpdateServicioDto } from '../types/servicio';
 import authService from './authService';
 import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
@@ -53,7 +53,7 @@ class ServiciosService {
     }
   }
 
-  async update(servicioId: number, camionId: number, data: Partial<CreateServicioDto>): Promise<Servicio> {
+  async update(servicioId: number, camionId: number, data: UpdateServicioDto): Promise<Servicio> {
     try {
       const response = await this.api.put<Servicio>(`/camiones/${camionId}/servicios/${servicioId}`, data);
       return response.data;

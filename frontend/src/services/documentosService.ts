@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { Documento, CreateDocumentoDto } from '../types/servicio';
 import authService from './authService';
 import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
+import { getDaysUntil } from '../utils/dateUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -97,9 +98,7 @@ class DocumentosService {
       return 'sin_vencimiento';
     }
 
-    const hoy = new Date();
-    const fechaVencimiento = new Date(documento.fechaVencimiento);
-    const diasRestantes = Math.floor((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const diasRestantes = getDaysUntil(documento.fechaVencimiento) as number;
 
     if (diasRestantes < 0) {
       return 'vencido';
@@ -118,9 +117,7 @@ class DocumentosService {
       return null;
     }
 
-    const hoy = new Date();
-    const fechaVencimiento = new Date(documento.fechaVencimiento);
-    return Math.floor((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    return getDaysUntil(documento.fechaVencimiento);
   }
 }
 

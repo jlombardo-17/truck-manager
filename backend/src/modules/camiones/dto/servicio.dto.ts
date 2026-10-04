@@ -1,11 +1,10 @@
-import { IsDate, IsEnum, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 import { TipoServicio } from '../servicio.entity';
-import { Type } from 'class-transformer';
 
 export class CreateServicioDto {
-  @Type(() => Date)
-  @IsDate()
-  fechaServicio: Date;
+  @IsDateOnly('La fecha debe ser una fecha válida (YYYY-MM-DD)')
+  fechaServicio: string;
 
   @IsArray()
   @IsEnum(TipoServicio, { each: true })
@@ -26,9 +25,8 @@ export class CreateServicioDto {
 
 export class UpdateServicioDto {
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaServicio?: Date;
+  @IsDateOnly('La fecha debe ser una fecha válida (YYYY-MM-DD)')
+  fechaServicio?: string;
 
   @IsOptional()
   @IsArray()

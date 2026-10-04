@@ -8,6 +8,7 @@ import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity
 import { Documento } from '../camiones/documento.entity';
 import { ChoferDocumento } from '../choferes/chofer-documento.entity';
 import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
+import { addDaysDateOnly, diffDaysDateOnly, toDateOnly, todayDateOnly } from '../../common/utils/date-only';
 
 export interface DashboardResumen {
   ingresosDelMes: number;
@@ -106,9 +107,12 @@ export class DashboardService {
       return 365;
     }
 
-    const start = new Date(documento.createdAt);
-    const end = new Date(documento.fechaVencimiento);
-    const days = this.getDaysInclusive(start, end);
+    const start = toDateOnly(documento.createdAt);
+    const end = toDateOnly(documento.fechaVencimiento);
+    if (!start || !end) {
+      return 365;
+    }
+    const days = diffDaysDateOnly(start, end) + 1;
     return days > 0 ? days : 365;
   }
 
@@ -356,8 +360,8 @@ export class DashboardService {
       );
 
       // Documentos por vencer (próximos 30 días)
-      const proximosMes = new Date();
-      proximosMes.setDate(proximosMes.getDate() + 30);
+      const hoy = todayDateOnly();
+      const proximosMes = addDaysDateOnly(hoy, 30);
 
       const documentosPorVencer = await this.safeQuery(
         'documentos por vencer',
@@ -367,7 +371,7 @@ export class DashboardService {
           .leftJoinAndSelect('doc.chofer', 'chofer')
           .where('doc.fechaVencimiento IS NOT NULL')
           .andWhere('doc.fechaVencimiento <= :fecha', { fecha: proximosMes })
-          .andWhere('doc.fechaVencimiento > :ahora', { ahora })
+          .andWhere('doc.fechaVencimiento > :hoy', { hoy })
           .orderBy('doc.fechaVencimiento', 'ASC')
           .take(5)
           .getMany(),
@@ -376,9 +380,7 @@ export class DashboardService {
       const documentosFormato = documentosPorVencer
         .filter((doc) => doc.fechaVencimiento) // Validar que no sea null
         .map((doc) => {
-          const diasRestantes = Math.ceil(
-            (doc.fechaVencimiento!.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24),
-          );
+          const diasRestantes = diffDaysDateOnly(hoy, doc.fechaVencimiento);
           return {
             choferNombre: doc.chofer?.nombre || 'Desconocido',
             documentoTipo: doc.tipo,

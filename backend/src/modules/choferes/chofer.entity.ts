@@ -26,10 +26,10 @@ export class Chofer {
   localidadResidencia: string;
 
   @Column({ type: 'date' })
-  fechaIngreso: Date;
+  fechaIngreso: string; // YYYY-MM-DD
 
   @Column({ type: 'date', nullable: true })
-  fechaNacimiento: Date;
+  fechaNacimiento: string; // YYYY-MM-DD
 
   @Column({ default: 'activo' })
   estado: string;

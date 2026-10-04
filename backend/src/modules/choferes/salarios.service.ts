@@ -7,6 +7,7 @@ import { Chofer } from './chofer.entity';
 import { Viaje } from '../viajes/viaje.entity';
 import { ViajComision } from '../viajes/viaje-comision.entity';
 import { ChoferViatico } from '../jornadas/chofer-viatico.entity';
+import { toDateOnly, todayDateOnly } from '../../common/utils/date-only';
 import {
   CreateSalarioDto,
   UpdateSalarioDto,
@@ -274,7 +275,7 @@ export class SalariosService {
         this.salarioPagoRepository.create({
           salarioId: saved.id,
           monto: this.toNumber(saved.salarioNeto),
-          fechaPago: dto.fechaPago ? new Date(dto.fechaPago) : new Date(),
+          fechaPago: dto.fechaPago || todayDateOnly(),
           metodoPago: dto.metodoPago || 'manual',
           tipo: TipoPagoSalario.LIQUIDACION,
           comprobante: dto.comprobante,
@@ -316,11 +317,19 @@ export class SalariosService {
   /**
    * Marcar salario como pagado
    */
-  async marcarComoPagado(id: number, fechaPago: Date, metodoPago: string, comprobante?: string): Promise<ChoferSalario> {
+  async marcarComoPagado(
+    id: number,
+    fechaPagoInput: string | undefined,
+    metodoPago: string,
+    comprobante?: string,
+  ): Promise<ChoferSalario> {
     const salario = await this.salarioRepository.findOne({ where: { id } });
     if (!salario) {
       throw new NotFoundException(`Salario con ID ${id} no encontrado`);
     }
+
+    // El body de este endpoint no pasa por un DTO, así que se normaliza acá
+    const fechaPago = toDateOnly(fechaPagoInput) ?? todayDateOnly();
 
     const totalPagado = await this.sumarPagos(id);
     const faltante = this.toNumber(salario.salarioNeto) - totalPagado;
@@ -382,7 +391,7 @@ export class SalariosService {
       this.salarioPagoRepository.create({
         salarioId: id,
         monto,
-        fechaPago: new Date(dto.fechaPago),
+        fechaPago: dto.fechaPago,
         metodoPago: dto.metodoPago,
         tipo: dto.tipo || TipoPagoSalario.ADELANTO,
         comprobante: dto.comprobante,
@@ -391,7 +400,7 @@ export class SalariosService {
       }),
     );
 
-    salario.fechaPago = new Date(dto.fechaPago);
+    salario.fechaPago = dto.fechaPago;
     salario.metodoPago = dto.metodoPago;
     if (dto.comprobante) {
       salario.comprobante = dto.comprobante;
@@ -417,7 +426,7 @@ export class SalariosService {
     }
 
     pago.monto = this.toNumber(dto.monto);
-    pago.fechaPago = new Date(dto.fechaPago);
+    pago.fechaPago = dto.fechaPago;
     pago.metodoPago = dto.metodoPago;
     pago.tipo = dto.tipo || pago.tipo;
     pago.comprobante = dto.comprobante;

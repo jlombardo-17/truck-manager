@@ -1,4 +1,5 @@
 import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested, IsIn } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 import { Type, Exclude } from 'class-transformer';
 
 class ViajRutaDTO {
@@ -75,8 +76,8 @@ export class CreateViajDTO {
   @IsOptional()
   fechaFin?: string;
 
-  @IsDateString()
   @IsOptional()
+  @IsDateOnly()
   fechaPago?: string;
 
   @IsString()

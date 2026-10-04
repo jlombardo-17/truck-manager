@@ -117,7 +117,7 @@ export class SalariosController {
   @Put(':id/pagar')
   async marcarComoPagado(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { fechaPago: Date; metodoPago: string; comprobante?: string },
+    @Body() body: { fechaPago?: string; metodoPago: string; comprobante?: string },
   ): Promise<ChoferSalario> {
     return await this.salariosService.marcarComoPagado(
       id,

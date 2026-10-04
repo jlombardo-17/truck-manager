@@ -49,10 +49,10 @@ export class ChoferDocumento {
   descripcion: string;
 
   @Column({ type: 'date', nullable: true })
-  fechaEmision: Date;
+  fechaEmision: string; // YYYY-MM-DD
 
   @Column({ type: 'date', nullable: true })
-  fechaVencimiento: Date;
+  fechaVencimiento: string; // YYYY-MM-DD
 
   @Column({ nullable: true })
   numeroDocumento: string;

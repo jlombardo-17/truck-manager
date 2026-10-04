@@ -25,7 +25,7 @@ export class Repostada {
   tipoCombustible: TipoCombustible;
 
   @Column({ type: 'date' })
-  fechaRepostada: Date;
+  fechaRepostada: string; // YYYY-MM-DD
 
   @Column()
   kmRecorridos: number;

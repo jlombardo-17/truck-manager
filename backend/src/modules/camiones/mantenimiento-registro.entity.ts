@@ -32,10 +32,10 @@ export class MantenimientoRegistro {
   estado: EstadoMantenimiento;
 
   @Column({ type: 'date' })
-  fechaPrograma: Date;
+  fechaPrograma: string; // YYYY-MM-DD
 
   @Column({ type: 'date', nullable: true })
-  fechaRealizado: Date;
+  fechaRealizado: string; // YYYY-MM-DD
 
   @Column({ type: 'int', nullable: true })
   kmActual: number;
@@ -44,7 +44,7 @@ export class MantenimientoRegistro {
   proximoKm: number; // próximo KM cuando hacer mantenimiento
 
   @Column({ type: 'date', nullable: true })
-  proximaFecha: Date; // próxima fecha cuando hacer mantenimiento
+  proximaFecha: string; // YYYY-MM-DD // próxima fecha cuando hacer mantenimiento
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   costoReal: number;

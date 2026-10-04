@@ -1,6 +1,7 @@
 import React from 'react';
 import { EstadoDocumento } from '../types/chofer-documento';
 import '../styles/DocumentoEstado.css';
+import { getDaysUntil } from '../utils/dateUtils';
 
 interface DocumentoEstadoBadgeProps {
   fechaVencimiento?: string | Date | null;
@@ -16,9 +17,7 @@ export const DocumentoEstadoBadge: React.FC<DocumentoEstadoBadgeProps> = ({
       return 'sin_vencimiento';
     }
 
-    const hoy = new Date();
-    const fecha = new Date(fechaVencimiento);
-    const diasRestantes = Math.floor((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const diasRestantes = getDaysUntil(fechaVencimiento) as number;
 
     if (diasRestantes < 0) {
       return 'vencido';
@@ -32,9 +31,7 @@ export const DocumentoEstadoBadge: React.FC<DocumentoEstadoBadgeProps> = ({
   const getDiasRestantes = (): number | null => {
     if (!fechaVencimiento) return null;
     
-    const hoy = new Date();
-    const fecha = new Date(fechaVencimiento);
-    return Math.floor((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    return getDaysUntil(fechaVencimiento);
   };
 
   const estado = getEstado();

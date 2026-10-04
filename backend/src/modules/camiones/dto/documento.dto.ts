@@ -1,4 +1,5 @@
-import { IsArray, IsDate, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 import { TipoDocumento } from '../documento.entity';
 import { Type } from 'class-transformer';
 
@@ -30,9 +31,8 @@ export class CreateDocumentoDto {
   costo?: number;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaVencimiento?: Date;
+  @IsDateOnly()
+  fechaVencimiento?: string;
 }
 
 export class UpdateDocumentoDto {
@@ -64,7 +64,6 @@ export class UpdateDocumentoDto {
   costo?: number;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaVencimiento?: Date;
+  @IsDateOnly()
+  fechaVencimiento?: string;
 }

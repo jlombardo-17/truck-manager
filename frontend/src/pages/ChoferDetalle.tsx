@@ -10,7 +10,7 @@ import BackButton from '../components/BackButton';
 import SalariosTab from '../components/SalariosTab';
 import EstadoBadge from '../components/EstadoBadge';
 import { estadoChoferTono } from '../utils/estadoChofer';
-import { toDateInputValue } from '../utils/dateUtils';
+import { toDateInputValue, formatDateForDisplay } from '../utils/dateUtils';
 import '../styles/ChoferDetalle.css';
 
 interface ChoferEditFormData {
@@ -603,7 +603,7 @@ const ChoferDetalle: React.FC = () => {
                 {chofer.fechaNacimiento && (
                   <div className="info-item">
                     <label>Fecha de Nacimiento:</label>
-                    <span>{new Date(chofer.fechaNacimiento).toLocaleDateString('es-AR')}</span>
+                    <span>{formatDateForDisplay(chofer.fechaNacimiento, 'es-AR')}</span>
                   </div>
                 )}
                 {chofer.localidadResidencia && (
@@ -624,7 +624,7 @@ const ChoferDetalle: React.FC = () => {
                 <h3>� Información Laboral</h3>
                 <div className="info-item">
                   <label>Fecha de Ingreso:</label>
-                  <span>{new Date(chofer.fechaIngreso).toLocaleDateString('es-AR')}</span>
+                  <span>{formatDateForDisplay(chofer.fechaIngreso, 'es-AR')}</span>
                 </div>
                 {chofer.sueldoBase && (
                   <div className="info-item">
@@ -938,7 +938,7 @@ const ChoferDetalle: React.FC = () => {
                     <div className="documento-info">
                       {doc.fechaVencimiento && (
                         <p className="vencimiento">
-                          Vence: {new Date(doc.fechaVencimiento).toLocaleDateString('es-AR')}
+                          Vence: {formatDateForDisplay(doc.fechaVencimiento, 'es-AR')}
                         </p>
                       )}
                       <DocumentoEstadoBadge fechaVencimiento={doc.fechaVencimiento} mostrarDias={true} />

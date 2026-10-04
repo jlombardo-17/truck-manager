@@ -41,6 +41,15 @@ export interface CreateServicioDto {
   kilometraje?: number;
 }
 
+// En update, null limpia el campo opcional
+export interface UpdateServicioDto {
+  fechaServicio?: string;
+  tipos?: TipoServicio[];
+  descripcion?: string | null;
+  costo?: number | null;
+  kilometraje?: number | null;
+}
+
 export enum TipoDocumento {
   SEGURO = 'seguro',
   LIBRETA_PROPIEDAD = 'libreta_propiedad',

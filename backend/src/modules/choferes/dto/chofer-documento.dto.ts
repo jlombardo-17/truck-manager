@@ -1,4 +1,5 @@
-import { IsArray, IsEnum, IsOptional, IsString, IsDateString, IsNumber } from 'class-validator';
+import { IsArray, IsEnum, IsOptional, IsString, IsNumber } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 import { TipoDocumentoChofer } from '../chofer-documento.entity';
 
 export class CreateChoferDocumentoDto {
@@ -25,12 +26,12 @@ export class CreateChoferDocumentoDto {
   @IsOptional()
   descripcion?: string;
 
-  @IsDateString()
   @IsOptional()
+  @IsDateOnly()
   fechaEmision?: string;
 
-  @IsDateString()
   @IsOptional()
+  @IsDateOnly()
   fechaVencimiento?: string;
 
   @IsString()
@@ -60,12 +61,12 @@ export class UpdateChoferDocumentoDto {
   @IsOptional()
   descripcion?: string;
 
-  @IsDateString()
   @IsOptional()
+  @IsDateOnly()
   fechaEmision?: string;
 
-  @IsDateString()
   @IsOptional()
+  @IsDateOnly()
   fechaVencimiento?: string;
 
   @IsString()

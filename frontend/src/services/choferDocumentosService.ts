@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { ChoferDocumento, EstadoDocumento } from '../types/chofer-documento';
 import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
+import { getDaysUntil } from '../utils/dateUtils';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -63,9 +64,7 @@ export const choferDocumentosService = {
       return 'sin_vencimiento';
     }
 
-    const hoy = new Date();
-    const fechaVencimiento = new Date(documento.fechaVencimiento);
-    const diasRestantes = Math.floor((fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    const diasRestantes = getDaysUntil(documento.fechaVencimiento) as number;
 
     if (diasRestantes < 0) {
       return 'vencido';
@@ -84,9 +83,7 @@ export const choferDocumentosService = {
       return null;
     }
 
-    const hoy = new Date();
-    const fecha = new Date(fechaVencimiento);
-    return Math.floor((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+    return getDaysUntil(fechaVencimiento);
   },
 };
 

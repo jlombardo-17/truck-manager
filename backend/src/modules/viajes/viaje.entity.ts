@@ -95,7 +95,7 @@ export class Viaje {
   otrosGastos: number;
 
   @Column({ type: 'date', nullable: true })
-  fechaPago: Date;
+  fechaPago: string; // YYYY-MM-DD
 
   // Estado
   @Column({ default: 'en_progreso' })

@@ -9,6 +9,7 @@ import {
   CreateMantenimientoRegistroDto,
   UpdateMantenimientoRegistroDto,
 } from './dto/mantenimiento.dto';
+import { addDaysDateOnly, todayDateOnly } from '../../common/utils/date-only';
 
 @Injectable()
 export class MantenimientoService {
@@ -93,15 +94,13 @@ export class MantenimientoService {
   async marcarComoCompletado(id: number, costoReal?: number, observaciones?: string): Promise<MantenimientoRegistro> {
     const registro = await this.getRegistroById(id);
     registro.estado = EstadoMantenimiento.COMPLETADO;
-    registro.fechaRealizado = new Date();
+    registro.fechaRealizado = todayDateOnly();
     if (costoReal) registro.costoReal = costoReal;
     if (observaciones) registro.observaciones = observaciones;
-    
+
     // Calcular próximo mantenimiento
     if (registro.tipo.intervaloDias) {
-      const proxima = new Date(registro.fechaRealizado);
-      proxima.setDate(proxima.getDate() + registro.tipo.intervaloDias);
-      registro.proximaFecha = proxima;
+      registro.proximaFecha = addDaysDateOnly(registro.fechaRealizado, registro.tipo.intervaloDias);
     }
     
     return await this.registroRepository.save(registro);
@@ -110,9 +109,8 @@ export class MantenimientoService {
   // ============ ALERTAS ============
 
   async getProximosAVencer(camionId?: number, dias: number = 30): Promise<MantenimientoRegistro[]> {
-    const hoy = new Date();
-    const proximosDias = new Date();
-    proximosDias.setDate(proximosDias.getDate() + dias);
+    const hoy = todayDateOnly();
+    const proximosDias = addDaysDateOnly(hoy, dias);
 
     const query = this.registroRepository
       .createQueryBuilder('registro')
@@ -129,7 +127,7 @@ export class MantenimientoService {
   }
 
   async getVencidos(camionId?: number): Promise<MantenimientoRegistro[]> {
-    const hoy = new Date();
+    const hoy = todayDateOnly();
 
     const query = this.registroRepository
       .createQueryBuilder('registro')
@@ -146,12 +144,12 @@ export class MantenimientoService {
 
   async getEstadisticasCamion(camionId: number) {
     const registros = await this.getRegistrosByCamion(camionId);
-    const vencidos = registros.filter((r) => r.proximaFecha && new Date(r.proximaFecha) < new Date());
+    // Las fechas son 'YYYY-MM-DD', así que la comparación de strings es cronológica
+    const hoy = todayDateOnly();
+    const en30Dias = addDaysDateOnly(hoy, 30);
+    const vencidos = registros.filter((r) => r.proximaFecha && r.proximaFecha < hoy);
     const proximos = registros.filter(
-      (r) =>
-        r.proximaFecha &&
-        new Date(r.proximaFecha) >= new Date() &&
-        new Date(r.proximaFecha) <= new Date(new Date().setDate(new Date().getDate() + 30)),
+      (r) => r.proximaFecha && r.proximaFecha >= hoy && r.proximaFecha <= en30Dias,
     );
 
     const costoTotal = registros

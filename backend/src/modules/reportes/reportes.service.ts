@@ -8,6 +8,7 @@ import { Camion } from '../camiones/camion.entity';
 import { Documento } from '../camiones/documento.entity';
 import { Repostada } from '../camiones/repostada.entity';
 import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
+import { parseDateOnly } from '../../common/utils/date-only';
 
 type Granularidad = 'diaria' | 'semanal' | 'mensual';
 type GranularidadOperacion = 'diaria' | 'semanal' | 'mensual';
@@ -142,7 +143,7 @@ export class ReportesService {
 
     const repostadas = await repostadasQuery.getMany();
     for (const repostada of repostadas) {
-      const key = this.toBucketKey(new Date(repostada.fechaRepostada), 'mensual');
+      const key = this.toBucketKey(parseDateOnly(repostada.fechaRepostada), 'mensual');
       if (!flujoPorMes.has(key)) {
         continue;
       }
@@ -178,7 +179,7 @@ export class ReportesService {
         continue;
       }
 
-      const key = this.toBucketKey(new Date(fecha), 'mensual');
+      const key = this.toBucketKey(parseDateOnly(fecha), 'mensual');
       if (!flujoPorMes.has(key)) {
         continue;
       }
@@ -204,7 +205,7 @@ export class ReportesService {
 
     const pagos = await pagosQuery.getMany();
     for (const pago of pagos) {
-      const key = this.toBucketKey(new Date(pago.fechaPago), 'mensual');
+      const key = this.toBucketKey(parseDateOnly(pago.fechaPago), 'mensual');
       if (!flujoPorMes.has(key)) {
         continue;
       }
@@ -531,7 +532,7 @@ export class ReportesService {
             continue;
           }
 
-          const fecha = new Date(fechaBase);
+          const fecha = parseDateOnly(fechaBase);
           if (fecha < desde || fecha > hasta) {
             continue;
           }
@@ -744,7 +745,7 @@ export class ReportesService {
         continue;
       }
 
-      const fecha = new Date(fechaBase);
+      const fecha = parseDateOnly(fechaBase);
       if (fecha < filters.desde || fecha > filters.hasta) {
         continue;
       }
@@ -945,7 +946,7 @@ export class ReportesService {
     const start = Number.isNaN(rawStart.getTime()) ? new Date() : rawStart;
     start.setHours(0, 0, 0, 0);
 
-    const rawEnd = documento.fechaVencimiento ? new Date(documento.fechaVencimiento) : null;
+    const rawEnd = documento.fechaVencimiento ? parseDateOnly(documento.fechaVencimiento) : null;
     const hasValidEnd = rawEnd && !Number.isNaN(rawEnd.getTime());
     const end = hasValidEnd ? new Date(rawEnd) : new Date(start);
 
@@ -1122,14 +1123,14 @@ export class ReportesService {
       camionId: number;
       patente: string;
       tipoMantenimiento: string;
-      fecha: Date;
+      fecha: string;
       costo: number;
       estado: string;
     }[]>();
 
     for (const mantenimiento of mantenimientos) {
       const fecha = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
-      if (!fecha || fecha < desde || fecha > hasta) {
+      if (!fecha || parseDateOnly(fecha) < desde || parseDateOnly(fecha) > hasta) {
         continue;
       }
 
@@ -1203,7 +1204,7 @@ export class ReportesService {
         costoActual: number;
         coberturaDias: number;
         costoProyectado: number;
-        fechaVencimiento?: Date;
+        fechaVencimiento?: string;
       }>;
     }>();
 

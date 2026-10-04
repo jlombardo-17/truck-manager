@@ -15,7 +15,7 @@ import {
 import { Chofer } from '../types/chofer';
 import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
-import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
+import { getTodayLocalInputValue, toDateInputValue, formatDateForDisplay } from '../utils/dateUtils';
 import '../styles/ChoferSalarios.css';
 
 const ChoferSalarios: React.FC = () => {
@@ -518,7 +518,7 @@ const ChoferSalarios: React.FC = () => {
                 <div className="historial-meta">
                   <span>
                     Fecha pago: {pago.fechaPago
-                      ? new Date(pago.fechaPago).toLocaleDateString('es-CL')
+                      ? formatDateForDisplay(pago.fechaPago, 'es-CL')
                       : '-'}
                   </span>
                   <span>Tipo: {pago.tipo === TipoPagoSalario.ADELANTO ? 'Adelanto' : 'Liquidación'}</span>
@@ -611,7 +611,7 @@ const ChoferSalarios: React.FC = () => {
                     </td>
                     <td>
                       {salario.fechaPago
-                        ? new Date(salario.fechaPago).toLocaleDateString('es-CL')
+                        ? formatDateForDisplay(salario.fechaPago, 'es-CL')
                         : '-'}
                     </td>
                     <td>

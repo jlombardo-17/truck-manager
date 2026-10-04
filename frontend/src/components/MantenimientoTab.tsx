@@ -111,12 +111,12 @@ export const MantenimientoTab = ({ camionId }: Props) => {
         camionId,
         tipoId: parseInt(formData.tipoId),
         estado: EstadoMantenimiento.PENDIENTE,
-        fechaPrograma: new Date(formData.fechaPrograma),
+        fechaPrograma: formData.fechaPrograma,
         kmActual: parseInt(formData.kmActual),
         costoReal: formData.costoReal ? parseFloat(formData.costoReal) : undefined,
         observaciones: formData.observaciones || undefined,
         taller: formData.taller || undefined,
-        proximaFecha: new Date(formData.fechaPrograma),
+        proximaFecha: formData.fechaPrograma,
       };
 
       if (editingId) {

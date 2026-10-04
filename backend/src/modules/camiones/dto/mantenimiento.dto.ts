@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, IsOptional, IsNumber, IsDate, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsNotEmpty, IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 import { EstadoMantenimiento } from '../mantenimiento-registro.entity';
 
 export class CreateMantenimientoTipoDto {
@@ -67,14 +67,12 @@ export class CreateMantenimientoRegistroDto {
   tipoId: number;
 
   @IsNotEmpty()
-  @Type(() => Date)
-  @IsDate()
-  fechaPrograma: Date;
+  @IsDateOnly()
+  fechaPrograma: string;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaRealizado?: Date;
+  @IsDateOnly()
+  fechaRealizado?: string;
 
   @IsOptional()
   @IsNumber()
@@ -85,9 +83,8 @@ export class CreateMantenimientoRegistroDto {
   proximoKm?: number;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  proximaFecha?: Date;
+  @IsDateOnly()
+  proximaFecha?: string;
 
   @IsOptional()
   @IsNumber()
@@ -108,14 +105,12 @@ export class UpdateMantenimientoRegistroDto {
   estado?: EstadoMantenimiento;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaPrograma?: Date;
+  @IsDateOnly()
+  fechaPrograma?: string;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  fechaRealizado?: Date;
+  @IsDateOnly()
+  fechaRealizado?: string;
 
   @IsOptional()
   @IsNumber()
@@ -126,9 +121,8 @@ export class UpdateMantenimientoRegistroDto {
   proximoKm?: number;
 
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  proximaFecha?: Date;
+  @IsDateOnly()
+  proximaFecha?: string;
 
   @IsOptional()
   @IsNumber()

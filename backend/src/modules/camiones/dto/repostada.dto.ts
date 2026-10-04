@@ -1,11 +1,10 @@
-import { IsDate, IsDecimal, IsEnum, IsNumber, IsOptional, IsPositive } from 'class-validator';
+import { IsDecimal, IsEnum, IsNumber, IsOptional, IsPositive } from 'class-validator';
+import { IsDateOnly } from '../../../common/utils/date-only';
 import { TipoCombustible } from '../repostada.entity';
-import { Type } from 'class-transformer';
 
 export class CreateRepostadaDto {
-  @IsDate()
-  @Type(() => Date)
-  fechaRepostada: Date;
+  @IsDateOnly()
+  fechaRepostada: string;
 
   @IsEnum(TipoCombustible)
   tipoCombustible: TipoCombustible;
@@ -35,9 +34,8 @@ export class CreateRepostadaDto {
 
 export class UpdateRepostadaDto {
   @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  fechaRepostada?: Date;
+  @IsDateOnly()
+  fechaRepostada?: string;
 
   @IsOptional()
   @IsEnum(TipoCombustible)
