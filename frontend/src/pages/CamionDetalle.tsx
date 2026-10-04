@@ -5,7 +5,7 @@ import serviciosService from '../services/serviciosService';
 import documentosService from '../services/documentosService';
 import { repostadasService } from '../services/repostadasService';
 import { Camion } from '../types/camion';
-import { Servicio, TipoServicio, TipoServicioLabels, CreateServicioDto } from '../types/servicio';
+import { Servicio, TipoServicio, TipoServicioLabels, CreateServicioDto, MonedaServicio, MONEDAS_SERVICIO } from '../types/servicio';
 import { Documento, TipoDocumento, TipoDocumentoLabels } from '../types/servicio';
 import {
   CreateRepostadaDto,
@@ -25,6 +25,9 @@ import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue, getDay
 import '../styles/CamionDetalle.css';
 
 type DocumentCostProjectionWindow = '1y' | '5y';
+
+const formatCostoServicio = (costo: number, moneda: MonedaServicio = 'UYU') =>
+  `${moneda} ${Number(costo).toLocaleString('es-AR', { maximumFractionDigits: 2 })}`;
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('es-AR', {
@@ -580,7 +583,7 @@ const CamionDetalle: React.FC = () => {
                 {ultimoServicio.costo && (
                   <div className="info-item">
                     <label>Costo</label>
-                    <span>${Number(ultimoServicio.costo).toLocaleString('es-AR')}</span>
+                    <span>{formatCostoServicio(ultimoServicio.costo, ultimoServicio.moneda)}</span>
                   </div>
                 )}
               </div>
@@ -668,7 +671,7 @@ const CamionDetalle: React.FC = () => {
                     {servicio.descripcion && <p className="descripcion">{servicio.descripcion}</p>}
                     <div className="servicio-footer">
                       {servicio.kilometraje && <span className="km">km: {servicio.kilometraje.toLocaleString('es-AR')}</span>}
-                      {servicio.costo && <span className="costo">${Number(servicio.costo).toLocaleString('es-AR')}</span>}
+                      {servicio.costo && <span className="costo">{formatCostoServicio(servicio.costo, servicio.moneda)}</span>}
                     </div>
                   </div>
                 ))}
@@ -887,6 +890,7 @@ const ServicioModal: React.FC<{
     tipos: servicio?.tipos ?? ([] as TipoServicio[]),
     descripcion: servicio?.descripcion ?? '',
     costo: servicio?.costo != null ? String(servicio.costo) : '',
+    moneda: servicio?.moneda ?? ('UYU' as MonedaServicio),
     kilometraje: servicio?.kilometraje != null ? String(servicio.kilometraje) : '',
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -917,6 +921,7 @@ const ServicioModal: React.FC<{
         tipos: formData.tipos,
         descripcion: formData.descripcion || empty,
         costo: formData.costo ? Number(formData.costo) : empty,
+        moneda: formData.moneda,
         kilometraje: formData.kilometraje ? Number(formData.kilometraje) : empty,
       };
 
@@ -1003,6 +1008,18 @@ const ServicioModal: React.FC<{
                 disabled={isLoading}
                 step="0.01"
               />
+            </div>
+            <div className="form-group">
+              <label>Moneda</label>
+              <select
+                value={formData.moneda}
+                onChange={(e) => setFormData({ ...formData, moneda: e.target.value as MonedaServicio })}
+                disabled={isLoading}
+              >
+                {MONEDAS_SERVICIO.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
             </div>
           </div>
 

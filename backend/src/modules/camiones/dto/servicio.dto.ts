@@ -1,6 +1,6 @@
-import { IsEnum, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
+import { IsEnum, IsIn, IsNumber, IsOptional, IsString, IsArray } from 'class-validator';
 import { IsDateOnly } from '../../../common/utils/date-only';
-import { TipoServicio } from '../servicio.entity';
+import { MONEDAS_SERVICIO, MonedaServicio, TipoServicio } from '../servicio.entity';
 
 export class CreateServicioDto {
   @IsDateOnly('La fecha debe ser una fecha válida (YYYY-MM-DD)')
@@ -17,6 +17,10 @@ export class CreateServicioDto {
   @IsOptional()
   @IsNumber()
   costo?: number;
+
+  @IsOptional()
+  @IsIn(MONEDAS_SERVICIO)
+  moneda?: MonedaServicio;
 
   @IsOptional()
   @IsNumber()
@@ -40,6 +44,10 @@ export class UpdateServicioDto {
   @IsOptional()
   @IsNumber()
   costo?: number;
+
+  @IsOptional()
+  @IsIn(MONEDAS_SERVICIO)
+  moneda?: MonedaServicio;
 
   @IsOptional()
   @IsNumber()

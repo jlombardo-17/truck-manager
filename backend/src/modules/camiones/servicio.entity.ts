@@ -13,6 +13,9 @@ export enum TipoServicio {
   OTRO = 'otro',
 }
 
+export const MONEDAS_SERVICIO = ['UYU', 'USD'] as const;
+export type MonedaServicio = (typeof MONEDAS_SERVICIO)[number];
+
 @Entity({ name: 'servicios' })
 export class Servicio {
   @PrimaryGeneratedColumn()
@@ -36,6 +39,9 @@ export class Servicio {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   costo: number;
+
+  @Column({ type: 'varchar', length: 3, default: 'UYU' })
+  moneda: MonedaServicio;
 
   @Column({ nullable: true })
   kilometraje: number;

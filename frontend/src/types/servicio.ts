@@ -22,6 +22,10 @@ export const TipoServicioLabels: Record<TipoServicio, string> = {
   [TipoServicio.OTRO]: 'Otro',
 };
 
+export type MonedaServicio = 'UYU' | 'USD';
+
+export const MONEDAS_SERVICIO: MonedaServicio[] = ['UYU', 'USD'];
+
 export interface Servicio {
   id: number;
   camionId: number;
@@ -29,6 +33,7 @@ export interface Servicio {
   tipos: TipoServicio[];
   descripcion?: string;
   costo?: number;
+  moneda: MonedaServicio;
   kilometraje?: number;
   createdAt: string;
 }
@@ -38,6 +43,7 @@ export interface CreateServicioDto {
   tipos: TipoServicio[];
   descripcion?: string;
   costo?: number;
+  moneda?: MonedaServicio;
   kilometraje?: number;
 }
 
@@ -47,6 +53,7 @@ export interface UpdateServicioDto {
   tipos?: TipoServicio[];
   descripcion?: string | null;
   costo?: number | null;
+  moneda?: MonedaServicio;
   kilometraje?: number | null;
 }
 
