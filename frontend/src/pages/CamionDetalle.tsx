@@ -20,6 +20,7 @@ import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import EstadoBadge from '../components/EstadoBadge';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
+import CamionFotoCard from '../components/CamionFotoCard';
 import { estadoCamionLabel, estadoCamionTono } from '../utils/estadoCamion';
 import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue, getDaysUntil, parseDatePreservingDay } from '../utils/dateUtils';
 import '../styles/CamionDetalle.css';
@@ -532,7 +533,10 @@ const CamionDetalle: React.FC = () => {
             <span className="summary-empty">Sección contraída — click para expandir</span>
           </div>
         ) : (
-          <ConfiguracionVehicularTab camionId={camionId} />
+          <>
+            <CamionFotoCard camion={camion} onUpdated={setCamion} />
+            <ConfiguracionVehicularTab camionId={camionId} />
+          </>
         )}
       </section>
 

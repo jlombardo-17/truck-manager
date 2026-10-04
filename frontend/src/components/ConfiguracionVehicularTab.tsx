@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import {
   ConfiguracionVehicular,
   ICONO_SECCION,
@@ -32,21 +32,100 @@ function fmt(n: number) {
 }
 // ─── SVG Diagrama de ejes (perfil lateral) ────────────────────────────────
 
-const WHEEL_R = 9;
-const GROUND_Y = 84;
-const wheelCY = GROUND_Y - WHEEL_R;          // 75
-const CHASSIS_Y = 52;
-const CHASSIS_H = 6;
-const chassisBottom = CHASSIS_Y + CHASSIS_H; // 58
-const DIAG_H = 96;
+const WHEEL_R = 10;
+const GROUND_Y = 86;
+const wheelCY = GROUND_Y - WHEEL_R;          // 76
+const CHASSIS_Y = 60;
+const CHASSIS_H = 5;
+const DIAG_H = 102;
 
-const WheelSvg: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
+const COLOR = {
+  frame: '#1f2937',
+  steel: '#374151',
+  steelLight: '#64748b',
+  rubber: '#111827',
+  cabEdge: '#7f1d1d',
+  boxEdge: '#94a3b8',
+  tail: '#dc2626',
+  marker: '#f59e0b',
+};
+
+// Gradientes compartidos por todas las piezas del SVG; `uid` evita colisiones de id entre diagramas
+const SvgDefs: React.FC<{ uid: string }> = ({ uid }) => (
+  <defs>
+    <linearGradient id={`${uid}-cab`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor="#ef4444" />
+      <stop offset="0.55" stopColor="#c81e1e" />
+      <stop offset="1" stopColor="#8f1d1d" />
+    </linearGradient>
+    <linearGradient id={`${uid}-glass`} x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stopColor="#dbeafe" />
+      <stop offset="0.45" stopColor="#60a5fa" />
+      <stop offset="1" stopColor="#1e3a8a" />
+    </linearGradient>
+    <linearGradient id={`${uid}-box`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor="#ffffff" />
+      <stop offset="0.7" stopColor="#f1f5f9" />
+      <stop offset="1" stopColor="#cbd5e1" />
+    </linearGradient>
+    <linearGradient id={`${uid}-chrome`} x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stopColor="#94a3b8" />
+      <stop offset="0.45" stopColor="#f8fafc" />
+      <stop offset="1" stopColor="#64748b" />
+    </linearGradient>
+    <linearGradient id={`${uid}-tank`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor="#f1f5f9" />
+      <stop offset="0.5" stopColor="#cbd5e1" />
+      <stop offset="1" stopColor="#64748b" />
+    </linearGradient>
+    <linearGradient id={`${uid}-deck`} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor="#b45309" />
+      <stop offset="1" stopColor="#78350f" />
+    </linearGradient>
+    <radialGradient id={`${uid}-rim`} cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stopColor="#f8fafc" />
+      <stop offset="0.6" stopColor="#cbd5e1" />
+      <stop offset="1" stopColor="#64748b" />
+    </radialGradient>
+  </defs>
+);
+
+const WheelSvg: React.FC<{ cx: number; cy: number; uid: string }> = ({ cx, cy, uid }) => (
   <g>
-    <circle cx={cx} cy={cy} r={WHEEL_R} fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
-    <circle cx={cx} cy={cy} r={WHEEL_R * 0.46} fill="#94a3b8" />
-    <circle cx={cx} cy={cy} r={WHEEL_R * 0.18} fill="#334155" />
+    {/* Cubierta */}
+    <circle cx={cx} cy={cy} r={WHEEL_R} fill="#1f2937" />
+    <circle cx={cx} cy={cy} r={WHEEL_R - 0.8} fill="none" stroke="#0b1220" strokeWidth="1.2" strokeDasharray="1.4 1.1" />
+    <circle cx={cx} cy={cy} r={WHEEL_R * 0.72} fill="#111827" />
+    {/* Llanta */}
+    <circle cx={cx} cy={cy} r={WHEEL_R * 0.58} fill={`url(#${uid}-rim)`} stroke="#475569" strokeWidth="0.5" />
+    <circle cx={cx} cy={cy} r={WHEEL_R * 0.25} fill="#64748b" />
+    {/* Bulones */}
+    {Array.from({ length: 8 }, (_, i) => {
+      const a = (i / 8) * Math.PI * 2;
+      return (
+        <circle
+          key={i}
+          cx={cx + Math.cos(a) * WHEEL_R * 0.4}
+          cy={cy + Math.sin(a) * WHEEL_R * 0.4}
+          r="0.55"
+          fill="#334155"
+        />
+      );
+    })}
+    <circle cx={cx} cy={cy} r={WHEEL_R * 0.1} fill="#1e293b" />
   </g>
 );
+
+/** Agrupa ejes contiguos (tándem/trídem) para dibujar un único guardabarros por grupo */
+function agruparEjes(xs: number[]): number[][] {
+  const grupos: number[][] = [];
+  [...xs].sort((a, b) => a - b).forEach((x) => {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && x - ultimo[ultimo.length - 1] <= 24) ultimo.push(x);
+    else grupos.push([x]);
+  });
+  return grupos;
+}
 
 function getSvgWidth(tipo: TipoSeccion, ejes: number): number {
   const rearExtra = (n: number) => Math.max(0, n - 1) * 20; // gap per extra rear axle
@@ -105,152 +184,252 @@ function getAxleXs(tipo: TipoSeccion, ejes: number, W: number): number[] {
   return Array.from({ length: ejes }, (_, i) => lastX - (ejes - 1 - i) * GAP);
 }
 
-function renderVehicleBody(tipo: TipoSeccion, W: number): JSX.Element {
+// Cabina "cab-over" mirando a la izquierda. `largo` = largo de cabina; `dormitorio` agrega litera y deflector.
+function renderCabina(uid: string, largo: number, dormitorio: boolean): JSX.Element {
+  const L = largo;
+  const top = dormitorio ? 8 : 12;
+  return (
+    <g>
+      {/* Deflector de techo */}
+      {dormitorio && (
+        <path d={`M 20 ${top} L 34 2 L ${L - 2} 2 L ${L - 1} ${top} Z`} fill={`url(#${uid}-cab)`} stroke={COLOR.cabEdge} strokeWidth="0.5" />
+      )}
+      {/* Carrocería de cabina */}
+      <path
+        d={`M 5 57 L 4 ${top + 16} Q 4 ${top + 2} 11 ${top} L ${L} ${top} L ${L + 1} 57 Z`}
+        fill={`url(#${uid}-cab)`}
+        stroke={COLOR.cabEdge}
+        strokeWidth="0.6"
+      />
+      {/* Brillo superior */}
+      <path d={`M 11 ${top + 1.5} L ${L - 1} ${top + 1.5}`} stroke="rgba(255,255,255,0.45)" strokeWidth="1.2" />
+      {/* Ventanilla lateral + parabrisas */}
+      <path
+        d={`M 13 ${top + 5} L ${L * 0.52} ${top + 5} L ${L * 0.52} ${top + 22} L 8 ${top + 22} Q 8 ${top + 11} 13 ${top + 5} Z`}
+        fill={`url(#${uid}-glass)`}
+        stroke="#1e293b"
+        strokeWidth="0.6"
+      />
+      <path d={`M 5 ${top + 18} Q 5.5 ${top + 8} 11 ${top + 3}`} stroke="#93c5fd" strokeWidth="1.6" fill="none" />
+      {/* Puerta */}
+      <path d={`M 8 ${top + 3.5} L ${L * 0.55} ${top + 3.5} L ${L * 0.55} 55`} stroke={COLOR.cabEdge} strokeWidth="0.7" fill="none" />
+      <rect x={L * 0.55 - 7} y={top + 26} width="5" height="1.4" rx="0.7" fill="#e5e7eb" />
+      {/* Ventanilla de litera */}
+      {dormitorio && <rect x={L * 0.66} y={top + 7} width={L * 0.2} height="6" rx="2" fill={`url(#${uid}-glass)`} opacity="0.8" />}
+      {/* Franja decorativa */}
+      <rect x="4.5" y="44" width={L - 3.5} height="1.6" fill="rgba(255,255,255,0.5)" />
+      {/* Paragolpes, faro y parrilla */}
+      <rect x="2" y="50" width="13" height="8" rx="1.5" fill={COLOR.steel} />
+      <rect x="2.5" y="51.5" width="12" height="1" fill="#4b5563" />
+      <rect x="3" y="46" width="4.5" height="3.2" rx="1" fill="#fef9c3" stroke="#a16207" strokeWidth="0.4" />
+      {[34, 37, 40].map((y) => (
+        <rect key={y} x="4.2" y={y} width="2.2" height="1.2" rx="0.4" fill={COLOR.cabEdge} />
+      ))}
+      {/* Espejo */}
+      <rect x="1.2" y={top + 6} width="1.4" height="14" fill={COLOR.steel} />
+      <rect x="0" y={top + 4} width="3.2" height="11" rx="1" fill="#1f2937" />
+      {/* Escalones */}
+      <rect x={L * 0.25} y="57" width={L * 0.22} height="1.8" rx="0.8" fill="#9ca3af" />
+      <rect x={L * 0.27} y="61" width={L * 0.2} height="1.8" rx="0.8" fill="#9ca3af" />
+    </g>
+  );
+}
+
+function renderTanque(uid: string, x: number, w: number): JSX.Element {
+  return (
+    <g>
+      <rect x={x} y="61" width={w} height="11" rx="5" fill={`url(#${uid}-tank)`} stroke="#64748b" strokeWidth="0.5" />
+      <rect x={x + 3} y="61" width="1.4" height="11" fill="#94a3b8" />
+      <rect x={x + w - 4.4} y="61" width="1.4" height="11" fill="#94a3b8" />
+    </g>
+  );
+}
+
+function renderCajaFurgon(uid: string, x0: number, x1: number, top: number, bottom: number): JSX.Element {
+  const ribs: number[] = [];
+  for (let x = x0 + 12; x < x1 - 8; x += 11) ribs.push(x);
+  return (
+    <g>
+      <rect x={x0} y={top} width={x1 - x0} height={bottom - top} rx="1.5" fill={`url(#${uid}-box)`} stroke={COLOR.boxEdge} strokeWidth="0.8" />
+      {ribs.map((x) => (
+        <line key={x} x1={x} y1={top + 3} x2={x} y2={bottom - 4} stroke="rgba(100,116,139,0.28)" strokeWidth="0.8" />
+      ))}
+      {/* Rieles superior e inferior */}
+      <rect x={x0} y={top} width={x1 - x0} height="2.5" rx="1" fill="#cbd5e1" />
+      <rect x={x0} y={bottom - 4} width={x1 - x0} height="4" fill="#94a3b8" />
+      {/* Puertas traseras con bisagras */}
+      <rect x={x1 - 4} y={top + 2.5} width="3" height={bottom - top - 6.5} fill="#e2e8f0" stroke={COLOR.boxEdge} strokeWidth="0.5" />
+      {[0.2, 0.5, 0.8].map((f) => (
+        <rect key={f} x={x1 - 5} y={top + (bottom - top) * f} width="2" height="2" fill={COLOR.steelLight} />
+      ))}
+      {/* Luces de gálibo */}
+      {ribs.filter((_, i) => i % 4 === 1).map((x) => (
+        <rect key={x} x={x} y={bottom - 3.2} width="2.2" height="1.6" rx="0.5" fill={COLOR.marker} />
+      ))}
+    </g>
+  );
+}
+
+function renderLanza(xEnganche: number, xFin: number): JSX.Element {
+  return (
+    <g>
+      <line x1={xEnganche + 3} y1="68" x2={xFin} y2="62" stroke={COLOR.steel} strokeWidth="3" strokeLinecap="round" />
+      <circle cx={xEnganche + 2} cy="68.5" r="3" fill="none" stroke={COLOR.steel} strokeWidth="2" />
+    </g>
+  );
+}
+
+/** Piezas que van detrás de las ruedas */
+function renderVehicleBody(tipo: TipoSeccion, W: number, axleXs: number[], uid: string): JSX.Element {
   const cy = CHASSIS_Y;
+  const primerEje = axleXs[0] ?? 30;
+
   switch (tipo) {
-    case 'tractora':
+    case 'tractora': {
+      const traseros = axleXs.slice(1);
+      const quintaX = traseros.reduce((a, b) => a + b, 0) / Math.max(1, traseros.length) - 4;
       return (
         <g>
-          {/* Chassis */}
-          <rect x="8" y={cy} width={W - 16} height={CHASSIS_H} rx="2" fill="#1e293b" />
-          {/* Cab block */}
-          <rect x="8" y="9" width="87" height={cy - 9} rx="3" fill="#3b4a6b" />
-          {/* Windshield */}
-          <rect x="11" y="12" width="81" height="24" rx="2" fill="#60a5fa" opacity="0.45" />
-          {/* Rear side window */}
-          <rect x="73" y="14" width="18" height="16" rx="1.5" fill="#60a5fa" opacity="0.28" />
-          {/* Front bumper */}
-          <rect x="8" y={cy - 6} width="14" height="10" rx="1.5" fill="#374151" />
-          {/* Mirror arm */}
-          <rect x="2" y="25" width="9" height="3" rx="1" fill="#475569" />
-          {/* Mirror glass */}
-          <rect x="0" y="21" width="6" height="9" rx="1" fill="#64748b" />
-          {/* Door handle */}
-          <rect x="38" y={cy - 17} width="12" height="2" rx="1" fill="#64748b" />
-          {/* 5th wheel saddle */}
-          <rect x="74" y={cy - 5} width="32" height="7" rx="2.5" fill="#475569" />
-          <ellipse cx="90" cy={cy + 1} rx="14" ry="3.5" fill="#64748b" />
+          <rect x="8" y={cy} width={W - 14} height={CHASSIS_H} rx="1.5" fill={COLOR.frame} />
+          {/* Caño de escape */}
+          <rect x="74" y="5" width="3.5" height={cy - 5} rx="1.5" fill={`url(#${uid}-chrome)`} />
+          <rect x="73.2" y="3" width="5" height="4" rx="1" fill={COLOR.steel} />
+          {renderCabina(uid, 72, true)}
+          {renderTanque(uid, 46, 30)}
+          {/* Quinta rueda */}
+          <path d={`M ${quintaX - 17} ${cy} L ${quintaX - 13} ${cy - 4} L ${quintaX + 15} ${cy - 4} L ${quintaX + 17} ${cy} Z`} fill={COLOR.rubber} />
+          <rect x={quintaX - 9} y={cy - 6} width="18" height="2.2" rx="1" fill={COLOR.steelLight} />
+          <rect x={W - 7} y={cy - 4} width="3" height="3" rx="0.6" fill={COLOR.tail} />
         </g>
       );
-    case 'camion':
+    }
+    case 'camion': {
+      const cajaX0 = 64;
+      const segundoEje = axleXs[1] ?? W;
+      const largoTanque = Math.min(24, segundoEje - primerEje - 40);
       return (
         <g>
-          {/* Chassis */}
-          <rect x="8" y={cy} width={W - 16} height={CHASSIS_H} rx="2" fill="#1e293b" />
-          {/* Cab */}
-          <rect x="8" y="12" width="72" height={cy - 12} rx="3" fill="#3b4a6b" />
-          {/* Windshield */}
-          <rect x="11" y="15" width="66" height="20" rx="2" fill="#60a5fa" opacity="0.45" />
-          {/* Side window */}
-          <rect x="55" y="15" width="20" height="14" rx="1.5" fill="#60a5fa" opacity="0.28" />
-          {/* Bumper */}
-          <rect x="8" y={cy - 5} width="12" height="9" rx="1.5" fill="#374151" />
-          {/* Mirror arm */}
-          <rect x="2" y="26" width="8" height="2.5" rx="1" fill="#475569" />
-          {/* Mirror */}
-          <rect x="0" y="22" width="6" height="7" rx="1" fill="#64748b" />
-          {/* Cargo box — starts at x=82, ends near rear */}
-          <rect x="82" y="9" width={W - 94} height={cy - 9} rx="2" fill="#4a5568" />
-          {/* Box panel lines spaced evenly */}
-          {Array.from({ length: Math.floor((W - 110) / 24) }, (_, i) => 108 + i * 24)
-            .filter(x => x < W - 16)
-            .map((x, i) => (
-              <line key={i} x1={x} y1="10" x2={x} y2={cy - 1} stroke="#5a6880" strokeWidth="0.8" />
+          <rect x="6" y={cy} width={W - 12} height={CHASSIS_H} rx="1.5" fill={COLOR.frame} />
+          {renderCabina(uid, 58, false)}
+          <rect x={cajaX0 + 2} y="56" width={W - cajaX0 - 10} height="4" fill={COLOR.steel} />
+          {renderCajaFurgon(uid, cajaX0, W - 5, 5, 57)}
+          {axleXs.length > 1 && largoTanque > 10 && renderTanque(uid, primerEje + 13, largoTanque)}
+          <rect x={W - 8} y={cy + 1} width="3" height="3" rx="0.6" fill={COLOR.tail} />
+        </g>
+      );
+    }
+    case 'semirremolque': {
+      const pataX = Math.max(42, Math.min(70, primerEje - 50));
+      const largoProteccion = primerEje - 14 - (pataX + 10);
+      return (
+        <g>
+          {renderCajaFurgon(uid, 6, W - 6, 6, 55)}
+          {/* Bastidor bajo caja y perno rey */}
+          <rect x={pataX - 6} y="55" width={W - pataX - 6} height="4" fill={COLOR.frame} />
+          <rect x="20" y="55" width="4" height="6" rx="1" fill={COLOR.steel} />
+          {/* Patas de apoyo */}
+          <rect x={pataX} y="55" width="3.5" height="24" fill="#4b5563" />
+          <rect x={pataX - 3} y="78" width="9.5" height="3" rx="1" fill={COLOR.steel} />
+          <rect x={pataX + 3.5} y="63" width="5" height="1.6" rx="0.6" fill={COLOR.steelLight} />
+          {/* Protección lateral */}
+          {largoProteccion > 2 && (
+            <>
+              <rect x={pataX + 10} y="63" width={largoProteccion} height="1.8" fill={COLOR.steelLight} />
+              <rect x={pataX + 10} y="68" width={largoProteccion} height="1.8" fill={COLOR.steelLight} />
+            </>
+          )}
+          <rect x={W - 9} y="56" width="3" height="3" rx="0.6" fill={COLOR.tail} />
+        </g>
+      );
+    }
+    case 'acoplado': {
+      const largoProteccion = primerEje - 14 - 58;
+      return (
+        <g>
+          {renderLanza(1, 30)}
+          {renderCajaFurgon(uid, 24, W - 6, 8, 56)}
+          <rect x="28" y="56" width={W - 38} height="5" fill={COLOR.frame} />
+          {/* Plato giratorio delantero */}
+          <rect x="30" y="61" width="22" height="3" rx="1" fill={COLOR.steel} />
+          {largoProteccion > 2 && <rect x="58" y="65" width={largoProteccion} height="1.8" fill={COLOR.steelLight} />}
+          <rect x={W - 9} y="57" width="3" height="3" rx="0.6" fill={COLOR.tail} />
+        </g>
+      );
+    }
+    case 'zorra': {
+      const estacas: number[] = [];
+      for (let x = 24; x < W - 12; x += 18) estacas.push(x);
+      return (
+        <g>
+          {renderLanza(1, 30)}
+          {/* Viga principal */}
+          <rect x="6" y="51" width={W - 12} height="7" fill={COLOR.steel} />
+          <rect x="6" y="51" width={W - 12} height="1.2" fill={COLOR.steelLight} />
+          {/* Piso de madera */}
+          <rect x="6" y="47" width={W - 12} height="4" rx="0.6" fill={`url(#${uid}-deck)`} />
+          {/* Cabezal delantero */}
+          <rect x="8" y="30" width="4" height="17" fill={COLOR.steelLight} />
+          {[33, 38, 43].map((y) => (
+            <rect key={y} x="12" y={y} width="5" height="1.2" fill={COLOR.steelLight} />
           ))}
-          {/* Rear door */}
-          <rect x={W - 14} y="10" width="4" height={cy - 10} rx="1" fill="#374151" />
+          {/* Portaestacas */}
+          {estacas.map((x) => (
+            <rect key={x} x={x} y="52.5" width="3" height="4" fill="#1f2937" />
+          ))}
+          {/* Plato giratorio */}
+          {axleXs.length > 1 && <rect x={primerEje - 13} y="58" width="26" height="3" rx="1" fill={COLOR.frame} />}
+          <rect x={W - 9} y="52" width="3" height="3" rx="0.6" fill={COLOR.tail} />
         </g>
       );
-    case 'semirremolque':
+    }
+    case 'dolly': {
+      const mx = axleXs.reduce((a, b) => a + b, 0) / Math.max(1, axleXs.length);
       return (
         <g>
-          {/* Chassis */}
-          <rect x="30" y={cy} width={W - 38} height={CHASSIS_H} rx="2" fill="#1e293b" />
-          {/* Body with kingpin cutout front-bottom */}
-          <polygon points={`30,9 ${W - 13},9 ${W - 13},${cy} 48,${cy} 48,41 30,41`} fill="#4a5568" />
-          {/* Top edge highlight */}
-          <line x1="30" y1="10" x2={W - 13} y2="10" stroke="#334155" strokeWidth="1.5" />
-          {/* Panel dividers */}
-          {[68, 98, 128, 158, 188].filter(x => x < W - 17).map((x, i) => (
-            <line key={i} x1={x} y1="11" x2={x} y2={cy - 1} stroke="#5a6880" strokeWidth="0.8" />
-          ))}
-          {/* Rear door */}
-          <rect x={W - 19} y="10" width="5" height={cy - 10} rx="1" fill="#374151" />
-          {/* Kingpin shaft */}
-          <rect x="32" y="39" width="9" height="21" rx="2.5" fill="#374151" />
+          {renderLanza(1, 30)}
+          <rect x="26" y={cy} width={W - 32} height={CHASSIS_H} rx="1.5" fill={COLOR.frame} />
+          {/* Quinta rueda */}
+          <path d={`M ${mx - 16} ${cy} L ${mx - 12} ${cy - 4} L ${mx + 14} ${cy - 4} L ${mx + 16} ${cy} Z`} fill={COLOR.rubber} />
+          <rect x={mx - 8} y={cy - 6} width="16" height="2.2" rx="1" fill={COLOR.steelLight} />
+          <rect x={W - 8} y={cy} width="3" height="3" rx="0.6" fill={COLOR.tail} />
         </g>
       );
-    case 'acoplado':
-      return (
-        <g>
-          {/* Chassis */}
-          <rect x="10" y={cy} width={W - 18} height={CHASSIS_H} rx="2" fill="#1e293b" />
-          {/* Box body */}
-          <rect x="24" y="9" width={W - 36} height={cy - 9} rx="2" fill="#4a5568" />
-          {/* Top rail */}
-          <line x1="24" y1="10" x2={W - 14} y2="10" stroke="#334155" strokeWidth="1.5" />
-          {/* Panel lines */}
-          {[50, 80, 110, 140, 170].filter(x => x < W - 18).map((x, i) => (
-            <line key={i} x1={x} y1="10" x2={x} y2={cy - 1} stroke="#5a6880" strokeWidth="0.8" />
-          ))}
-          {/* Rear door */}
-          <rect x={W - 18} y="10" width="4" height={cy - 10} rx="1" fill="#374151" />
-          {/* Drawbar arm */}
-          <rect x="10" y={cy - 10} width="18" height="5" rx="2" fill="#375569" />
-          {/* Coupling ring */}
-          <circle cx="10" cy={cy - 7} r="6" fill="#475569" stroke="#64748b" strokeWidth="1.5" />
-          <circle cx="10" cy={cy - 7} r="2.5" fill="#334155" />
-        </g>
-      );
-    case 'zorra':
-      return (
-        <g>
-          {/* Chassis */}
-          <rect x="8" y={cy} width={W - 16} height={CHASSIS_H} rx="2" fill="#1e293b" />
-          {/* Low flatbed platform */}
-          <rect x="8" y={cy - 14} width={W - 16} height="14" rx="1" fill="#4a5568" />
-          {/* Front steering-axle housing / neck piece */}
-          <rect x="8" y="25" width="42" height={cy - 25} rx="2" fill="#374151" />
-          {/* Neck highlight */}
-          <rect x="10" y="27" width="38" height={cy - 29} rx="1" fill="#475569" />
-          {/* Kingpin / coupling ring */}
-          <circle cx="18" cy={cy - 6} r="7" fill="#475569" stroke="#64748b" strokeWidth="1.5" />
-          <circle cx="18" cy={cy - 6} r="3" fill="#334155" />
-          {/* Flatbed body starts after steering section */}
-          <rect x="50" y="10" width={W - 62} height={cy - 14} rx="1" fill="#4a5568" />
-          {/* Rear stop */}
-          <rect x={W - 17} y="14" width="7" height={cy - 16} rx="1.5" fill="#374151" />
-          {/* Floor plank lines */}
-          {[68, 90, 112, 134, 156, 178].filter(x => x < W - 20).map((x, i) => (
-            <line key={i} x1={x} y1={cy - 13} x2={x} y2={cy - 1} stroke="#5a6880" strokeWidth="0.8" />
-          ))}
-          {/* Side stakes */}
-          {[68, 99, 130, 161].filter(x => x < W - 22).map((x, i) => (
-            <line key={i} x1={x} y1={cy - 26} x2={x} y2={cy - 14} stroke="#475569" strokeWidth="2" />
-          ))}
-          {/* Top rail */}
-          <line x1="50" y1={cy - 26} x2={W - 10} y2={cy - 26} stroke="#64748b" strokeWidth="1.5" />
-        </g>
-      );
-    case 'dolly':
-      return (
-        <g>
-          {/* Frame */}
-          <rect x="10" y={cy - 4} width={W - 20} height={CHASSIS_H + 4} rx="2" fill="#1e293b" />
-          {/* Turntable (front kingpin coupling) */}
-          <circle cx="26" cy={cy - 11} r="14" fill="#475569" stroke="#64748b" strokeWidth="1.5" />
-          <circle cx="26" cy={cy - 11} r="7" fill="#64748b" />
-          <circle cx="26" cy={cy - 11} r="2.5" fill="#334155" />
-          {/* Frame bar */}
-          <rect x="14" y={cy - 15} width={W - 28} height="8" rx="2" fill="#374151" />
-          {/* 5th wheel platform (rear, for next trailer) */}
-          <rect x={W - 38} y={cy - 4} width="28" height="6" rx="2" fill="#475569" />
-          <ellipse cx={W - 24} cy={cy + 2} rx="13" ry="3.5" fill="#64748b" />
-        </g>
-      );
+    }
     default:
       return <g />;
   }
+}
+
+/** Piezas que van delante de las ruedas: guardabarros y barreros */
+function renderGuardabarros(tipo: TipoSeccion, axleXs: number[]): JSX.Element {
+  // En tractora y camión el eje delantero queda bajo la cabina
+  const ejes = (tipo === 'tractora' || tipo === 'camion') && axleXs.length > 1 ? axleXs.slice(1) : axleXs;
+  const curvo = tipo === 'tractora';
+  return (
+    <g>
+      {agruparEjes(ejes).map((grupo) => {
+        const a = grupo[0];
+        const b = grupo[grupo.length - 1];
+        return (
+          <g key={a}>
+            {curvo ? (
+              <path
+                d={`M ${a - 13} 75 Q ${a - 13} 63 ${a - 2} 63 L ${b + 2} 63 Q ${b + 13} 63 ${b + 13} 75`}
+                fill="none"
+                stroke={COLOR.rubber}
+                strokeWidth="2.6"
+                strokeLinecap="round"
+              />
+            ) : (
+              <rect x={a - 12} y="62.5" width={b - a + 24} height="2.4" rx="1" fill={COLOR.rubber} />
+            )}
+            {/* Barrero */}
+            <rect x={b + 11.5} y="64" width="2.4" height="18" rx="0.6" fill={COLOR.rubber} />
+          </g>
+        );
+      })}
+    </g>
+  );
 }
 // ─── Bloque visual de sección ────────────────────────────────────────────────
 
@@ -267,6 +446,7 @@ const SeccionBlock: React.FC<SeccionBlockProps> = ({ seccion }) => {
   const pbvKg = pesoVacio + capacidad;
   const W = getSvgWidth(seccion.tipo, seccion.ejes);
   const axleXs = getAxleXs(seccion.tipo, seccion.ejes, W);
+  const uid = `cv${useId().replace(/:/g, '')}`;
   const tPerAxle = pbvKg > 0 && seccion.ejes > 0 ? pbvKg / seccion.ejes / 1000 : null;
 
   return (
@@ -285,32 +465,25 @@ const SeccionBlock: React.FC<SeccionBlockProps> = ({ seccion }) => {
           className="cv-diagrama-svg"
           aria-label={`${LABELS_SECCION[seccion.tipo]} – ${seccion.ejes} ${seccion.ejes === 1 ? 'eje' : 'ejes'}`}
         >
-          {/* Ground dashed line */}
-          <line x1="4" y1={GROUND_Y} x2={W - 4} y2={GROUND_Y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="5,4" />
-          {/* Vehicle body silhouette */}
-          {renderVehicleBody(seccion.tipo, W)}
-          {/* Axle rods (chassis → wheel) */}
+          <SvgDefs uid={uid} />
+          {/* Sombra y piso */}
+          <ellipse cx={W / 2} cy={GROUND_Y + 0.5} rx={W / 2 - 6} ry="2" fill="rgba(15,23,42,0.12)" />
+          <line x1="2" y1={GROUND_Y} x2={W - 2} y2={GROUND_Y} stroke="#cbd5e1" strokeWidth="1" />
+          {renderVehicleBody(seccion.tipo, W, axleXs, uid)}
+          {/* Suspensión */}
           {axleXs.map((x, i) => (
-            <rect
-              key={i}
-              x={x - 1.5}
-              y={chassisBottom}
-              width="3"
-              height={wheelCY - WHEEL_R - chassisBottom}
-              rx="1.5"
-              fill="#475569"
-            />
+            <rect key={i} x={x - 8} y={CHASSIS_Y + CHASSIS_H - 1} width="16" height="3" rx="1.2" fill={COLOR.steel} />
           ))}
-          {/* Wheel circles */}
           {axleXs.map((x, i) => (
-            <WheelSvg key={i} cx={x} cy={wheelCY} />
+            <WheelSvg key={i} cx={x} cy={wheelCY} uid={uid} />
           ))}
+          {renderGuardabarros(seccion.tipo, axleXs)}
           {/* Per-axle weight label */}
           {tPerAxle !== null && axleXs.map((x, i) => (
             <text
               key={i}
               x={x}
-              y={GROUND_Y + 11}
+              y={GROUND_Y + 12}
               textAnchor="middle"
               fontSize="9"
               fill="#64748b"

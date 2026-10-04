@@ -1,17 +1,27 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CamionesService } from './camiones.service';
+import { FotosVehiculoService } from './fotos-vehiculo.service';
 import { CreateCamionDto } from './dto/create-camion.dto';
 import { UpdateCamionDto } from './dto/update-camion.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('camiones')
 export class CamionesController {
-  constructor(private readonly camionesService: CamionesService) {}
+  constructor(
+    private readonly camionesService: CamionesService,
+    private readonly fotosVehiculoService: FotosVehiculoService,
+  ) {}
 
   @Get()
   findAll() {
     return this.camionesService.findAll();
+  }
+
+  // Debe ir antes de ':id' para que no lo capture esa ruta
+  @Get('fotos-sugeridas')
+  buscarFotos(@Query('q') q = '') {
+    return this.fotosVehiculoService.buscar(q);
   }
 
   @Get(':id')

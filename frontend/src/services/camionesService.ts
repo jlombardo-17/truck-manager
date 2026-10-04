@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { Camion, CreateCamionDto, UpdateCamionDto } from '../types/camion';
+import { Camion, CreateCamionDto, FotoSugerida, UpdateCamionDto } from '../types/camion';
 import authService from './authService';
 import { normalizeArrayResponse, normalizeObjectResponse } from './responseNormalizer';
 
@@ -57,6 +57,15 @@ class CamionesService {
     try {
       const response = await this.api.patch<Camion>(`/camiones/${id}`, data);
       return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  }
+
+  async buscarFotos(q: string): Promise<FotoSugerida[]> {
+    try {
+      const response = await this.api.get<unknown>('/camiones/fotos-sugeridas', { params: { q } });
+      return normalizeArrayResponse<FotoSugerida>(response.data, 'fotos');
     } catch (error: any) {
       throw error.response?.data || error;
     }

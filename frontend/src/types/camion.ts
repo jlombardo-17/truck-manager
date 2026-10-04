@@ -6,6 +6,8 @@ export interface Camion {
   anio: number;
   estado: string;
   odometroKm: number;
+  fotoUrl?: string | null;
+  fotoCredito?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,4 +28,16 @@ export interface UpdateCamionDto {
   anio?: number;
   estado?: string;
   odometroKm?: number;
+  // null quita la foto
+  fotoUrl?: string | null;
+  fotoCredito?: string | null;
+}
+
+export interface FotoSugerida {
+  titulo: string;
+  thumbUrl: string;
+  url: string;
+  paginaUrl: string;
+  autor: string | null;
+  licencia: string | null;
 }

@@ -10,6 +10,7 @@ import { MantenimientoRegistro } from './mantenimiento-registro.entity';
 import { ConfiguracionVehicular } from './configuracion-vehicular.entity';
 import { CamionesController } from './camiones.controller';
 import { CamionesService } from './camiones.service';
+import { FotosVehiculoService } from './fotos-vehiculo.service';
 import { ServiciosController } from './servicios.controller';
 import { ServiciosService } from './servicios.service';
 import { DocumentosController, DocumentosCamionesAlertasController } from './documentos.controller';
@@ -45,6 +46,7 @@ import { ConfiguracionVehicularService } from './configuracion-vehicular.service
   ],
   providers: [
     CamionesService,
+    FotosVehiculoService,
     ServiciosService,
     DocumentosService,
     RepostadasService,

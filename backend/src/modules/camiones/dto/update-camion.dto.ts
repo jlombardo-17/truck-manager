@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
 import { EstadoCamion, mapEstadoCamionAlias } from '../camion-status';
 
 export class UpdateCamionDto {
@@ -31,4 +31,18 @@ export class UpdateCamionDto {
   @IsOptional()
   @Min(0)
   odometroKm?: number;
+
+  // null quita la foto
+  @IsOptional()
+  @IsString()
+  @MaxLength(3_000_000)
+  @Matches(/^(https:\/\/|data:image\/(jpeg|png|webp);base64,)/, {
+    message: 'fotoUrl debe ser una URL https o una imagen (jpeg, png, webp) en base64',
+  })
+  fotoUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  fotoCredito?: string | null;
 }

@@ -26,6 +26,14 @@ export class Camion {
   @Column({ name: 'odometro_km', type: 'decimal', precision: 10, scale: 2, default: 0 })
   odometroKm: number;
 
+  // Foto del vehículo: URL https (p. ej. Wikimedia Commons) o data URL de una imagen subida
+  @Column({ name: 'foto_url', type: 'mediumtext', nullable: true })
+  fotoUrl: string | null;
+
+  // Atribución de la foto (autor · licencia · fuente), requerida para imágenes de Wikimedia
+  @Column({ name: 'foto_credito', type: 'varchar', length: 500, nullable: true })
+  fotoCredito: string | null;
+
   @OneToMany(() => Servicio, (servicio) => servicio.camionId, { cascade: true })
   servicios: Servicio[];
 
