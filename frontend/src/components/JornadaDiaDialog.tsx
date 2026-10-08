@@ -125,7 +125,9 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
         if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 99) {
           return `${chofer.nombre} ${chofer.apellido}: la cantidad de cada viático debe ser un entero entre 1 y 99.`;
         }
-        if (!(Number(v.monto) > 0)) return `${chofer.nombre} ${chofer.apellido}: el monto de cada viático debe ser mayor a 0.`;
+        if (v.monto.trim() !== '' && !(Number(v.monto) >= 0)) {
+          return `${chofer.nombre} ${chofer.apellido}: el monto de cada viático no puede ser negativo.`;
+        }
       }
     }
     return null;
@@ -166,7 +168,7 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
             viaticoTipoId: v.viaticoTipoId === '' ? undefined : v.viaticoTipoId,
             concepto: v.concepto.trim(),
             cantidad: Number(v.cantidad),
-            monto: Number(v.monto),
+            monto: v.monto.trim() === '' ? 0 : Number(v.monto),
           })),
         });
         if (res.salario) salarios.push(res.salario);
@@ -328,7 +330,7 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
                             min="0"
                             step="0.01"
                             value={v.monto}
-                            placeholder="Monto c/u"
+                            placeholder="Monto c/u (opcional)"
                             onChange={(e) => updateViatico(chofer.id, i, { monto: e.target.value })}
                           />
                           <button

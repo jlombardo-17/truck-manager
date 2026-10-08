@@ -37,11 +37,11 @@ export class ViaticoItemDto {
   @Max(99, { message: 'La cantidad no puede superar 99' })
   cantidad?: number;
 
-  @IsNotEmpty({ message: 'El monto del viático es requerido' })
+  @IsOptional()
   @IsNumber({}, { message: 'El monto debe ser un número' })
   @Type(() => Number)
-  @Min(0.01, { message: 'El monto debe ser mayor a 0' })
-  monto: number;
+  @Min(0, { message: 'El monto no puede ser negativo' })
+  monto?: number;
 
   @IsOptional()
   @IsString({ message: 'Las observaciones deben ser texto' })

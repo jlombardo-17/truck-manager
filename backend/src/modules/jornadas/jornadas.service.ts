@@ -404,7 +404,7 @@ export class JornadasService {
                 viaticoTipoId: v.viaticoTipoId ?? null,
                 concepto: v.concepto.trim(),
                 cantidad: v.cantidad ?? 1,
-                monto: v.monto,
+                monto: v.monto ?? 0,
                 observaciones: v.observaciones?.trim() || null,
               }),
             ),
