@@ -133,6 +133,17 @@
   font-size: 0.88rem;
 }
 
+.salarios-tab-item p.salarios-tab-observaciones {
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-left: 3px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-style: italic;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .salarios-tab-actions {
   display: flex;
   align-items: center;

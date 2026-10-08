@@ -652,6 +652,7 @@ const SalariosTab: React.FC<SalariosTabProps> = ({ choferId }) => {
                     Fecha: {formatDateForDisplay(pago.fechaPago)} | Metodo: {pago.metodoPago}
                   </p>
                   {pago.comprobante && <p>Referencia: {pago.comprobante}</p>}
+                  {pago.observaciones && <p className="salarios-tab-observaciones">{pago.observaciones}</p>}
                 </div>
                 <div className="salarios-tab-item-right">
                   <strong className="salarios-tab-amount">{formatCurrency(pago.monto)}</strong>

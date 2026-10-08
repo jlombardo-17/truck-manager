@@ -276,6 +276,18 @@
   font-size: 13px;
 }
 
+.historial-observaciones {
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 3px solid #d4dbe2;
+  background: #f8f9fa;
+  color: #495057;
+  font-size: 13px;
+  font-style: italic;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .btn-historial-detalle {
   justify-self: flex-start;
   background: #f8f9fa;

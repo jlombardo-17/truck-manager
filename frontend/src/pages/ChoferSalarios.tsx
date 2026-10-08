@@ -525,6 +525,7 @@ const ChoferSalarios: React.FC = () => {
                   <span>Método: {pago.metodoPago || '-'}</span>
                   {pago.comprobante && <span>Comprobante: {pago.comprobante}</span>}
                 </div>
+                {pago.observaciones && <p className="historial-observaciones">{pago.observaciones}</p>}
                 <button
                   type="button"
                   className="btn-historial-detalle"
