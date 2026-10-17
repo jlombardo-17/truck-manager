@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { CategoriaJornada, ChoferJornada } from './chofer-jornada.entity';
 import { ChoferViatico } from './chofer-viatico.entity';
+import { TipoViatico } from './tipo-viatico.enum';
 import { ViaticoTipo } from './viatico-tipo.entity';
 import { Chofer } from '../choferes/chofer.entity';
 import { Viaje } from '../viajes/viaje.entity';
@@ -32,11 +33,20 @@ export interface SalarioAfectado {
 }
 
 export interface DetalleViatico {
+  tipo: TipoViatico;
   concepto: string;
   montoUnitario: number;
   cantidad: number;
   total: number;
 }
+
+export type TotalesPorTipo = Record<TipoViatico, { cantidad: number; total: number }>;
+
+const totalesPorTipoVacios = (): TotalesPorTipo =>
+  Object.values(TipoViatico).reduce(
+    (acc, tipo) => ({ ...acc, [tipo]: { cantidad: 0, total: 0 } }),
+    {} as TotalesPorTipo,
+  );
 
 export interface ReporteViaticosChofer {
   choferId: number;
@@ -44,7 +54,8 @@ export interface ReporteViaticosChofer {
   apellido: string;
   cantidad: number;
   total: number;
-  // Agrupado por concepto y monto unitario en todo el período
+  porTipo: TotalesPorTipo;
+  // Agrupado por tipo, concepto y monto unitario en todo el período
   detalle: DetalleViatico[];
   // Solo días con viáticos, ordenados por fecha
   dias: { fecha: string; lugarTrabajo: string | null; cantidad: number; total: number; detalle: DetalleViatico[] }[];
@@ -58,6 +69,7 @@ export interface ResumenChofer {
   diasRegistrados: number;
   cantidadViaticos: number;
   totalViaticos: number;
+  porTipo: TotalesPorTipo;
 }
 
 @Injectable()
@@ -229,12 +241,14 @@ export class JornadasService {
       .createQueryBuilder('v')
       .innerJoin('v.jornada', 'j')
       .select('j.choferId', 'choferId')
+      .addSelect('v.tipo', 'tipo')
       .addSelect('COALESCE(SUM(v.cantidad), 0)', 'cantidad')
       .addSelect('COALESCE(SUM(v.cantidad * v.monto), 0)', 'total')
       .where('j.choferId IN (:...choferIds)', { choferIds })
       .andWhere('j.fecha BETWEEN :desde AND :hasta', { desde, hasta })
       .groupBy('j.choferId')
-      .getRawMany<{ choferId: string; cantidad: string; total: string }>();
+      .addGroupBy('v.tipo')
+      .getRawMany<{ choferId: string; tipo: TipoViatico; cantidad: string; total: string }>();
 
     return choferes.map((chofer) => {
       const dias = Object.values(CategoriaJornada).reduce(
@@ -244,7 +258,13 @@ export class JornadasService {
       conteos
         .filter((c) => Number(c.choferId) === chofer.id)
         .forEach((c) => (dias[c.categoria] = Number(c.cantidad)));
-      const v = viaticos.find((x) => Number(x.choferId) === chofer.id);
+      const porTipo = totalesPorTipoVacios();
+      viaticos
+        .filter((x) => Number(x.choferId) === chofer.id)
+        .forEach((x) => {
+          porTipo[x.tipo] = { cantidad: Number(x.cantidad), total: parseFloat(x.total) || 0 };
+        });
+      const totales = Object.values(porTipo);
 
       return {
         choferId: chofer.id,
@@ -252,8 +272,9 @@ export class JornadasService {
         apellido: chofer.apellido,
         dias,
         diasRegistrados: Object.values(dias).reduce((a, b) => a + b, 0),
-        cantidadViaticos: Number(v?.cantidad ?? 0),
-        totalViaticos: parseFloat(v?.total ?? '0') || 0,
+        cantidadViaticos: totales.reduce((acc, t) => acc + t.cantidad, 0),
+        totalViaticos: totales.reduce((acc, t) => acc + t.total, 0),
+        porTipo,
       };
     });
   }
@@ -273,13 +294,14 @@ export class JornadasService {
       order: { nombre: 'ASC', apellido: 'ASC' },
     });
 
-    // Una fila por chofer / día / concepto / monto unitario
+    // Una fila por chofer / día / tipo / concepto / monto unitario
     const filas = await this.viaticoRepository
       .createQueryBuilder('v')
       .innerJoin('v.jornada', 'j')
       .select('j.choferId', 'choferId')
       .addSelect("DATE_FORMAT(j.fecha, '%Y-%m-%d')", 'fecha')
       .addSelect('j.lugarTrabajo', 'lugarTrabajo')
+      .addSelect('v.tipo', 'tipo')
       .addSelect('v.concepto', 'concepto')
       .addSelect('v.monto', 'montoUnitario')
       .addSelect('SUM(v.cantidad)', 'cantidad')
@@ -290,15 +312,18 @@ export class JornadasService {
       .addGroupBy('j.choferId')
       .addGroupBy('j.fecha')
       .addGroupBy('j.lugarTrabajo')
+      .addGroupBy('v.tipo')
       .addGroupBy('v.concepto')
       .addGroupBy('v.monto')
       .orderBy('j.fecha', 'ASC')
+      .addOrderBy('v.tipo', 'ASC')
       .addOrderBy('v.concepto', 'ASC')
       .addOrderBy('v.monto', 'DESC')
       .getRawMany<{
         choferId: string;
         fecha: string;
         lugarTrabajo: string | null;
+        tipo: TipoViatico;
         concepto: string;
         montoUnitario: string;
         cantidad: string;
@@ -316,6 +341,7 @@ export class JornadasService {
         .map((f) => ({
           fecha: f.fecha,
           lugarTrabajo: f.lugarTrabajo,
+          tipo: f.tipo,
           concepto: f.concepto,
           montoUnitario: parseFloat(f.montoUnitario) || 0,
           cantidad: Number(f.cantidad),
@@ -324,15 +350,20 @@ export class JornadasService {
 
       const porConcepto = new Map<string, DetalleViatico>();
       const porDia = new Map<string, ReporteViaticosChofer['dias'][number]>();
+      const porTipo = totalesPorTipoVacios();
       for (const l of lineas) {
         const item: DetalleViatico = {
+          tipo: l.tipo,
           concepto: l.concepto,
           montoUnitario: l.montoUnitario,
           cantidad: l.cantidad,
           total: l.total,
         };
 
-        const key = `${l.concepto}|${l.montoUnitario}`;
+        porTipo[l.tipo].cantidad += l.cantidad;
+        porTipo[l.tipo].total += l.total;
+
+        const key = `${l.tipo}|${l.concepto}|${l.montoUnitario}`;
         const acumulado = porConcepto.get(key);
         if (acumulado) {
           acumulado.cantidad += l.cantidad;
@@ -354,14 +385,19 @@ export class JornadasService {
         porDia.set(l.fecha, dia);
       }
 
+      const ordenTipo = Object.values(TipoViatico);
       const detalle = [...porConcepto.values()].sort(
-        (a, b) => a.concepto.localeCompare(b.concepto) || b.montoUnitario - a.montoUnitario,
+        (a, b) =>
+          ordenTipo.indexOf(a.tipo) - ordenTipo.indexOf(b.tipo) ||
+          a.concepto.localeCompare(b.concepto) ||
+          b.montoUnitario - a.montoUnitario,
       );
       return {
         choferId: chofer.id,
         nombre: chofer.nombre,
         apellido: chofer.apellido,
         ...sumar(detalle),
+        porTipo,
         detalle,
         dias: [...porDia.values()],
       };
@@ -402,6 +438,7 @@ export class JornadasService {
               manager.create(ChoferViatico, {
                 jornadaId: jornada.id,
                 viaticoTipoId: v.viaticoTipoId ?? null,
+                tipo: v.tipo ?? TipoViatico.VIATICO,
                 concepto: v.concepto.trim(),
                 cantidad: v.cantidad ?? 1,
                 monto: v.monto ?? 0,

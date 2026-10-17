@@ -126,6 +126,102 @@ select.form-input {
   padding: 12px;
 }
 
+/* Documentos de descarga (mismo estilo que los comprobantes de salarios) */
+.viaje-form-dropzone {
+  border: 2px dashed #93c5fd;
+  background: #f8fbff;
+  border-radius: 10px;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.viaje-form-dropzone.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.viaje-form-dropzone p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.viaje-form-file-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.92rem;
+  color: #1f2937;
+  background: #ffffff;
+}
+
+.viaje-form-attachment-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.viaje-form-attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #dbeafe;
+}
+
+.viaje-form-attachment-item span {
+  font-size: 0.88rem;
+  color: #334155;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 180px;
+}
+
+.viaje-form-attachment-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.viaje-form-attachment-action {
+  border: 1px solid #bfd6fb;
+  color: #0f4ea8;
+  background: #edf4ff;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.viaje-form-attachment-action:hover {
+  background: #dceaff;
+}
+
+.viaje-form-attachment-action.danger {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.viaje-form-attachment-action.danger:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
 /* Form Actions */
 .form-actions {
   display: flex;

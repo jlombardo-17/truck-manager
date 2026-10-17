@@ -31,9 +31,35 @@ export const categoriaJornadaColors: Record<CategoriaJornada, { bg: string; fg: 
   [CategoriaJornada.OTRO]: { bg: '#f3f4f6', fg: '#1f2937' },
 };
 
+// Clasificación fija de cada línea de viático; todas suman al salario
+export enum TipoViatico {
+  VIATICO = 'viatico',
+  CARGA = 'carga',
+  VIAJE_COMISION = 'viaje_comision',
+  OTRO = 'otro',
+}
+
+export const tipoViaticoLabels: Record<TipoViatico, string> = {
+  [TipoViatico.VIATICO]: 'Viático',
+  [TipoViatico.CARGA]: 'Carga',
+  [TipoViatico.VIAJE_COMISION]: 'Viaje/Comisión',
+  [TipoViatico.OTRO]: 'Otro',
+};
+
+// Abreviatura para los chips del calendario
+export const tipoViaticoCortos: Record<TipoViatico, string> = {
+  [TipoViatico.VIATICO]: 'V',
+  [TipoViatico.CARGA]: 'C',
+  [TipoViatico.VIAJE_COMISION]: 'VC',
+  [TipoViatico.OTRO]: 'O',
+};
+
+export type TotalesPorTipo = Record<TipoViatico, { cantidad: number; total: number }>;
+
 export interface ViaticoTipo {
   id: number;
   nombre: string;
+  tipo: TipoViatico;
   montoDefault: number | string;
   activo: boolean;
 }
@@ -42,6 +68,7 @@ export interface ChoferViatico {
   id: number;
   jornadaId: number;
   viaticoTipoId?: number | null;
+  tipo: TipoViatico;
   concepto: string;
   cantidad: number;
   monto: number | string; // unitario; total de la línea = cantidad * monto
@@ -75,6 +102,7 @@ export interface JornadasRango {
 
 export interface ViaticoItemDto {
   viaticoTipoId?: number;
+  tipo: TipoViatico;
   concepto: string;
   cantidad?: number;
   monto: number;
@@ -117,9 +145,11 @@ export interface ResumenJornadasChofer {
   diasRegistrados: number;
   cantidadViaticos: number;
   totalViaticos: number;
+  porTipo: TotalesPorTipo;
 }
 
 export interface DetalleViatico {
+  tipo: TipoViatico;
   concepto: string;
   montoUnitario: number;
   cantidad: number;
@@ -140,12 +170,14 @@ export interface ReporteViaticosChofer {
   apellido: string;
   cantidad: number;
   total: number;
-  detalle: DetalleViatico[]; // agrupado por concepto y monto unitario
+  porTipo: TotalesPorTipo;
+  detalle: DetalleViatico[]; // agrupado por tipo, concepto y monto unitario
   dias: ReporteViaticosDia[]; // solo días con viáticos
 }
 
 export interface CreateViaticoTipoDto {
   nombre: string;
+  tipo?: TipoViatico;
   montoDefault: number;
   activo?: boolean;
 }

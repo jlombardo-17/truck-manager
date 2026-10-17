@@ -2,6 +2,14 @@ import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested, 
 import { IsDateOnly } from '../../../common/utils/date-only';
 import { Type, Exclude } from 'class-transformer';
 
+class ViajeDocumentoAdjuntoDTO {
+  @IsString()
+  nombre: string;
+
+  @IsString()
+  adjunto: string;
+}
+
 class ViajRutaDTO {
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
@@ -128,6 +136,12 @@ export class UpdateViajDTO {
   @IsString()
   @IsOptional()
   documentoDescargaAdjunto?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ViajeDocumentoAdjuntoDTO)
+  @IsOptional()
+  documentosDescargaAdjuntos?: ViajeDocumentoAdjuntoDTO[];
 
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()

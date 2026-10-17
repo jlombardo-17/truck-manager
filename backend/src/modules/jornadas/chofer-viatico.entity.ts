@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { ChoferJornada } from './chofer-jornada.entity';
 import { ViaticoTipo } from './viatico-tipo.entity';
+import { TipoViatico } from './tipo-viatico.enum';
 
 @Entity({ name: 'chofer_viatico' })
 export class ChoferViatico {
@@ -20,6 +21,9 @@ export class ChoferViatico {
 
   @Column({ name: 'viatico_tipo_id', nullable: true })
   viaticoTipoId: number;
+
+  @Column({ type: 'enum', enum: TipoViatico, default: TipoViatico.VIATICO })
+  tipo: TipoViatico;
 
   @Column()
   concepto: string;

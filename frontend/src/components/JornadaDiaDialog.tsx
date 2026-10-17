@@ -4,10 +4,12 @@ import {
   CategoriaJornada,
   ChoferJornada,
   SalarioAfectado,
+  TipoViatico,
   ViajeSugerido,
   ViaticoTipo,
   categoriaJornadaLabels,
   correspondeViatico,
+  tipoViaticoLabels,
 } from '../types/jornada';
 import jornadasService from '../services/jornadasService';
 import { formatDateForDisplay } from '../utils/dateUtils';
@@ -15,7 +17,8 @@ import { jornadaKey } from './JornadaCalendario';
 import '../styles/Modal.css';
 
 interface ViaticoForm {
-  viaticoTipoId: number | '';
+  viaticoTipoId: number | ''; // plantilla del catálogo usada, si hay
+  tipo: TipoViatico;
   concepto: string;
   cantidad: string;
   monto: string; // unitario
@@ -47,6 +50,7 @@ const formDesdeJornada = (jornada?: ChoferJornada): JornadaForm => ({
   viajeId: jornada?.viajeId ?? null,
   viaticos: (jornada?.viaticos ?? []).map((v) => ({
     viaticoTipoId: v.viaticoTipoId ?? '',
+    tipo: v.tipo ?? TipoViatico.VIATICO,
     concepto: v.concepto,
     cantidad: String(v.cantidad ?? 1),
     monto: String(Number(v.monto)),
@@ -83,26 +87,41 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
   };
 
   const agregarViatico = (choferId: number) => {
-    const tipo = tiposActivos[0];
-    const nuevo: ViaticoForm = tipo
-      ? { viaticoTipoId: tipo.id, concepto: tipo.nombre, cantidad: '1', monto: String(Number(tipo.montoDefault)) }
-      : { viaticoTipoId: '', concepto: '', cantidad: '1', monto: '' };
+    const nuevo: ViaticoForm = {
+      viaticoTipoId: '',
+      tipo: TipoViatico.VIATICO,
+      concepto: tipoViaticoLabels[TipoViatico.VIATICO],
+      cantidad: '1',
+      monto: '',
+    };
     updateForm(choferId, { viaticos: [...forms[choferId].viaticos, nuevo] });
   };
 
-  const cambiarTipo = (choferId: number, index: number, value: string) => {
-    if (!value) {
-      updateViatico(choferId, index, { viaticoTipoId: '' });
-      return;
-    }
-    const tipo = tiposViatico.find((t) => t.id === Number(value));
-    if (tipo) {
-      updateViatico(choferId, index, {
-        viaticoTipoId: tipo.id,
-        concepto: tipo.nombre,
-        monto: String(Number(tipo.montoDefault)),
-      });
-    }
+  // Si el concepto seguía siendo el nombre del tipo anterior, se actualiza junto con el tipo
+  const cambiarTipo = (choferId: number, index: number, tipo: TipoViatico) => {
+    const actual = forms[choferId].viaticos[index];
+    const conceptoPorDefecto = !actual.concepto.trim() || actual.concepto === tipoViaticoLabels[actual.tipo];
+    updateViatico(choferId, index, {
+      tipo,
+      ...(conceptoPorDefecto ? { concepto: tipoViaticoLabels[tipo] } : {}),
+    });
+  };
+
+  // Elegir una plantilla del catálogo (sugerida en el concepto) completa tipo y monto
+  const cambiarConcepto = (choferId: number, index: number, concepto: string) => {
+    const plantilla = tiposActivos.find((t) => t.nombre.toLowerCase() === concepto.trim().toLowerCase());
+    updateViatico(
+      choferId,
+      index,
+      plantilla
+        ? {
+            concepto: plantilla.nombre,
+            viaticoTipoId: plantilla.id,
+            tipo: plantilla.tipo,
+            monto: String(Number(plantilla.montoDefault)),
+          }
+        : { concepto, viaticoTipoId: '' },
+    );
   };
 
   const usarSugerencia = (choferId: number, sugerido: ViajeSugerido) =>
@@ -166,6 +185,7 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
           observaciones: form.observaciones.trim() || undefined,
           viaticos: form.viaticos.map((v) => ({
             viaticoTipoId: v.viaticoTipoId === '' ? undefined : v.viaticoTipoId,
+            tipo: v.tipo,
             concepto: v.concepto.trim(),
             cantidad: Number(v.cantidad),
             monto: v.monto.trim() === '' ? 0 : Number(v.monto),
@@ -195,17 +215,31 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
         </div>
 
         <div className="modal-form">
+          {tiposActivos.length > 0 && (
+            <datalist id="jornada-plantillas-viatico">
+              {tiposActivos.map((t) => (
+                <option key={t.id} value={t.nombre} />
+              ))}
+            </datalist>
+          )}
           {choferes.map((chofer) => {
             const form = forms[chofer.id];
             const sugerido = sugeridos.get(jornadaKey(chofer.id, fecha));
             const sugiereViatico =
               correspondeViatico(form.categoria || CategoriaJornada.OTRO, form.lugarTrabajo, chofer.localidadResidencia) &&
               form.viaticos.length === 0;
-            const cantidadViaticos = form.viaticos.reduce((acc, v) => acc + (Number(v.cantidad) || 0), 0);
             const totalViaticos = form.viaticos.reduce(
               (acc, v) => acc + (Number(v.cantidad) || 0) * (Number(v.monto) || 0),
               0,
             );
+            const cantidadesPorTipo = Object.values(TipoViatico)
+              .map((tipo) => ({
+                tipo,
+                cantidad: form.viaticos
+                  .filter((v) => v.tipo === tipo)
+                  .reduce((acc, v) => acc + (Number(v.cantidad) || 0), 0),
+              }))
+              .filter((t) => t.cantidad > 0);
 
             return (
               <section key={chofer.id} className="jornada-dialog__chofer">
@@ -274,8 +308,11 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
                   <div className="jornada-viaticos">
                     <div className="jornada-viaticos__header">
                       <span>
-                        Viáticos
-                        {form.viaticos.length > 0 && ` · ${cantidadViaticos} · ${formatUYU(totalViaticos)}`}
+                        Viáticos y adicionales
+                        {form.viaticos.length > 0 &&
+                          ` · ${cantidadesPorTipo
+                            .map((t) => `${t.cantidad} ${tipoViaticoLabels[t.tipo]}`)
+                            .join(', ')} · ${formatUYU(totalViaticos)}`}
                       </span>
                       <button type="button" className="btn-link" onClick={() => agregarViatico(chofer.id)}>
                         + Agregar
@@ -291,18 +328,16 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
                       </div>
                     )}
                     {form.viaticos.map((v, i) => {
-                      const opciones = tiposViatico.filter((t) => t.activo || t.id === v.viaticoTipoId);
                       return (
                         <div key={i} className="jornada-viaticos__row">
                           <select
-                            aria-label="Tipo de viático"
-                            value={v.viaticoTipoId}
-                            onChange={(e) => cambiarTipo(chofer.id, i, e.target.value)}
+                            aria-label="Tipo"
+                            value={v.tipo}
+                            onChange={(e) => cambiarTipo(chofer.id, i, e.target.value as TipoViatico)}
                           >
-                            <option value="">Manual</option>
-                            {opciones.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.nombre}
+                            {Object.values(TipoViatico).map((tipo) => (
+                              <option key={tipo} value={tipo}>
+                                {tipoViaticoLabels[tipo]}
                               </option>
                             ))}
                           </select>
@@ -311,7 +346,8 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
                             type="text"
                             value={v.concepto}
                             placeholder="Concepto"
-                            onChange={(e) => updateViatico(chofer.id, i, { concepto: e.target.value })}
+                            list={tiposActivos.length > 0 ? 'jornada-plantillas-viatico' : undefined}
+                            onChange={(e) => cambiarConcepto(chofer.id, i, e.target.value)}
                           />
                           <input
                             aria-label="Cantidad"

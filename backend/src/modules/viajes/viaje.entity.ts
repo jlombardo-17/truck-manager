@@ -4,6 +4,11 @@ import { Chofer } from '../choferes/chofer.entity';
 import { ViajRuta } from './viaje-ruta.entity';
 import { ViajComision } from './viaje-comision.entity';
 
+export interface ViajeDocumentoAdjunto {
+  nombre: string;
+  adjunto: string; // data URL (base64)
+}
+
 @Entity({ name: 'viajes' })
 export class Viaje {
   @PrimaryGeneratedColumn()
@@ -65,6 +70,9 @@ export class Viaje {
 
   @Column({ name: 'documento_descarga_adjunto', type: 'longtext', nullable: true })
   documentoDescargaAdjunto: string;
+
+  @Column({ name: 'documentos_descarga_adjuntos', type: 'json', nullable: true })
+  documentosDescargaAdjuntos: ViajeDocumentoAdjunto[] | null;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   pesoCargaKg: number;

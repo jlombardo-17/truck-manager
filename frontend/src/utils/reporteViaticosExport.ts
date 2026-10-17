@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { DetalleViatico, ReporteViaticosChofer } from '../types/jornada';
+import { DetalleViatico, ReporteViaticosChofer, TipoViatico, tipoViaticoLabels } from '../types/jornada';
 import { formatDateForDisplay } from './dateUtils';
 
 const formatUYU = (monto: number) =>
@@ -8,8 +8,23 @@ const formatUYU = (monto: number) =>
 
 const nombreChofer = (r: ReporteViaticosChofer) => `${r.nombre.trim()} ${r.apellido.trim()}`;
 
-const describirDetalle = (detalle: DetalleViatico[]) =>
-  detalle.map((d) => `${d.cantidad} × ${d.concepto} de ${formatUYU(d.montoUnitario)}`).join('\n');
+const TIPOS = Object.values(TipoViatico);
+
+const cantidadTipo = (r: ReporteViaticosChofer, tipo: TipoViatico) => r.porTipo?.[tipo]?.cantidad ?? 0;
+
+// El tipo se aclara solo cuando el concepto no lo dice ya
+export const describirItem = (d: DetalleViatico) => {
+  const tipo = tipoViaticoLabels[d.tipo];
+  const concepto = d.concepto === tipo ? d.concepto : `${d.concepto} (${tipo})`;
+  return `${d.cantidad} × ${concepto} de ${formatUYU(d.montoUnitario)}`;
+};
+
+const describirDetalle = (detalle: DetalleViatico[]) => detalle.map(describirItem).join('\n');
+
+const describirPorTipo = (r: ReporteViaticosChofer) =>
+  TIPOS.filter((t) => cantidadTipo(r, t) > 0)
+    .map((t) => `${cantidadTipo(r, t)} ${tipoViaticoLabels[t]}`)
+    .join(', ');
 
 // autoTable aplica columnStyles solo al body: el pie necesita su propia alineación
 const centro = (content: string | number) => ({ content: String(content), styles: { halign: 'center' as const } });
@@ -31,25 +46,35 @@ export const buildReporteViaticosPdf = (reporte: ReporteViaticosChofer[], desde:
   doc.text(`Período: ${formatDateForDisplay(desde, 'es-UY')} al ${formatDateForDisplay(hasta, 'es-UY')}`, 14, 22);
   doc.text(`Emitido: ${new Date().toLocaleString('es-UY')}`, 14, 27);
 
-  const totalCantidad = reporte.reduce((acc, r) => acc + r.cantidad, 0);
   const totalMonto = reporte.reduce((acc, r) => acc + r.total, 0);
+  const columnaMonto = TIPOS.length + 2;
 
   autoTable(doc, {
     startY: 33,
-    head: [['Chofer', 'Días con viáticos', 'Cantidad de viáticos', 'Monto total']],
-    body: reporte.map((r) => [nombreChofer(r), r.dias.length, r.cantidad, formatUYU(r.total)]),
+    head: [['Chofer', 'Días con viáticos', ...TIPOS.map((t) => tipoViaticoLabels[t]), 'Monto total']],
+    body: reporte.map((r) => [
+      nombreChofer(r),
+      r.dias.length,
+      ...TIPOS.map((t) => cantidadTipo(r, t) || '—'),
+      formatUYU(r.total),
+    ]),
     foot: [
       [
         'Total',
         centro(reporte.reduce((acc, r) => acc + r.dias.length, 0)),
-        centro(totalCantidad),
+        ...TIPOS.map((t) => centro(reporte.reduce((acc, r) => acc + cantidadTipo(r, t), 0))),
         derecha(formatUYU(totalMonto)),
       ],
     ],
     styles: { fontSize: 9 },
     headStyles: { fillColor: [0, 115, 209] },
     footStyles: { fillColor: [224, 231, 239], textColor: [44, 62, 80] },
-    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'right' } },
+    columnStyles: {
+      ...Object.fromEntries(
+        Array.from({ length: TIPOS.length + 1 }, (_, i) => [i + 1, { halign: 'center' as const }]),
+      ),
+      [columnaMonto]: { halign: 'right' },
+    },
   });
 
   let y = lastY(doc, 33) + 10;
@@ -62,7 +87,7 @@ export const buildReporteViaticosPdf = (reporte: ReporteViaticosChofer[], desde:
     doc.setFontSize(12);
     doc.text(nombreChofer(r), 14, y);
     doc.setFontSize(9);
-    doc.text(`${r.cantidad} viático(s) en ${r.dias.length} día(s) · ${formatUYU(r.total)}`, 14, y + 5);
+    doc.text(`${describirPorTipo(r)} en ${r.dias.length} día(s) · ${formatUYU(r.total)}`, 14, y + 5);
 
     autoTable(doc, {
       startY: y + 8,
@@ -107,7 +132,7 @@ const escapeCsvValue = (value: string | number) => {
  * CSV plano: una fila por chofer / día / concepto, apto para filtrar o sumar en Excel.
  */
 export const exportReporteViaticosCsv = (reporte: ReporteViaticosChofer[], desde: string, hasta: string) => {
-  const headers = ['Chofer', 'Fecha', 'Lugar de trabajo', 'Concepto', 'Cantidad', 'Monto unitario (UYU)', 'Total (UYU)'];
+  const headers = ['Chofer', 'Fecha', 'Lugar de trabajo', 'Tipo', 'Concepto', 'Cantidad', 'Monto unitario (UYU)', 'Total (UYU)'];
   const rows: Array<Array<string | number>> = [];
 
   for (const r of reporte) {
@@ -117,6 +142,7 @@ export const exportReporteViaticosCsv = (reporte: ReporteViaticosChofer[], desde
           nombreChofer(r),
           d.fecha,
           d.lugarTrabajo || '',
+          tipoViaticoLabels[item.tipo],
           item.concepto,
           item.cantidad,
           item.montoUnitario.toFixed(2),
@@ -125,7 +151,7 @@ export const exportReporteViaticosCsv = (reporte: ReporteViaticosChofer[], desde
       }
     }
   }
-  rows.push(['TOTAL', '', '', '', reporte.reduce((acc, r) => acc + r.cantidad, 0), '', reporte.reduce((acc, r) => acc + r.total, 0).toFixed(2)]);
+  rows.push(['TOTAL', '', '', '', '', reporte.reduce((acc, r) => acc + r.cantidad, 0), '', reporte.reduce((acc, r) => acc + r.total, 0).toFixed(2)]);
 
   // BOM para que Excel respete tildes
   const csvContent = '﻿' + [headers, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n');

@@ -3,9 +3,12 @@ import { eachDayOfInterval, endOfMonth, endOfWeek, isSameMonth, startOfMonth, st
 import { Chofer } from '../types/chofer';
 import {
   ChoferJornada,
+  TipoViatico,
   ViajeSugerido,
   categoriaJornadaColors,
   categoriaJornadaLabels,
+  tipoViaticoCortos,
+  tipoViaticoLabels,
 } from '../types/jornada';
 import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 
@@ -16,6 +19,17 @@ export const jornadaKey = (choferId: number, fecha: string) => `${choferId}|${fe
 
 export const iniciales = (chofer: Pick<Chofer, 'nombre' | 'apellido'>) =>
   `${chofer.nombre.trim().charAt(0)}${chofer.apellido.trim().charAt(0)}`.toUpperCase();
+
+// Cantidad por tipo, solo los tipos presentes y en orden fijo
+const cantidadesPorTipo = (jornada: ChoferJornada) =>
+  Object.values(TipoViatico)
+    .map((tipo) => ({
+      tipo,
+      cantidad: (jornada.viaticos ?? [])
+        .filter((v) => (v.tipo ?? TipoViatico.VIATICO) === tipo)
+        .reduce((acc, v) => acc + (v.cantidad ?? 1), 0),
+    }))
+    .filter((t) => t.cantidad > 0);
 
 interface JornadaCalendarioProps {
   mes: Date; // cualquier día del mes a mostrar
@@ -87,7 +101,8 @@ const JornadaCalendario: React.FC<JornadaCalendarioProps> = ({
               {visibles.slice(0, MAX_CHIPS).map(({ chofer, jornada, sugerido }) => {
                 if (jornada) {
                   const color = categoriaJornadaColors[jornada.categoria];
-                  const cantViaticos = (jornada.viaticos ?? []).reduce((acc, v) => acc + (v.cantidad ?? 1), 0);
+                  const porTipo = cantidadesPorTipo(jornada);
+                  const descripcion = porTipo.map((t) => `${t.cantidad} ${tipoViaticoLabels[t.tipo]}`).join(', ');
                   return (
                     <span
                       key={chofer.id}
@@ -95,13 +110,15 @@ const JornadaCalendario: React.FC<JornadaCalendarioProps> = ({
                       style={{ background: color.bg, color: color.fg }}
                       title={`${chofer.nombre} ${chofer.apellido}: ${categoriaJornadaLabels[jornada.categoria]}${
                         jornada.lugarTrabajo ? ` (${jornada.lugarTrabajo})` : ''
-                      }${cantViaticos ? ` · ${cantViaticos} viático(s)` : ''}`}
+                      }${descripcion ? ` · ${descripcion}` : ''}`}
                     >
                       <strong>{iniciales(chofer)}</strong>
                       <span className="jornada-chip__cat">{categoriaJornadaLabels[jornada.categoria]}</span>
-                      {cantViaticos > 0 && <span className="jornada-chip__viatico" aria-label={`${cantViaticos} viático(s)`}>
-                          #{cantViaticos}
-                        </span>}
+                      {porTipo.length > 0 && (
+                        <span className="jornada-chip__viatico" aria-label={descripcion}>
+                          {porTipo.map((t) => `${t.cantidad}${tipoViaticoCortos[t.tipo]}`).join(' ')}
+                        </span>
+                      )}
                     </span>
                   );
                 }

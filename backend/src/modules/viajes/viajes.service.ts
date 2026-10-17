@@ -171,6 +171,7 @@ export class ViajsService {
         documentoDescarga: createViajDTO.documentoDescarga,
         documentoDescargaNombre: createViajDTO.documentoDescargaNombre,
         documentoDescargaAdjunto: createViajDTO.documentoDescargaAdjunto,
+        documentosDescargaAdjuntos: createViajDTO.documentosDescargaAdjuntos ?? null,
         pesoCargaKg: createViajDTO.pesoCargaKg as any || null,
         valorViaje: valorViajeOriginal,
         valorViajeUyu,
@@ -267,7 +268,7 @@ export class ViajsService {
     }
 
     const viajes = await query.getMany();
-    return viajes.map((viaje) => this.withResolvedRelationIds(viaje));
+    return viajes.map((viaje) => this.withDocumentosDescarga(this.withResolvedRelationIds(viaje)));
   }
 
   /**
@@ -283,7 +284,7 @@ export class ViajsService {
       throw new NotFoundException(`Viaje con ID ${id} no encontrado`);
     }
 
-    return this.withResolvedRelationIds(viaje);
+    return this.withDocumentosDescarga(this.withResolvedRelationIds(viaje));
   }
 
   /**
@@ -308,6 +309,33 @@ export class ViajsService {
 
     if (!viaje.choferId && viaje.chofer?.id) {
       viaje.choferId = viaje.chofer.id;
+    }
+
+    return viaje;
+  }
+
+  /**
+   * Viajes anteriores guardaban un único adjunto en documentoDescargaAdjunto:
+   * se expone dentro de la lista para que el cliente trabaje solo con el array.
+   */
+  private withDocumentosDescarga(viaje: Viaje): Viaje {
+    if (!viaje) {
+      return viaje;
+    }
+
+    const documentos = Array.isArray(viaje.documentosDescargaAdjuntos)
+      ? viaje.documentosDescargaAdjuntos
+      : [];
+
+    if (documentos.length === 0 && viaje.documentoDescargaAdjunto) {
+      viaje.documentosDescargaAdjuntos = [
+        {
+          nombre: viaje.documentoDescargaNombre || 'documento-descarga',
+          adjunto: viaje.documentoDescargaAdjunto,
+        },
+      ];
+    } else {
+      viaje.documentosDescargaAdjuntos = documentos;
     }
 
     return viaje;

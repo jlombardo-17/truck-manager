@@ -124,8 +124,11 @@ const Viajes: React.FC = () => {
     return badges[estado] || 'badge-info';
   };
 
+  const getDocumentosAdjuntos = (viaje: Viaje) =>
+    Array.isArray(viaje.documentosDescargaAdjuntos) ? viaje.documentosDescargaAdjuntos : [];
+
   const hasDocumentoDescarga = (viaje: Viaje) => {
-    if (viaje.documentoDescargaAdjunto) {
+    if (getDocumentosAdjuntos(viaje).length > 0) {
       return true;
     }
 
@@ -133,11 +136,13 @@ const Viajes: React.FC = () => {
   };
 
   const getDocumentoDescargaUrl = (viaje: Viaje) => {
-    if (viaje.documentoDescargaAdjunto) {
-      return viaje.documentoDescargaAdjunto;
+    const adjuntos = getDocumentosAdjuntos(viaje);
+    if (adjuntos.length === 1) {
+      return adjuntos[0].adjunto;
     }
 
     if (
+      adjuntos.length === 0 &&
       typeof viaje.documentoDescarga === 'string' &&
       (viaje.documentoDescarga.startsWith('http://') || viaje.documentoDescarga.startsWith('https://'))
     ) {
@@ -404,9 +409,17 @@ const Viajes: React.FC = () => {
                         );
                       }
 
+                      const adjuntos = getDocumentosAdjuntos(viaje);
                       return (
-                        <span className={`doc-status-badge ${documentoCargado ? 'has-doc' : 'no-doc'}`}>
-                          {documentoCargado ? 'Cargado' : 'No cargado'}
+                        <span
+                          className={`doc-status-badge ${documentoCargado ? 'has-doc' : 'no-doc'}`}
+                          title={adjuntos.length > 1 ? adjuntos.map((doc) => doc.nombre).join(', ') : undefined}
+                        >
+                          {adjuntos.length > 1
+                            ? `${adjuntos.length} documentos`
+                            : documentoCargado
+                              ? 'Cargado'
+                              : 'No cargado'}
                         </span>
                       );
                     })()}

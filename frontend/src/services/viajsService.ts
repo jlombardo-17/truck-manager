@@ -90,6 +90,7 @@ const sanitizeViajePayload = (
     documentoDescarga: viaje.documentoDescarga,
     documentoDescargaNombre: viaje.documentoDescargaNombre,
     documentoDescargaAdjunto: viaje.documentoDescargaAdjunto,
+    documentosDescargaAdjuntos: viaje.documentosDescargaAdjuntos,
     notas: viaje.notas,
     fechaInicio: toDateString(viaje.fechaInicio),
     fechaFin: toDateString(viaje.fechaFin),
@@ -119,6 +120,11 @@ const sanitizeViajePayload = (
   return payload;
 };
 
+export interface ViajeDocumentoAdjunto {
+  nombre: string;
+  adjunto: string; // data URL (base64)
+}
+
 export interface Viaje {
   id?: number;
   numeroViaje: string;
@@ -137,6 +143,7 @@ export interface Viaje {
   documentoDescarga?: string;
   documentoDescargaNombre?: string;
   documentoDescargaAdjunto?: string;
+  documentosDescargaAdjuntos?: ViajeDocumentoAdjunto[];
   pesoCargaKg?: number;
   valorViaje: number;
   moneda?: 'UYU' | 'USD';

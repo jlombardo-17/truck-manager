@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ViaticoTipo } from '../types/jornada';
+import { TipoViatico, ViaticoTipo, tipoViaticoLabels } from '../types/jornada';
 import viaticoTiposService from '../services/viaticoTiposService';
 import '../styles/Modal.css';
 
@@ -11,12 +11,29 @@ interface ViaticoTiposDialogProps {
 
 interface FilaEdicion {
   nombre: string;
+  tipo: TipoViatico;
   montoDefault: string;
 }
 
+const filaVacia = (): FilaEdicion => ({ nombre: '', tipo: TipoViatico.VIATICO, montoDefault: '' });
+
+const SelectTipo: React.FC<{ value: TipoViatico; label: string; onChange: (tipo: TipoViatico) => void }> = ({
+  value,
+  label,
+  onChange,
+}) => (
+  <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value as TipoViatico)}>
+    {Object.values(TipoViatico).map((tipo) => (
+      <option key={tipo} value={tipo}>
+        {tipoViaticoLabels[tipo]}
+      </option>
+    ))}
+  </select>
+);
+
 const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose, onChanged }) => {
   const [edicion, setEdicion] = useState<Record<number, FilaEdicion>>({});
-  const [nuevo, setNuevo] = useState<FilaEdicion>({ nombre: '', montoDefault: '' });
+  const [nuevo, setNuevo] = useState<FilaEdicion>(filaVacia);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,7 +45,7 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
       onChanged();
     } catch (err: any) {
       const message = err.response?.data?.message;
-      setError(Array.isArray(message) ? message.join(' · ') : message || 'Error al guardar el tipo de viático');
+      setError(Array.isArray(message) ? message.join(' · ') : message || 'Error al guardar la plantilla');
     } finally {
       setSaving(false);
     }
@@ -43,7 +60,11 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
       return;
     }
     ejecutar(async () => {
-      await viaticoTiposService.update(tipo.id, { nombre: fila.nombre.trim(), montoDefault: Number(fila.montoDefault) });
+      await viaticoTiposService.update(tipo.id, {
+        nombre: fila.nombre.trim(),
+        tipo: fila.tipo,
+        montoDefault: Number(fila.montoDefault),
+      });
       setEdicion(({ [tipo.id]: _, ...rest }) => rest);
     });
   };
@@ -54,8 +75,12 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
       return;
     }
     ejecutar(async () => {
-      await viaticoTiposService.create({ nombre: nuevo.nombre.trim(), montoDefault: Number(nuevo.montoDefault) });
-      setNuevo({ nombre: '', montoDefault: '' });
+      await viaticoTiposService.create({
+        nombre: nuevo.nombre.trim(),
+        tipo: nuevo.tipo,
+        montoDefault: Number(nuevo.montoDefault),
+      });
+      setNuevo(filaVacia());
     });
   };
 
@@ -63,7 +88,7 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>Tipos de viático</h2>
+          <h2>Plantillas de viático</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Cerrar">
             ✕
           </button>
@@ -71,13 +96,15 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
 
         <div className="modal-form">
           <p className="jornada-hint">
-            El monto se precarga al registrar un viático y se puede ajustar en cada caso. Montos en UYU.
+            Al escribir el nombre de una plantilla en el concepto se precargan su tipo y su monto, que se pueden
+            ajustar en cada caso. Montos en UYU.
           </p>
 
           <table className="viatico-tipos-table">
             <thead>
               <tr>
                 <th>Nombre</th>
+                <th>Tipo</th>
                 <th>Monto por defecto</th>
                 <th>Estado</th>
                 <th aria-label="Acciones" />
@@ -97,6 +124,17 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
                         />
                       ) : (
                         tipo.nombre
+                      )}
+                    </td>
+                    <td>
+                      {fila ? (
+                        <SelectTipo
+                          label="Tipo"
+                          value={fila.tipo}
+                          onChange={(t) => setEdicion({ ...edicion, [tipo.id]: { ...fila, tipo: t } })}
+                        />
+                      ) : (
+                        tipoViaticoLabels[tipo.tipo] ?? '—'
                       )}
                     </td>
                     <td>
@@ -138,7 +176,11 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
                             onClick={() =>
                               setEdicion({
                                 ...edicion,
-                                [tipo.id]: { nombre: tipo.nombre, montoDefault: String(Number(tipo.montoDefault)) },
+                                [tipo.id]: {
+                                  nombre: tipo.nombre,
+                                  tipo: tipo.tipo ?? TipoViatico.VIATICO,
+                                  montoDefault: String(Number(tipo.montoDefault)),
+                                },
                               })
                             }
                           >
@@ -161,15 +203,22 @@ const ViaticoTiposDialog: React.FC<ViaticoTiposDialogProps> = ({ tipos, onClose,
               <tr>
                 <td>
                   <input
-                    aria-label="Nombre del nuevo tipo"
+                    aria-label="Nombre de la nueva plantilla"
                     placeholder="Ej. Almuerzo"
                     value={nuevo.nombre}
                     onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
                   />
                 </td>
                 <td>
+                  <SelectTipo
+                    label="Tipo de la nueva plantilla"
+                    value={nuevo.tipo}
+                    onChange={(t) => setNuevo({ ...nuevo, tipo: t })}
+                  />
+                </td>
+                <td>
                   <input
-                    aria-label="Monto por defecto del nuevo tipo"
+                    aria-label="Monto por defecto de la nueva plantilla"
                     type="number"
                     min="0"
                     step="0.01"

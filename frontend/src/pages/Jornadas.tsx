@@ -17,13 +17,15 @@ import {
   ReporteViaticosChofer,
   ResumenJornadasChofer,
   SalarioAfectado,
+  TipoViatico,
   ViajeSugerido,
   ViaticoTipo,
   categoriaJornadaColors,
   categoriaJornadaLabels,
+  tipoViaticoLabels,
 } from '../types/jornada';
 import { formatDateForDisplay, getTodayLocalInputValue } from '../utils/dateUtils';
-import { exportReporteViaticosCsv, exportReporteViaticosPdf } from '../utils/reporteViaticosExport';
+import { describirItem, exportReporteViaticosCsv, exportReporteViaticosPdf } from '../utils/reporteViaticosExport';
 import '../styles/Modal.css';
 import '../styles/Jornadas.css';
 
@@ -90,7 +92,7 @@ const Jornadas: React.FC = () => {
     try {
       setTiposViatico(await viaticoTiposService.getAll(true));
     } catch (err) {
-      handleError(err, 'Error al cargar los tipos de viático');
+      handleError(err, 'Error al cargar las plantillas de viático');
     }
   }, []);
 
@@ -226,10 +228,10 @@ const Jornadas: React.FC = () => {
       ? { desde: ancla, hasta: ancla }
       : null;
 
-  const resumenTotales = resumen.reduce(
-    (acc, r) => ({ viaticos: acc.viaticos + r.totalViaticos, cantidad: acc.cantidad + r.cantidadViaticos }),
-    { viaticos: 0, cantidad: 0 },
-  );
+  const tiposViaticoOrden = Object.values(TipoViatico);
+  const sumarTipo = (filas: { porTipo: ResumenJornadasChofer['porTipo'] }[], tipo: TipoViatico) =>
+    filas.reduce((acc, r) => acc + (r.porTipo?.[tipo]?.cantidad ?? 0), 0);
+  const resumenTotalMonto = resumen.reduce((acc, r) => acc + r.totalViaticos, 0);
 
   return (
     <div className="jornadas-container">
@@ -246,7 +248,7 @@ const Jornadas: React.FC = () => {
             <p>Registrá qué hizo cada chofer cada día y los viáticos correspondientes.</p>
           </div>
           <button type="button" className="btn-secondary" onClick={() => setShowTipos(true)}>
-            Tipos de viático
+            Plantillas de viático
           </button>
         </div>
 
@@ -364,8 +366,10 @@ const Jornadas: React.FC = () => {
                     {Object.values(CategoriaJornada).map((cat) => (
                       <th key={cat}>{categoriaJornadaLabels[cat]}</th>
                     ))}
-                    <th>Viáticos</th>
-                    <th>Total viáticos</th>
+                    {tiposViaticoOrden.map((tipo) => (
+                      <th key={tipo}>{tipoViaticoLabels[tipo]}</th>
+                    ))}
+                    <th>Monto total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -377,7 +381,9 @@ const Jornadas: React.FC = () => {
                       {Object.values(CategoriaJornada).map((cat) => (
                         <td key={cat}>{r.dias[cat] || '—'}</td>
                       ))}
-                      <td>{r.cantidadViaticos || '—'}</td>
+                      {tiposViaticoOrden.map((tipo) => (
+                        <td key={tipo}>{r.porTipo?.[tipo]?.cantidad || '—'}</td>
+                      ))}
                       <td>{formatUYU(r.totalViaticos)}</td>
                     </tr>
                   ))}
@@ -386,8 +392,10 @@ const Jornadas: React.FC = () => {
                   <tfoot>
                     <tr>
                       <td colSpan={Object.values(CategoriaJornada).length + 1}>Total</td>
-                      <td>{resumenTotales.cantidad}</td>
-                      <td>{formatUYU(resumenTotales.viaticos)}</td>
+                      {tiposViaticoOrden.map((tipo) => (
+                        <td key={tipo}>{sumarTipo(resumen, tipo)}</td>
+                      ))}
+                      <td>{formatUYU(resumenTotalMonto)}</td>
                     </tr>
                   </tfoot>
                 )}
@@ -399,7 +407,7 @@ const Jornadas: React.FC = () => {
         <section className="jornadas-resumen">
           <h2>Reporte de viáticos por período</h2>
           <p className="jornada-hint">
-            Cantidad de viáticos (y su monto) de los choferes seleccionados entre dos fechas, hasta un año.
+            Cantidad por tipo (viático, carga, viaje/comisión, otro) y monto de los choferes seleccionados entre dos fechas, hasta un año.
           </p>
           <div className="jornadas-reporte__filtros">
             <label>
@@ -440,7 +448,9 @@ const Jornadas: React.FC = () => {
                   <tr>
                     <th>Chofer</th>
                     <th>Días con viáticos</th>
-                    <th>Cantidad de viáticos</th>
+                    {tiposViaticoOrden.map((tipo) => (
+                      <th key={tipo}>{tipoViaticoLabels[tipo]}</th>
+                    ))}
                     <th>Monto total</th>
                     <th>Detalle</th>
                   </tr>
@@ -452,14 +462,14 @@ const Jornadas: React.FC = () => {
                         {r.nombre.trim()} {r.apellido}
                       </td>
                       <td>{r.dias.length || '—'}</td>
-                      <td>{r.cantidad}</td>
+                      {tiposViaticoOrden.map((tipo) => (
+                        <td key={tipo}>{r.porTipo?.[tipo]?.cantidad || '—'}</td>
+                      ))}
                       <td>{formatUYU(r.total)}</td>
                       <td className="jornadas-reporte__detalle">
                         {r.detalle.length === 0
                           ? '—'
-                          : r.detalle
-                              .map((d) => `${d.cantidad} × ${d.concepto} de ${formatUYU(d.montoUnitario)}`)
-                              .join(' · ')}
+                          : r.detalle.map(describirItem).join(' · ')}
                       </td>
                     </tr>
                   ))}
@@ -469,7 +479,9 @@ const Jornadas: React.FC = () => {
                     <tr>
                       <td>Total</td>
                       <td>{reporte.reduce((acc, r) => acc + r.dias.length, 0)}</td>
-                      <td>{reporte.reduce((acc, r) => acc + r.cantidad, 0)}</td>
+                      {tiposViaticoOrden.map((tipo) => (
+                        <td key={tipo}>{sumarTipo(reporte, tipo)}</td>
+                      ))}
                       <td>{formatUYU(reporte.reduce((acc, r) => acc + r.total, 0))}</td>
                       <td />
                     </tr>

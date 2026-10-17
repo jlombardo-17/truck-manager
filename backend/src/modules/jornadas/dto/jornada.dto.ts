@@ -16,8 +16,10 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CategoriaJornada } from '../chofer-jornada.entity';
+import { TipoViatico } from '../tipo-viatico.enum';
 
 const CATEGORIA_MSG = `La categoría debe ser: ${Object.values(CategoriaJornada).join(', ')}`;
+const TIPO_VIATICO_MSG = `El tipo debe ser: ${Object.values(TipoViatico).join(', ')}`;
 const IDS_REGEX = /^\d+(,\d+)*$/;
 
 export class ViaticoItemDto {
@@ -25,6 +27,10 @@ export class ViaticoItemDto {
   @IsInt({ message: 'El tipo de viático debe ser un número' })
   @Type(() => Number)
   viaticoTipoId?: number;
+
+  @IsOptional()
+  @IsEnum(TipoViatico, { message: TIPO_VIATICO_MSG })
+  tipo?: TipoViatico;
 
   @IsNotEmpty({ message: 'El concepto del viático es requerido' })
   @IsString({ message: 'El concepto debe ser texto' })
@@ -137,6 +143,10 @@ export class CreateViaticoTipoDto {
   @IsString({ message: 'El nombre debe ser texto' })
   nombre: string;
 
+  @IsOptional()
+  @IsEnum(TipoViatico, { message: TIPO_VIATICO_MSG })
+  tipo?: TipoViatico;
+
   @IsNumber({}, { message: 'El monto por defecto debe ser un número' })
   @Type(() => Number)
   @Min(0, { message: 'El monto por defecto no puede ser negativo' })
@@ -152,6 +162,10 @@ export class UpdateViaticoTipoDto {
   @IsNotEmpty({ message: 'El nombre no puede estar vacío' })
   @IsString({ message: 'El nombre debe ser texto' })
   nombre?: string;
+
+  @IsOptional()
+  @IsEnum(TipoViatico, { message: TIPO_VIATICO_MSG })
+  tipo?: TipoViatico;
 
   @IsOptional()
   @IsNumber({}, { message: 'El monto por defecto debe ser un número' })

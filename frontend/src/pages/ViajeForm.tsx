@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { viajsService, Viaje, ViajRuta, ViajComision } from '../services/viajsService';
+import { viajsService, Viaje, ViajRuta, ViajComision, ViajeDocumentoAdjunto } from '../services/viajsService';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import { Camion } from '../types/camion';
@@ -55,40 +55,88 @@ const ViajeForm: React.FC = () => {
       reader.readAsDataURL(file);
     });
 
-  const handleDocumentoAdjuntoChange = async (files: FileList | null) => {
-    const file = files?.[0];
-    if (!file) return;
-
+  const isAllowedDocumento = (file: File) => {
     const normalizedMimeType = normalizeMimeType(file.type);
-    const extension = getFileExtension(file.name);
     const isMimeAllowed = normalizedMimeType
       ? ALLOWED_DOCUMENTO_MIME_TYPES.map((item) => normalizeMimeType(item)).includes(normalizedMimeType)
       : false;
-    const isExtensionAllowed = ALLOWED_DOCUMENTO_EXTENSIONS.includes(extension);
+    return isMimeAllowed || ALLOWED_DOCUMENTO_EXTENSIONS.includes(getFileExtension(file.name));
+  };
 
-    if (!isMimeAllowed && !isExtensionAllowed) {
-      setError('Solo se permiten archivos PDF o imagen (PNG, JPG, WEBP, GIF, BMP, SVG)');
+  const handleDocumentosAdjuntosChange = async (files: FileList | null) => {
+    const selectedFiles = Array.from(files || []);
+    if (selectedFiles.length === 0) return;
+
+    const invalidType = selectedFiles.filter((file) => !isAllowedDocumento(file));
+    if (invalidType.length > 0) {
+      setError(
+        `Solo se permiten archivos PDF o imagen (PNG, JPG, WEBP, GIF, BMP, SVG): ${invalidType
+          .map((file) => file.name)
+          .join(', ')}`,
+      );
       return;
     }
 
-    const sizeMb = file.size / (1024 * 1024);
-    if (sizeMb > MAX_DOCUMENTO_SIZE_MB) {
-      setError(`El archivo supera el límite de ${MAX_DOCUMENTO_SIZE_MB}MB`);
+    const tooLarge = selectedFiles.filter((file) => file.size / (1024 * 1024) > MAX_DOCUMENTO_SIZE_MB);
+    if (tooLarge.length > 0) {
+      setError(
+        `Superan el límite de ${MAX_DOCUMENTO_SIZE_MB}MB: ${tooLarge.map((file) => file.name).join(', ')}`,
+      );
       return;
     }
 
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const nuevos: ViajeDocumentoAdjunto[] = await Promise.all(
+        selectedFiles.map(async (file) => ({ nombre: file.name, adjunto: await fileToDataUrl(file) })),
+      );
       setFormData((prev) => ({
         ...prev,
-        documentoDescargaAdjunto: dataUrl,
-        documentoDescargaNombre: file.name,
+        documentosDescargaAdjuntos: [...(prev.documentosDescargaAdjuntos || []), ...nuevos],
       }));
       setError(null);
     } catch (err) {
-      console.error('Error adjuntando documento de descarga:', err);
-      setError('No se pudo procesar el archivo del documento de descarga');
+      console.error('Error adjuntando documentos de descarga:', err);
+      setError('No se pudieron procesar los archivos de descarga');
     }
+  };
+
+  const handleQuitarDocumento = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      documentosDescargaAdjuntos: (prev.documentosDescargaAdjuntos || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  // Chrome bloquea abrir data: URLs en una pestaña nueva; se abre como blob
+  const handleVerDocumento = async (documento: ViajeDocumentoAdjunto) => {
+    try {
+      const blob = await (await fetch(documento.adjunto)).blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      console.error('Error abriendo documento de descarga:', err);
+      setError('No se pudo abrir el documento');
+    }
+  };
+
+  const handleDocumentosDragOver = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDocumentosDropActive(true);
+  };
+
+  const handleDocumentosDragLeave = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDocumentosDropActive(false);
+  };
+
+  const handleDocumentosDrop = async (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDocumentosDropActive(false);
+    await handleDocumentosAdjuntosChange(event.dataTransfer.files);
   };
 
   // Estado del formulario
@@ -119,6 +167,7 @@ const ViajeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing] = useState(!!id);
   const [usdUyuRate, setUsdUyuRate] = useState<number>(40);
+  const [isDocumentosDropActive, setIsDocumentosDropActive] = useState(false);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -329,6 +378,9 @@ const ViajeForm: React.FC = () => {
         longitudOrigen: toNumberOrUndefined(formData.longitudOrigen) ?? toNumberOrUndefined(firstRoute?.longitud),
         latitudDestino: toNumberOrUndefined(formData.latitudDestino) ?? toNumberOrUndefined(lastRoute?.latitud),
         longitudDestino: toNumberOrUndefined(formData.longitudDestino) ?? toNumberOrUndefined(lastRoute?.longitud),
+        documentosDescargaAdjuntos: formData.documentosDescargaAdjuntos || [],
+        documentoDescargaAdjunto: '',
+        documentoDescargaNombre: '',
         comisiones,
         // No incluir rutas aqui, se guardarán después
       };
@@ -664,49 +716,61 @@ const ViajeForm: React.FC = () => {
             </div>
 
             <div className="form-field full-width">
-              <label htmlFor="documentoDescargaAdjunto">Adjuntar documento de descarga (PDF o imagen)</label>
-              <input
-                type="file"
-                id="documentoDescargaAdjunto"
-                accept="application/pdf,image/*"
-                onChange={(event) => handleDocumentoAdjuntoChange(event.target.files)}
-                className="form-input"
-              />
+              <label htmlFor="documentosDescargaAdjuntos">Adjuntar documentos de descarga</label>
+              <div
+                className={`viaje-form-dropzone ${isDocumentosDropActive ? 'active' : ''}`}
+                onDragOver={handleDocumentosDragOver}
+                onDragLeave={handleDocumentosDragLeave}
+                onDrop={handleDocumentosDrop}
+              >
+                <input
+                  type="file"
+                  id="documentosDescargaAdjuntos"
+                  className="viaje-form-file-input"
+                  accept="application/pdf,image/*"
+                  multiple
+                  onChange={async (event) => {
+                    await handleDocumentosAdjuntosChange(event.target.files);
+                    event.target.value = '';
+                  }}
+                />
+                <p>Arrastrá y soltá aquí uno o varios documentos, o seleccionalos manualmente.</p>
+              </div>
               <small className="field-hint">
-                Tamaño máximo: {MAX_DOCUMENTO_SIZE_MB}MB. Formatos: PDF, PNG, JPG, WEBP, GIF, BMP, SVG.
+                PDF o imagen (PNG, JPG, WEBP, GIF, BMP, SVG) hasta {MAX_DOCUMENTO_SIZE_MB}MB por archivo.
               </small>
 
-              {formData.documentoDescargaAdjunto && (
-                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span>{formData.documentoDescargaNombre || 'Adjunto listo para guardar'}</span>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => window.open(formData.documentoDescargaAdjunto, '_blank', 'noopener,noreferrer')}
-                  >
-                    Ver adjunto
-                  </button>
-                  <a
-                    className="btn-secondary"
-                    href={formData.documentoDescargaAdjunto}
-                    download={formData.documentoDescargaNombre || 'documento-descarga'}
-                  >
-                    Descargar
-                  </a>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        documentoDescargaAdjunto: '',
-                        documentoDescargaNombre: '',
-                      }))
-                    }
-                  >
-                    Quitar adjunto
-                  </button>
-                </div>
+              {(formData.documentosDescargaAdjuntos || []).length > 0 && (
+                <ul className="viaje-form-attachment-list">
+                  {(formData.documentosDescargaAdjuntos || []).map((documento, index) => (
+                    <li key={`${documento.nombre}-${index}`} className="viaje-form-attachment-item">
+                      <span title={documento.nombre}>📎 {documento.nombre}</span>
+                      <div className="viaje-form-attachment-actions">
+                        <button
+                          type="button"
+                          className="viaje-form-attachment-action"
+                          onClick={() => handleVerDocumento(documento)}
+                        >
+                          Ver
+                        </button>
+                        <a
+                          className="viaje-form-attachment-action"
+                          href={documento.adjunto}
+                          download={documento.nombre || 'documento-descarga'}
+                        >
+                          Descargar
+                        </a>
+                        <button
+                          type="button"
+                          className="viaje-form-attachment-action danger"
+                          onClick={() => handleQuitarDocumento(index)}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
