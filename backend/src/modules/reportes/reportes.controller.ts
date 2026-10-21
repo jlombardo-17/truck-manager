@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
+import { parseDateOnly } from '../../common/utils/date-only';
 
 const parseIds = (value?: string): number[] | undefined => {
   if (!value) return undefined;
@@ -8,6 +9,19 @@ const parseIds = (value?: string): number[] | undefined => {
     .map((item) => Number(item.trim()))
     .filter((num) => Number.isFinite(num) && num > 0);
   return parsed.length > 0 ? parsed : undefined;
+};
+
+// 'YYYY-MM-DD' en hora local: desde = inicio del día, hasta = fin del día (incluye el último día)
+const parseDesde = (value?: string): Date | undefined => {
+  if (!value) return undefined;
+  const date = parseDateOnly(value);
+  return Number.isNaN(date.getTime()) ? new Date(value) : date;
+};
+
+const parseHasta = (value?: string): Date | undefined => {
+  const date = parseDesde(value);
+  date?.setHours(23, 59, 59, 999);
+  return date;
 };
 
 @Controller('reportes')
@@ -32,8 +46,8 @@ export class ReportesController {
       granularidad,
       camionIds: parsedCamionIds,
       choferIds: parsedChoferIds,
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
       usarFechaPago: usarFechaPago === 'true',
     });
   }
@@ -54,8 +68,8 @@ export class ReportesController {
 
     return this.reportesService.getRentabilidadComparativa({
       compararPor,
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
       camionIds: parsedCamionIds,
       choferIds: parsedChoferIds,
       usarFechaPago: usarFechaPago === 'true',
@@ -77,8 +91,8 @@ export class ReportesController {
     return this.reportesService.getOperacionCamion({
       camionId,
       granularidad,
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
     });
   }
 
@@ -90,8 +104,8 @@ export class ReportesController {
     @Query('choferIds') choferIds?: string,
   ) {
     return this.reportesService.getDesempenoChoferes({
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
       choferIds: parseIds(choferIds),
     });
   }
@@ -103,21 +117,21 @@ export class ReportesController {
     @Query('camionIds') camionIds?: string,
   ) {
     return this.reportesService.getGastosMantenimiento({
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
       camionIds: parseIds(camionIds),
     });
   }
 
-  @Get('gastos-documentales')
-  async getGastosDocumentales(
+  @Get('gastos-fijos')
+  async getGastosFijos(
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
     @Query('camionIds') camionIds?: string,
   ) {
-    return this.reportesService.getGastosDocumentales({
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+    return this.reportesService.getGastosFijos({
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
       camionIds: parseIds(camionIds),
     });
   }
@@ -130,8 +144,8 @@ export class ReportesController {
     @Query('choferIds') choferIds?: string,
   ) {
     return this.reportesService.getIngresosMS({
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
       camionIds: parseIds(camionIds),
       choferIds: parseIds(choferIds),
     });
@@ -145,8 +159,8 @@ export class ReportesController {
     @Query('choferIds') choferIds?: string,
   ) {
     return this.reportesService.getFlujoCaja({
-      desde: desde ? new Date(desde) : undefined,
-      hasta: hasta ? new Date(hasta) : undefined,
+      desde: parseDesde(desde),
+      hasta: parseHasta(hasta),
       camionIds: parseIds(camionIds),
       choferIds: parseIds(choferIds),
     });

@@ -10,12 +10,13 @@ export interface RentabilidadPoint {
   gastos: number;
   gananciaNeta: number;
   kmRecorridos: number;
+  cantidadViajes: number;
   detalleGastos: {
     operativosViaje: number;
-    comisionChofer: number;
+    gastosViaje: number;
     sueldoChofer: number;
     mantenimiento: number;
-    documentosFijos: number;
+    gastosFijos: number;
   };
 }
 
@@ -102,6 +103,7 @@ export interface GastosMantenimientoResponse {
     registros: Array<{
       camionId: number;
       patente: string;
+      origen: 'servicio' | 'mantenimiento';
       tipoMantenimiento: string;
       fecha: string;
       costo: number;
@@ -112,33 +114,31 @@ export interface GastosMantenimientoResponse {
   }>;
 }
 
-export interface GastosDocumentalesResponse {
+export interface GastosFijosReporteResponse {
   filtrosAplicados: {
     desde: string;
     hasta: string;
     camionIds?: number[];
   };
-  resumenTotalSemanal: number;
-  resumenTotalActual: number;
-  resumenTotalProyectado: number;
+  resumenTotalAnual: number;
+  resumenTotalPeriodo: number;
   gastos: Array<{
     camionId: number;
     patente: string;
-    cantidadDocumentos: number;
-    totalCostoSemanal: number;
-    totalCostoActual: number;
-    totalCostoProyectado: number;
-    documentos: Array<{
-      documentoId: number;
+    cantidad: number;
+    totalAnualUyu: number;
+    totalCostoPeriodo: number;
+    items: Array<{
+      gastoFijoId: number;
       tipo: string;
-      nombre: string;
-      fechaInicio: string;
-      fechaFin: string;
-      costoSemanal: number;
-      costoActual: number;
-      coberturaDias: number;
-      costoProyectado: number;
-      fechaVencimiento?: string;
+      concepto: string;
+      moneda: 'UYU' | 'USD';
+      montoAnual: number;
+      montoAnualUyu: number;
+      costoMensualUyu: number;
+      vigenciaDesde: string;
+      vigenciaHasta: string | null;
+      costoPeriodo: number;
     }>;
   }>;
 }
@@ -179,10 +179,10 @@ export interface FlujoCajaResponse {
     resultadoNeto: number;
     detalleEgresos: {
       operativosViaje: number;
-      combustibleRepostadas: number;
+      gastosViaje: number;
       mantenimiento: number;
       pagosChoferes: number;
-      documentosFijos: number;
+      gastosFijos: number;
     };
   };
   series: Array<{
@@ -192,10 +192,10 @@ export interface FlujoCajaResponse {
     resultadoNeto: number;
     detalleEgresos: {
       operativosViaje: number;
-      combustibleRepostadas: number;
+      gastosViaje: number;
       mantenimiento: number;
       pagosChoferes: number;
-      documentosFijos: number;
+      gastosFijos: number;
     };
   }>;
 }
@@ -312,12 +312,12 @@ class ReportesService {
     return response.data;
   }
 
-  async getGastosDocumentales(filters: {
+  async getGastosFijos(filters: {
     desde?: string;
     hasta?: string;
     camionIds?: number[];
-  }): Promise<GastosDocumentalesResponse> {
-    const response = await this.api.get<GastosDocumentalesResponse>('/reportes/gastos-documentales', {
+  }): Promise<GastosFijosReporteResponse> {
+    const response = await this.api.get<GastosFijosReporteResponse>('/reportes/gastos-fijos', {
       params: {
         ...(filters.desde ? { desde: filters.desde } : {}),
         ...(filters.hasta ? { hasta: filters.hasta } : {}),

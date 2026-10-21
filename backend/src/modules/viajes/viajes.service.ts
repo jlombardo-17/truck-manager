@@ -15,6 +15,7 @@ import { UpdateViajDTO } from './dto/update-viaje.dto';
 import { CamionesService } from '../camiones/camiones.service';
 import { Camion } from '../camiones/camion.entity';
 import { Chofer } from '../choferes/chofer.entity';
+import { getUsdUyuRateInfo, UsdUyuRateInfo } from '../../common/utils/usd-uyu-rate';
 
 type RoutePointInput = {
   orden?: number;
@@ -30,12 +31,6 @@ type ViajeCurrency = 'UYU' | 'USD';
 @Injectable()
 export class ViajsService {
   private readonly logger = new Logger(ViajsService.name);
-  private usdUyuRateCache: { rate: number; fetchedAtMs: number } | null = null;
-
-  private getConfiguredUsdToUyuRate(): number {
-    const parsed = Number(process.env.USD_TO_UYU_RATE);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 40;
-  }
 
   private normalizeCurrency(value?: string): ViajeCurrency {
     if ((value || '').toUpperCase() === 'USD') return 'USD';
@@ -46,52 +41,8 @@ export class ViajsService {
     return Math.round(value * 100) / 100;
   }
 
-  private async getUsdUyuRateInfo(): Promise<{ rate: number; source: string; fetchedAt: string }> {
-    const nowMs = Date.now();
-
-    if (this.usdUyuRateCache && nowMs - this.usdUyuRateCache.fetchedAtMs < 15 * 60 * 1000) {
-      return {
-        rate: this.usdUyuRateCache.rate,
-        source: 'cache',
-        fetchedAt: new Date(this.usdUyuRateCache.fetchedAtMs).toISOString(),
-      };
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch('https://open.er-api.com/v6/latest/USD', {
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const payload = await response.json() as { rates?: Record<string, unknown> };
-      const rate = Number(payload?.rates?.UYU);
-      if (!Number.isFinite(rate) || rate <= 0) {
-        throw new Error('Tipo de cambio UYU inválido en la respuesta externa');
-      }
-
-      this.usdUyuRateCache = { rate, fetchedAtMs: nowMs };
-
-      return {
-        rate,
-        source: 'open.er-api.com',
-        fetchedAt: new Date(nowMs).toISOString(),
-      };
-    } catch (error) {
-      const fallbackRate = this.getConfiguredUsdToUyuRate();
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`No se pudo obtener cotización online USD/UYU (${message}). Se usa fallback=${fallbackRate}`);
-      return {
-        rate: fallbackRate,
-        source: 'fallback-env',
-        fetchedAt: new Date(nowMs).toISOString(),
-      };
-    }
+  private getUsdUyuRateInfo(): Promise<UsdUyuRateInfo> {
+    return getUsdUyuRateInfo();
   }
 
   private toUyuAmount(value: unknown, currency: ViajeCurrency, usdUyuRate: number): number | null {

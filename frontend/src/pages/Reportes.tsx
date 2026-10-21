@@ -18,7 +18,7 @@ import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import {
   DesempenoChoferesResponse,
-  GastosDocumentalesResponse,
+  GastosFijosReporteResponse,
   GastosMantenimientoResponse,
   FlujoCajaResponse,
   IngresosMensualesResponse,
@@ -32,7 +32,7 @@ import { Chofer } from '../types/chofer';
 import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import heroAnalyticsGreen from '../assets/hero-analytics-green.svg';
-import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
+import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/Reportes.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend);
@@ -44,10 +44,10 @@ type RentabilidadExportColumnKey =
   | 'gananciaNeta'
   | 'kmRecorridos'
   | 'gastosOperativos'
-  | 'documentosFijos'
+  | 'gastosViaje'
   | 'mantenimiento'
-  | 'sueldoChofer'
-  | 'comisionChofer';
+  | 'gastosFijos'
+  | 'sueldoChofer';
 
 const RENTABILIDAD_EXPORT_COLUMNS: Array<{ key: RentabilidadExportColumnKey; label: string }> = [
   { key: 'periodo', label: 'Período' },
@@ -55,11 +55,11 @@ const RENTABILIDAD_EXPORT_COLUMNS: Array<{ key: RentabilidadExportColumnKey; lab
   { key: 'gastos', label: 'Gastos' },
   { key: 'gananciaNeta', label: 'Ganancia Neta' },
   { key: 'kmRecorridos', label: 'KM Recorridos' },
-  { key: 'gastosOperativos', label: 'Gastos Operativos' },
-  { key: 'documentosFijos', label: 'Documentos Fijos' },
+  { key: 'gastosOperativos', label: 'Combustible + Otros' },
+  { key: 'gastosViaje', label: 'Gastos del Viaje' },
   { key: 'mantenimiento', label: 'Mantenimiento' },
+  { key: 'gastosFijos', label: 'Gastos Fijos' },
   { key: 'sueldoChofer', label: 'Sueldo Chofer' },
-  { key: 'comisionChofer', label: 'Comisión Chofer' },
 ];
 
 const DEFAULT_RENTABILIDAD_EXPORT_COLUMNS: Record<RentabilidadExportColumnKey, boolean> = {
@@ -69,10 +69,10 @@ const DEFAULT_RENTABILIDAD_EXPORT_COLUMNS: Record<RentabilidadExportColumnKey, b
   gananciaNeta: true,
   kmRecorridos: true,
   gastosOperativos: true,
-  documentosFijos: true,
+  gastosViaje: true,
   mantenimiento: true,
+  gastosFijos: true,
   sueldoChofer: true,
-  comisionChofer: true,
 };
 
 const OPERATION_COLORS = [
@@ -119,7 +119,7 @@ const Reportes: React.FC = () => {
   const [operacionCamiones, setOperacionCamiones] = useState<Record<number, OperacionCamionResponse>>({});
   const [desempenoChoferes, setDesempenoChoferes] = useState<DesempenoChoferesResponse | null>(null);
   const [gastosMantenimiento, setGastosMantenimiento] = useState<GastosMantenimientoResponse | null>(null);
-  const [gastosDocumentales, setGastosDocumentales] = useState<GastosDocumentalesResponse | null>(null);
+  const [gastosFijos, setGastosFijos] = useState<GastosFijosReporteResponse | null>(null);
   const [ingresosMensuales, setIngresosMensuales] = useState<IngresosMensualesResponse | null>(null);
   const [flujoCaja, setFlujoCaja] = useState<FlujoCajaResponse | null>(null);
 
@@ -414,7 +414,7 @@ const Reportes: React.FC = () => {
   const fetchReportesAdicionales = async () => {
     try {
       setLoadingAdicionales(true);
-      const [desempenoData, gastosData, gastosDocumentalesData, ingresosData, flujoCajaData] = await Promise.all([
+      const [desempenoData, gastosData, gastosFijosData, ingresosData, flujoCajaData] = await Promise.all([
         reportesService.getDesempenoChoferes({
           desde,
           hasta,
@@ -425,7 +425,7 @@ const Reportes: React.FC = () => {
           hasta,
           camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
         }),
-        reportesService.getGastosDocumentales({
+        reportesService.getGastosFijos({
           desde,
           hasta,
           camionIds: camionIds.length ? camionIds.map((id) => Number(id)) : undefined,
@@ -446,7 +446,7 @@ const Reportes: React.FC = () => {
 
       setDesempenoChoferes(desempenoData);
       setGastosMantenimiento(gastosData);
-      setGastosDocumentales(gastosDocumentalesData);
+      setGastosFijos(gastosFijosData);
       setIngresosMensuales(ingresosData);
       setFlujoCaja(flujoCajaData);
     } catch (err: any) {
@@ -499,10 +499,10 @@ const Reportes: React.FC = () => {
       gananciaNeta: point.gananciaNeta.toFixed(2),
       kmRecorridos: point.kmRecorridos.toFixed(2),
       gastosOperativos: point.detalleGastos.operativosViaje.toFixed(2),
-      documentosFijos: point.detalleGastos.documentosFijos.toFixed(2),
+      gastosViaje: point.detalleGastos.gastosViaje.toFixed(2),
       mantenimiento: point.detalleGastos.mantenimiento.toFixed(2),
+      gastosFijos: point.detalleGastos.gastosFijos.toFixed(2),
       sueldoChofer: point.detalleGastos.sueldoChofer.toFixed(2),
-      comisionChofer: point.detalleGastos.comisionChofer.toFixed(2),
     };
 
     return selectedRentabilidadColumns.map((column) => valuesByColumn[column.key]);
@@ -692,18 +692,24 @@ const Reportes: React.FC = () => {
     );
   };
 
-  const exportGastosDocumentalesCsv = () => {
-    const rows = (gastosDocumentales?.gastos || []).map((item) => [
-      item.patente || `Camion ${item.camionId}`,
-      item.cantidadDocumentos,
-      item.totalCostoSemanal.toFixed(2),
-      item.totalCostoActual.toFixed(2),
-      item.totalCostoProyectado.toFixed(2),
-    ]);
+  const exportGastosFijosCsv = () => {
+    const rows = (gastosFijos?.gastos || []).flatMap((item) =>
+      item.items.map((gasto) => [
+        item.patente || `Camion ${item.camionId}`,
+        gasto.tipo,
+        gasto.concepto,
+        gasto.moneda,
+        gasto.montoAnual.toFixed(2),
+        gasto.montoAnualUyu.toFixed(2),
+        gasto.vigenciaDesde,
+        gasto.vigenciaHasta || '',
+        gasto.costoPeriodo.toFixed(2),
+      ]),
+    );
 
     downloadCsv(
-      `gastos_documentales_${desde}_${hasta}.csv`,
-      ['Patente', 'Documentos', 'CostoSemanal', 'CostoActual', 'CostoProyectado'],
+      `gastos_fijos_${desde}_${hasta}.csv`,
+      ['Patente', 'Tipo', 'Concepto', 'Moneda', 'MontoAnual', 'MontoAnualUYU', 'VigenciaDesde', 'VigenciaHasta', 'CostoPeriodo'],
       rows,
     );
   };
@@ -731,11 +737,11 @@ const Reportes: React.FC = () => {
       item.ingresos.toFixed(2),
       item.egresos.toFixed(2),
       item.resultadoNeto.toFixed(2),
-      item.detalleEgresos.combustibleRepostadas.toFixed(2),
+      item.detalleEgresos.operativosViaje.toFixed(2),
+      item.detalleEgresos.gastosViaje.toFixed(2),
       item.detalleEgresos.mantenimiento.toFixed(2),
       item.detalleEgresos.pagosChoferes.toFixed(2),
-      item.detalleEgresos.operativosViaje.toFixed(2),
-      item.detalleEgresos.documentosFijos.toFixed(2),
+      item.detalleEgresos.gastosFijos.toFixed(2),
     ]);
 
     downloadCsv(
@@ -745,11 +751,11 @@ const Reportes: React.FC = () => {
         'Ingresos',
         'Egresos',
         'ResultadoNeto',
-        'CombustibleRepostadas',
+        'CombustibleOtros',
+        'GastosViaje',
         'Mantenimiento',
         'PagosChoferes',
-        'OperativosViaje',
-        'DocumentosFijos',
+        'GastosFijos',
       ],
       rows,
     );
@@ -1545,10 +1551,11 @@ const Reportes: React.FC = () => {
               <th>Gastos</th>
               <th>Ganancia Neta</th>
               <th>KM Recorridos</th>
-              <th>Documentos Fijos</th>
+              <th>Combustible + Otros</th>
+              <th>Gastos del Viaje</th>
               <th>Mantenimiento</th>
+              <th>Gastos Fijos</th>
               <th>Sueldo Chofer</th>
-              <th>Comisión Chofer</th>
             </tr>
           </thead>
           <tbody>
@@ -1559,15 +1566,16 @@ const Reportes: React.FC = () => {
                 <td>${point.gastos.toFixed(2)}</td>
                 <td>${point.gananciaNeta.toFixed(2)}</td>
                 <td>{point.kmRecorridos.toFixed(2)} km</td>
-                <td>${point.detalleGastos.documentosFijos.toFixed(2)}</td>
+                <td>${point.detalleGastos.operativosViaje.toFixed(2)}</td>
+                <td>${point.detalleGastos.gastosViaje.toFixed(2)}</td>
                 <td>${point.detalleGastos.mantenimiento.toFixed(2)}</td>
+                <td>${point.detalleGastos.gastosFijos.toFixed(2)}</td>
                 <td>${point.detalleGastos.sueldoChofer.toFixed(2)}</td>
-                <td>${point.detalleGastos.comisionChofer.toFixed(2)}</td>
               </tr>
             ))}
             {(reporte?.series || []).length === 0 && (
               <tr>
-                <td colSpan={9}>No hay datos para el filtro seleccionado.</td>
+                <td colSpan={10}>No hay datos para el filtro seleccionado.</td>
               </tr>
             )}
           </tbody>
@@ -1620,47 +1628,53 @@ const Reportes: React.FC = () => {
 
       <div className="tabla-container">
         <div className="section-header-inline">
-          <h3>Gastos Documentales Fijos</h3>
+          <h3>Gastos Fijos (seguro, patente, ...)</h3>
           <button
             className="btn-rapido btn-rapido--accent"
-            onClick={exportGastosDocumentalesCsv}
-            disabled={loadingAdicionales || !(gastosDocumentales?.gastos || []).length}
+            onClick={exportGastosFijosCsv}
+            disabled={loadingAdicionales || !(gastosFijos?.gastos || []).length}
           >
             Exportar CSV
           </button>
         </div>
         {loadingAdicionales ? (
-          <p>Cargando gastos documentales...</p>
+          <p>Cargando gastos fijos...</p>
         ) : (
           <>
             <div className="operacion-resumen reportes-resumen-doble">
-              <span>Costo semanal: ${Number(gastosDocumentales?.resumenTotalSemanal || 0).toFixed(2)}</span>
-              <span>Costo actual cargado: ${Number(gastosDocumentales?.resumenTotalActual || 0).toFixed(2)}</span>
-              <span>Costo proyectado: ${Number(gastosDocumentales?.resumenTotalProyectado || 0).toFixed(2)}</span>
+              <span>Total anual: ${Number(gastosFijos?.resumenTotalAnual || 0).toFixed(2)}</span>
+              <span>Imputado al período: ${Number(gastosFijos?.resumenTotalPeriodo || 0).toFixed(2)}</span>
             </div>
             <table className="reportes-table">
               <thead>
                 <tr>
                   <th>Patente</th>
-                  <th>Documentos</th>
-                  <th>Costo Semanal</th>
-                  <th>Costo Actual</th>
-                  <th>Costo Proyectado</th>
+                  <th>Concepto</th>
+                  <th>Monto Anual</th>
+                  <th>Vigencia</th>
+                  <th>Imputado al Período</th>
                 </tr>
               </thead>
               <tbody>
-                {(gastosDocumentales?.gastos || []).map((item) => (
-                  <tr key={item.camionId}>
-                    <td>{item.patente || `Camión ${item.camionId}`}</td>
-                    <td>{item.cantidadDocumentos}</td>
-                    <td>${item.totalCostoSemanal.toFixed(2)}</td>
-                    <td>${item.totalCostoActual.toFixed(2)}</td>
-                    <td>${item.totalCostoProyectado.toFixed(2)}</td>
-                  </tr>
-                ))}
-                {(gastosDocumentales?.gastos || []).length === 0 && (
+                {(gastosFijos?.gastos || []).flatMap((item) =>
+                  item.items.map((gasto) => (
+                    <tr key={gasto.gastoFijoId}>
+                      <td>{item.patente || `Camión ${item.camionId}`}</td>
+                      <td>{gasto.concepto}</td>
+                      <td>
+                        {gasto.moneda === 'USD' ? 'US$' : '$'}
+                        {gasto.montoAnual.toFixed(2)}
+                      </td>
+                      <td>
+                        {formatDateForDisplay(gasto.vigenciaDesde)} – {gasto.vigenciaHasta ? formatDateForDisplay(gasto.vigenciaHasta) : 'sin vencimiento'}
+                      </td>
+                      <td>${gasto.costoPeriodo.toFixed(2)}</td>
+                    </tr>
+                  )),
+                )}
+                {(gastosFijos?.gastos || []).length === 0 && (
                   <tr>
-                    <td colSpan={5}>No hay gastos documentales para el filtro seleccionado.</td>
+                    <td colSpan={5}>No hay gastos fijos vigentes para el filtro seleccionado.</td>
                   </tr>
                 )}
               </tbody>
@@ -1787,7 +1801,8 @@ const Reportes: React.FC = () => {
               <span>Ingresos: ${Number(flujoCaja?.resumen.totalIngresos || 0).toFixed(2)}</span>
               <span>Egresos: ${Number(flujoCaja?.resumen.totalEgresos || 0).toFixed(2)}</span>
               <span>Resultado Neto: ${Number(flujoCaja?.resumen.resultadoNeto || 0).toFixed(2)}</span>
-              <span>Combustible (repostadas): ${Number(flujoCaja?.resumen.detalleEgresos.combustibleRepostadas || 0).toFixed(2)}</span>
+              <span>Combustible + otros: ${Number(flujoCaja?.resumen.detalleEgresos.operativosViaje || 0).toFixed(2)}</span>
+              <span>Gastos del viaje: ${Number(flujoCaja?.resumen.detalleEgresos.gastosViaje || 0).toFixed(2)}</span>
               <span>Mantenimiento: ${Number(flujoCaja?.resumen.detalleEgresos.mantenimiento || 0).toFixed(2)}</span>
               <span>Pagos choferes: ${Number(flujoCaja?.resumen.detalleEgresos.pagosChoferes || 0).toFixed(2)}</span>
             </div>
@@ -1798,11 +1813,11 @@ const Reportes: React.FC = () => {
                   <th>Ingresos</th>
                   <th>Egresos</th>
                   <th>Resultado Neto</th>
-                  <th>Combustible</th>
+                  <th>Combustible + Otros</th>
+                  <th>Gastos del Viaje</th>
                   <th>Mantenimiento</th>
                   <th>Pagos Choferes</th>
-                  <th>Operativos Viaje</th>
-                  <th>Documentos Fijos</th>
+                  <th>Gastos Fijos</th>
                 </tr>
               </thead>
               <tbody>
@@ -1812,11 +1827,11 @@ const Reportes: React.FC = () => {
                     <td>${item.ingresos.toFixed(2)}</td>
                     <td>${item.egresos.toFixed(2)}</td>
                     <td>${item.resultadoNeto.toFixed(2)}</td>
-                    <td>${item.detalleEgresos.combustibleRepostadas.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.operativosViaje.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.gastosViaje.toFixed(2)}</td>
                     <td>${item.detalleEgresos.mantenimiento.toFixed(2)}</td>
                     <td>${item.detalleEgresos.pagosChoferes.toFixed(2)}</td>
-                    <td>${item.detalleEgresos.operativosViaje.toFixed(2)}</td>
-                    <td>${item.detalleEgresos.documentosFijos.toFixed(2)}</td>
+                    <td>${item.detalleEgresos.gastosFijos.toFixed(2)}</td>
                   </tr>
                 ))}
                 {(flujoCaja?.series || []).length === 0 && (

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { Camion } from './camion.entity';
 import { Servicio } from './servicio.entity';
+import { GastoFijo } from './gasto-fijo.entity';
 import { Documento } from './documento.entity';
 import { Repostada } from './repostada.entity';
 import { MantenimientoTipo } from './mantenimiento-tipo.entity';
@@ -13,6 +14,8 @@ import { CamionesService } from './camiones.service';
 import { FotosVehiculoService } from './fotos-vehiculo.service';
 import { ServiciosController } from './servicios.controller';
 import { ServiciosService } from './servicios.service';
+import { GastosFijosController } from './gastos-fijos.controller';
+import { GastosFijosService } from './gastos-fijos.service';
 import { DocumentosController, DocumentosCamionesAlertasController } from './documentos.controller';
 import { DocumentosService } from './documentos.service';
 import { RepostadasController } from './repostadas.controller';
@@ -27,6 +30,7 @@ import { ConfiguracionVehicularService } from './configuracion-vehicular.service
     TypeOrmModule.forFeature([
       Camion,
       Servicio,
+      GastoFijo,
       Documento,
       Repostada,
       MantenimientoTipo,
@@ -38,6 +42,7 @@ import { ConfiguracionVehicularService } from './configuracion-vehicular.service
   controllers: [
     CamionesController,
     ServiciosController,
+    GastosFijosController,
     DocumentosController,
     DocumentosCamionesAlertasController,
     RepostadasController,
@@ -48,6 +53,7 @@ import { ConfiguracionVehicularService } from './configuracion-vehicular.service
     CamionesService,
     FotosVehiculoService,
     ServiciosService,
+    GastosFijosService,
     DocumentosService,
     RepostadasService,
     MantenimientoService,

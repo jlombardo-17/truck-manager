@@ -15,9 +15,10 @@ export interface DashboardResumen {
   viajesCompletados: number;
   detalleGastosDelMes: {
     operativosViaje: number;
+    gastosViaje: number;
     sueldos: number;
     mantenimiento: number;
-    documentosFijos: number;
+    gastosFijos: number;
   };
   mantenimientoPendiente: Array<{
     camionPlaca: string;
@@ -80,9 +81,10 @@ export const dashboardService = {
         viajesCompletados: Number(payload.viajesCompletados) || 0,
         detalleGastosDelMes: {
           operativosViaje: Number(payload.detalleGastosDelMes?.operativosViaje) || 0,
+          gastosViaje: Number(payload.detalleGastosDelMes?.gastosViaje) || 0,
           sueldos: Number(payload.detalleGastosDelMes?.sueldos) || 0,
           mantenimiento: Number(payload.detalleGastosDelMes?.mantenimiento) || 0,
-          documentosFijos: Number(payload.detalleGastosDelMes?.documentosFijos) || 0,
+          gastosFijos: Number(payload.detalleGastosDelMes?.gastosFijos) || 0,
         },
         mantenimientoPendiente: normalizeArrayResponse(payload.mantenimientoPendiente, 'mantenimientoPendiente'),
         documentosPorVencer: normalizeArrayResponse(payload.documentosPorVencer, 'documentosPorVencer'),
@@ -97,9 +99,10 @@ export const dashboardService = {
         viajesCompletados: 0,
         detalleGastosDelMes: {
           operativosViaje: 0,
+          gastosViaje: 0,
           sueldos: 0,
           mantenimiento: 0,
-          documentosFijos: 0,
+          gastosFijos: 0,
         },
         mantenimientoPendiente: [],
         documentosPorVencer: [],

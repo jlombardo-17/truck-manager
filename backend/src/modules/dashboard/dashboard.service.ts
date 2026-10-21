@@ -1,14 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
 import { Camion } from '../camiones/camion.entity';
 import { Chofer } from '../choferes/chofer.entity';
-import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
-import { Documento } from '../camiones/documento.entity';
 import { ChoferDocumento } from '../choferes/chofer-documento.entity';
 import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
-import { addDaysDateOnly, diffDaysDateOnly, toDateOnly, todayDateOnly } from '../../common/utils/date-only';
+import { addDaysDateOnly, diffDaysDateOnly, parseDateOnly, todayDateOnly } from '../../common/utils/date-only';
+import { ReportesService } from '../reportes/reportes.service';
 
 export interface DashboardResumen {
   ingresosDelMes: number;
@@ -16,11 +15,13 @@ export interface DashboardResumen {
   gananciaNetaDelMes: number;
   camionesActivos: number;
   viajesCompletados: number;
+  // Mismo criterio de gastos que Reportes; los sueldos son los pagos reales del período
   detalleGastosDelMes: {
     operativosViaje: number;
+    gastosViaje: number;
     sueldos: number;
     mantenimiento: number;
-    documentosFijos: number;
+    gastosFijos: number;
   };
   mantenimientoPendiente: Array<{
     camionPatente: string;
@@ -65,14 +66,11 @@ export class DashboardService {
     private camionesRepository: Repository<Camion>,
     @InjectRepository(Chofer)
     private choferesRepository: Repository<Chofer>,
-    @InjectRepository(MantenimientoRegistro)
-    private mantenimientoRepository: Repository<MantenimientoRegistro>,
-    @InjectRepository(Documento)
-    private documentosCamionRepository: Repository<Documento>,
     @InjectRepository(ChoferDocumento)
     private choferDocumentosRepository: Repository<ChoferDocumento>,
     @InjectRepository(ChoferSalarioPago)
     private salarioPagoRepository: Repository<ChoferSalarioPago>,
+    private reportesService: ReportesService,
   ) {}
 
   private toNumber(value: unknown): number {
@@ -100,39 +98,6 @@ export class DashboardService {
   private toId(value: unknown): number | null {
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }
-
-  private getDocumentoCoverageDays(documento: Documento): number {
-    if (!documento.fechaVencimiento || !documento.createdAt) {
-      return 365;
-    }
-
-    const start = toDateOnly(documento.createdAt);
-    const end = toDateOnly(documento.fechaVencimiento);
-    if (!start || !end) {
-      return 365;
-    }
-    const days = diffDaysDateOnly(start, end) + 1;
-    return days > 0 ? days : 365;
-  }
-
-  private getDaysInclusive(start: Date, end: Date): number {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(0, 0, 0, 0);
-    const diff = endDate.getTime() - startDate.getTime();
-    return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)) + 1);
-  }
-
-  private getProjectedDocumentCostForPeriod(documento: Documento, start: Date, end: Date): number {
-    const costo = this.toNumber(documento.costo);
-    if (costo <= 0) {
-      return 0;
-    }
-
-    const projectionDays = this.getDaysInclusive(start, end);
-    return (costo / this.getDocumentoCoverageDays(documento)) * projectionDays;
   }
 
   private async getTableColumns(tableName: string): Promise<Set<string>> {
@@ -189,7 +154,7 @@ export class DashboardService {
       return null;
     }
 
-    const parsed = new Date(value);
+    const parsed = parseDateOnly(value);
     if (Number.isNaN(parsed.getTime())) {
       return null;
     }
@@ -201,6 +166,30 @@ export class DashboardService {
     }
 
     return parsed;
+  }
+
+  /**
+   * Expresión SQL con la suma de comisiones/gastos listados en el viaje (no cancelados).
+   * Devuelve '0' si la tabla o sus columnas no existen (Railway sin migrar).
+   */
+  private async getGastosViajeSelect(viajeAlias: string): Promise<string> {
+    const viajeColumns = await this.getTableColumns('viajes');
+    const viajeIdColumn = this.pickColumn(viajeColumns, ['id']);
+    const comisionColumns = await this.getOptionalTableColumns('viajes_comisiones');
+    const comisionViajeIdColumn = this.pickOptionalColumn(comisionColumns, ['viaje_id', 'viajeId']);
+    const montoTotalColumn = this.pickOptionalColumn(comisionColumns, ['montoTotal', 'monto_total']);
+    const estadoColumn = this.pickOptionalColumn(comisionColumns, ['estado']);
+
+    if (!comisionViajeIdColumn || !montoTotalColumn) {
+      return '0';
+    }
+
+    const estadoFilter = estadoColumn ? ` AND LOWER(c.${estadoColumn}) <> 'cancelado'` : '';
+    return `COALESCE((
+      SELECT SUM(c.${montoTotalColumn})
+      FROM viajes_comisiones c
+      WHERE c.${comisionViajeIdColumn} = ${viajeAlias}.${viajeIdColumn}${estadoFilter}
+    ), 0)`;
   }
 
   private async getGastoSueldos(periodStart: Date, periodEnd: Date): Promise<number> {
@@ -268,17 +257,19 @@ export class DashboardService {
       const otrosGastosColumn = this.pickColumn(viajeColumns, ['otrosGastos', 'otros_gastos']);
       const estadoColumn = this.pickColumn(viajeColumns, ['estado']);
       const fechaInicioColumn = this.pickColumn(viajeColumns, ['fechaInicio', 'fecha_inicio']);
+      const gastosViajeSelect = await this.getGastosViajeSelect('viajes');
 
       const viajesMes = await this.safeQuery(
         'viajes de resumen',
-        [] as Array<{ valorViaje: unknown; costoCombustible: unknown; otrosGastos: unknown }>,
+        [] as Array<{ valorViaje: unknown; costoCombustible: unknown; otrosGastos: unknown; gastosViaje: unknown }>,
         async () => {
           const rows = await this.viajesRepository.query(
             `
               SELECT
                 ${valorViajeColumn} AS valorViaje,
                 ${costoCombustibleColumn} AS costoCombustible,
-                ${otrosGastosColumn} AS otrosGastos
+                ${otrosGastosColumn} AS otrosGastos,
+                ${gastosViajeSelect} AS gastosViaje
               FROM viajes
               WHERE LOWER(${estadoColumn}) = ?
                 AND ${fechaInicioColumn} >= ?
@@ -302,52 +293,32 @@ export class DashboardService {
         0,
       );
 
-      const mantenimientoColumns = await this.getOptionalTableColumns('mantenimiento_registros');
-      const fechaProgramaColumn = this.pickOptionalColumn(mantenimientoColumns, ['fechaPrograma', 'fecha_programa']);
-      const costoRealColumn = this.pickOptionalColumn(mantenimientoColumns, ['costoReal', 'costo_real']);
-
-      const gastosMantenimientoRows = fechaProgramaColumn && costoRealColumn
-        ? await this.safeQuery(
-            'mantenimiento de resumen',
-            [] as Array<{ costoReal: unknown }>,
-            async () => {
-              const rows = await this.mantenimientoRepository.query(
-                `
-                  SELECT ${costoRealColumn} AS costoReal
-                  FROM mantenimiento_registros
-                  WHERE ${fechaProgramaColumn} >= ?
-                    AND ${fechaProgramaColumn} <= ?
-                `,
-                [primerDia, ultimoDia],
-              );
-              return Array.isArray(rows) ? rows : [];
-            },
-          )
-        : [];
-
-      const gastoMantenimiento = gastosMantenimientoRows.reduce(
-        (sum, row) => sum + this.toNumber(row.costoReal),
+      const gastosCargadosViajes = viajesMes.reduce(
+        (sum, viaje) => sum + this.toNumber(viaje.gastosViaje),
         0,
       );
 
       const gastoSueldos = await this.getGastoSueldos(primerDia, ultimoDia);
 
-      const documentosCamion = await this.safeQuery(
-        'documentos de camion para prorrateo',
-        [] as Documento[],
-        async () => this.documentosCamionRepository.find(),
+      // Mantenimiento (servicios + registros) y gastos fijos prorrateados: mismo cálculo que Reportes
+      const costosCamion = await this.safeQuery(
+        'costos de camiones (mantenimiento y gastos fijos)',
+        new Map<number, { mantenimiento: number; gastosFijos: number }>(),
+        async () => this.reportesService.getCostosCamionPorPeriodo(primerDia, ultimoDia),
       );
-
-      const gastoDocumentosCamion = documentosCamion.reduce(
-        (sum, documento) => sum + this.getProjectedDocumentCostForPeriod(documento, primerDia, ultimoDia),
-        0,
-      );
+      let gastoMantenimiento = 0;
+      let gastoFijos = 0;
+      for (const costos of costosCamion.values()) {
+        gastoMantenimiento += costos.mantenimiento;
+        gastoFijos += costos.gastosFijos;
+      }
 
       const gastosDelMes =
         gastosOperativosViajes +
+        gastosCargadosViajes +
         gastoSueldos +
         gastoMantenimiento +
-        gastoDocumentosCamion;
+        gastoFijos;
 
       // Camiones activos: usar el estado operativo real del vehículo.
       const camionesActivos = await this.safeQuery(
@@ -396,9 +367,10 @@ export class DashboardService {
         viajesCompletados: viajesMes.length,
         detalleGastosDelMes: {
           operativosViaje: gastosOperativosViajes,
+          gastosViaje: gastosCargadosViajes,
           sueldos: gastoSueldos,
           mantenimiento: gastoMantenimiento,
-          documentosFijos: gastoDocumentosCamion,
+          gastosFijos: gastoFijos,
         },
         mantenimientoPendiente: [],
         documentosPorVencer: documentosFormato,
@@ -415,9 +387,10 @@ export class DashboardService {
         viajesCompletados: 0,
         detalleGastosDelMes: {
           operativosViaje: 0,
+          gastosViaje: 0,
           sueldos: 0,
           mantenimiento: 0,
-          documentosFijos: 0,
+          gastosFijos: 0,
         },
         mantenimientoPendiente: [],
         documentosPorVencer: [],
@@ -435,6 +408,7 @@ export class DashboardService {
     const kmRecorridosColumn = this.pickColumn(viajeColumns, ['kmRecorridos', 'kms_recorridos', 'km_recorridos']);
     const estadoColumn = this.pickColumn(viajeColumns, ['estado']);
     const fechaInicioColumn = this.pickColumn(viajeColumns, ['fechaInicio', 'fecha_inicio']);
+    const gastosViajeSelect = await this.getGastosViajeSelect('viajes');
 
     const viajesPorCamion = await this.viajesRepository.query(
       `
@@ -443,6 +417,7 @@ export class DashboardService {
           ${valorViajeColumn} AS valorViaje,
           ${costoCombustibleColumn} AS costoCombustible,
           ${otrosGastosColumn} AS otrosGastos,
+          ${gastosViajeSelect} AS gastosViaje,
           ${kmRecorridosColumn} AS kmRecorridos
         FROM viajes
         WHERE ${estadoColumn} = ?
@@ -496,45 +471,22 @@ export class DashboardService {
       camion.ingresos += this.toNumber(viaje.valorViaje);
       camion.gastosViaje +=
         this.toNumber(viaje.costoCombustible) +
-        this.toNumber(viaje.otrosGastos);
+        this.toNumber(viaje.otrosGastos) +
+        this.toNumber(viaje.gastosViaje);
       camion.kmRecorridos += this.toNumber(viaje.kmRecorridos);
       camion.viajesCompletos += 1;
     }
 
-    const mantenimientos = await this.mantenimientoRepository.find({
-      relations: ['camion'],
-      where: {
-        fechaPrograma: Between(primerDia, ultimoDia) as any,
-      },
-    });
-
-    // Agrupar gastos de mantenimiento por camión
-    const gastosMap = new Map<number, number>();
-
-    mantenimientos.forEach((m) => {
-      const camionId = m.camionId;
-      if (!gastosMap.has(camionId)) gastosMap.set(camionId, 0);
-      gastosMap.set(
-        camionId,
-        gastosMap.get(camionId) + this.toNumber(m.costoReal),
-      );
-    });
-
-    const documentosCamion = await this.documentosCamionRepository.find();
-
-    documentosCamion.forEach((documento) => {
-      const camionId = documento.camionId;
-      if (!gastosMap.has(camionId)) gastosMap.set(camionId, 0);
-      gastosMap.set(
-        camionId,
-        gastosMap.get(camionId) + this.getProjectedDocumentCostForPeriod(documento, primerDia, ultimoDia),
-      );
-    });
+    // Mantenimiento (servicios + registros) y gastos fijos prorrateados por camión, igual que Reportes
+    const costosCamion = camionesMap.size > 0
+      ? await this.reportesService.getCostosCamionPorPeriodo(primerDia, ultimoDia, Array.from(camionesMap.keys()))
+      : new Map<number, { mantenimiento: number; gastosFijos: number }>();
 
     // Calcular eficiencia
     const resultado: DesempenoCamion[] = Array.from(camionesMap.values()).map(
       (camion) => {
-        const gastos = camion.gastosViaje + (gastosMap.get(camion.id) || 0);
+        const costos = costosCamion.get(camion.id);
+        const gastos = camion.gastosViaje + (costos?.mantenimiento || 0) + (costos?.gastosFijos || 0);
         const ganancia = camion.ingresos - gastos;
         const eficiencia =
           camion.ingresos > 0 ? (ganancia / camion.ingresos) * 100 : 0;

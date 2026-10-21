@@ -175,10 +175,18 @@ const Dashboard: React.FC = () => {
               <h3>Desglose de Gastos del Mes</h3>
               <div className="cost-breakdown-grid">
                 <article className="cost-breakdown-card">
-                  <p className="cost-breakdown-label">Operativos de Viaje</p>
+                  <p className="cost-breakdown-label">Combustible + Otros</p>
                   <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.operativosViaje || 0)}</p>
                   <span className="cost-breakdown-share">
                     {formatPercentage(resumen.detalleGastosDelMes?.operativosViaje || 0, resumen.gastosDelMes || 0)} del total
+                  </span>
+                </article>
+
+                <article className="cost-breakdown-card">
+                  <p className="cost-breakdown-label">Gastos del Viaje</p>
+                  <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.gastosViaje || 0)}</p>
+                  <span className="cost-breakdown-share">
+                    {formatPercentage(resumen.detalleGastosDelMes?.gastosViaje || 0, resumen.gastosDelMes || 0)} del total
                   </span>
                 </article>
 
@@ -200,9 +208,9 @@ const Dashboard: React.FC = () => {
 
                 <article className="cost-breakdown-card">
                   <p className="cost-breakdown-label">Gastos Fijos</p>
-                  <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.documentosFijos || 0)}</p>
+                  <p className="cost-breakdown-value">{formatCurrency(resumen.detalleGastosDelMes?.gastosFijos || 0)}</p>
                   <span className="cost-breakdown-share">
-                    {formatPercentage(resumen.detalleGastosDelMes?.documentosFijos || 0, resumen.gastosDelMes || 0)} del total
+                    {formatPercentage(resumen.detalleGastosDelMes?.gastosFijos || 0, resumen.gastosDelMes || 0)} del total
                   </span>
                 </article>
               </div>

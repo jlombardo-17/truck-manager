@@ -17,12 +17,19 @@ describe('DashboardService', () => {
     getRawMany: jest.fn().mockResolvedValue(docs),
   });
 
-  const getCurrentMonthRange = () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    return { start, end };
-  };
+  const VIAJES_COLUMNS = [
+    { Field: 'id' },
+    { Field: 'camion_id' },
+    { Field: 'chofer_id' },
+    { Field: 'valorViaje' },
+    { Field: 'costoCombustible' },
+    { Field: 'otrosGastos' },
+    { Field: 'kmRecorridos' },
+    { Field: 'estado' },
+    { Field: 'fechaInicio' },
+  ];
+
+  const COMISIONES_COLUMNS = [{ Field: 'viaje_id' }, { Field: 'montoTotal' }, { Field: 'estado' }];
 
   const createService = () => {
     const viajesRepository = {
@@ -38,12 +45,6 @@ describe('DashboardService', () => {
       find: jest.fn(),
       findBy: jest.fn(),
     };
-    const mantenimientoRepository = {
-      find: jest.fn(),
-    };
-    const documentosCamionRepository = {
-      find: jest.fn(),
-    };
     const choferDocumentosRepository = {
       createQueryBuilder: jest.fn(),
     };
@@ -51,214 +52,167 @@ describe('DashboardService', () => {
       find: jest.fn(),
       query: jest.fn(),
     };
+    const reportesService = {
+      getCostosCamionPorPeriodo: jest.fn().mockResolvedValue(new Map()),
+    };
 
     const service = new DashboardService(
       viajesRepository as any,
       camionesRepository as any,
       choferesRepository as any,
-      mantenimientoRepository as any,
-      documentosCamionRepository as any,
       choferDocumentosRepository as any,
       salarioPagoRepository as any,
+      reportesService as any,
     );
+
+    camionesRepository.createQueryBuilder.mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      getCount: jest.fn().mockResolvedValue(1),
+    });
+    choferDocumentosRepository.createQueryBuilder.mockReturnValue(createQueryBuilderMock());
 
     return {
       service,
       viajesRepository,
       camionesRepository,
       choferesRepository,
-      mantenimientoRepository,
-      documentosCamionRepository,
-      choferDocumentosRepository,
       salarioPagoRepository,
+      reportesService,
     };
   };
 
-  it('calcula el resumen mensual usando gastos operativos, sueldos pagados, mantenimiento y documentos', async () => {
-    const {
-      service,
-      viajesRepository,
-      camionesRepository,
-      mantenimientoRepository,
-      documentosCamionRepository,
-      choferDocumentosRepository,
-      salarioPagoRepository,
-    } = createService();
-    const { start, end } = getCurrentMonthRange();
-
-    viajesRepository.find
-      .mockResolvedValueOnce([
-        {
-          camionId: 1,
-          valorViaje: '1000',
-          costoCombustible: '100',
-          otrosGastos: '50',
-        },
-      ]);
+  /** Simula SHOW COLUMNS y devuelve `viajes` para cualquier SELECT sobre viajes. */
+  const mockViajesQuery = (
+    viajesRepository: { query: jest.Mock },
+    viajes: any[],
+    options: { pagosColumns?: boolean; comisionesColumns?: boolean } = {},
+  ) => {
+    const { pagosColumns = true, comisionesColumns = true } = options;
     viajesRepository.query.mockImplementation((sql: string) => {
       if (sql.includes('SHOW COLUMNS FROM choferes_salarios_pagos')) {
-        return Promise.resolve([
-          { Field: 'fecha_pago' },
-          { Field: 'monto' },
-        ]);
+        return pagosColumns
+          ? Promise.resolve([{ Field: 'fecha_pago' }, { Field: 'monto' }])
+          : Promise.reject(new Error('Table "choferes_salarios_pagos" doesn\'t exist'));
       }
-
-      return Promise.resolve([]);
+      if (sql.includes('SHOW COLUMNS FROM viajes_comisiones')) {
+        return comisionesColumns
+          ? Promise.resolve(COMISIONES_COLUMNS)
+          : Promise.reject(new Error('Table "viajes_comisiones" doesn\'t exist'));
+      }
+      if (sql.includes('SHOW COLUMNS FROM viajes')) {
+        return Promise.resolve(VIAJES_COLUMNS);
+      }
+      return Promise.resolve(viajes);
     });
-    salarioPagoRepository.query.mockResolvedValue([{ monto: '250' }]);
+  };
 
-    camionesRepository.createQueryBuilder.mockReturnValue({
-      where: jest.fn().mockReturnThis(),
-      getCount: jest.fn().mockResolvedValue(1),
-    });
-    mantenimientoRepository.find.mockResolvedValue([{ camionId: 1, costoReal: '200' }]);
-    documentosCamionRepository.find.mockResolvedValue([
-      { camionId: 1, costo: '310', createdAt: start, fechaVencimiento: end },
+  it('calcula el resumen con gastos del viaje, sueldos pagados, mantenimiento y gastos fijos', async () => {
+    const { service, viajesRepository, salarioPagoRepository, reportesService } = createService();
+
+    mockViajesQuery(viajesRepository, [
+      { valorViaje: '1000', costoCombustible: '100', otrosGastos: '50', gastosViaje: '75' },
     ]);
-    choferDocumentosRepository.createQueryBuilder.mockReturnValue(createQueryBuilderMock());
-
-    const resumen = await service.getResumen(
-      start.toISOString().slice(0, 10),
-      end.toISOString().slice(0, 10),
+    salarioPagoRepository.query.mockResolvedValue([{ monto: '250' }]);
+    reportesService.getCostosCamionPorPeriodo.mockResolvedValue(
+      new Map([
+        [1, { mantenimiento: 200, gastosFijos: 100 }],
+        [2, { mantenimiento: 0, gastosFijos: 10 }],
+      ]),
     );
 
+    const resumen = await service.getResumen('2026-10-01', '2026-10-31');
+
     expect(resumen.ingresosDelMes).toBe(1000);
-    expect(resumen.gastosDelMes).toBe(910);
-    expect(resumen.gananciaNetaDelMes).toBe(90);
-    expect(resumen.camionesActivos).toBe(1);
-    expect(resumen.viajesCompletados).toBe(1);
-    expect(resumen.detalleGastosDelMes).toMatchObject({
+    expect(resumen.detalleGastosDelMes).toEqual({
       operativosViaje: 150,
+      gastosViaje: 75,
       sueldos: 250,
       mantenimiento: 200,
-      documentosFijos: 310,
+      gastosFijos: 110,
     });
+    expect(resumen.gastosDelMes).toBe(785);
+    expect(resumen.gananciaNetaDelMes).toBe(215);
+    expect(resumen.camionesActivos).toBe(1);
+    expect(resumen.viajesCompletados).toBe(1);
+
+    // El rango incluye el día completo en hora local
+    const [desde, hasta] = reportesService.getCostosCamionPorPeriodo.mock.calls[0];
+    expect(desde).toEqual(new Date(2026, 9, 1, 0, 0, 0, 0));
+    expect(hasta).toEqual(new Date(2026, 9, 31, 23, 59, 59, 999));
   });
 
-  it('no falla si Railway todavia no tiene la tabla o columnas de pagos de salarios', async () => {
-    const {
-      service,
+  it('excluye comisiones canceladas en la subconsulta de gastos del viaje', async () => {
+    const { service, viajesRepository } = createService();
+    mockViajesQuery(viajesRepository, []);
+
+    await service.getResumen('2026-10-01', '2026-10-31');
+
+    const selectViajes = viajesRepository.query.mock.calls
+      .map(([sql]) => sql as string)
+      .find((sql) => sql.includes('FROM viajes') && !sql.includes('SHOW COLUMNS'));
+    expect(selectViajes).toContain('FROM viajes_comisiones c');
+    expect(selectViajes).toContain("<> 'cancelado'");
+  });
+
+  it('no falla si Railway todavia no tiene las tablas de pagos de salarios ni comisiones', async () => {
+    const { service, viajesRepository, reportesService } = createService();
+
+    mockViajesQuery(
       viajesRepository,
-      camionesRepository,
-      mantenimientoRepository,
-      documentosCamionRepository,
-      choferDocumentosRepository,
-    } = createService();
-
-    viajesRepository.find.mockResolvedValue([
-      {
-        camionId: 1,
-        valorViaje: '1000',
-        costoCombustible: '100',
-        otrosGastos: '50',
-      },
-    ]);
-    viajesRepository.query.mockImplementation((sql: string) => {
-      if (sql.includes('SHOW COLUMNS FROM choferes_salarios_pagos')) {
-        return Promise.reject(new Error('Table \"choferes_salarios_pagos\" doesn\'t exist'));
-      }
-
-      return Promise.resolve([]);
-    });
-
-    camionesRepository.createQueryBuilder.mockReturnValue({
-      where: jest.fn().mockReturnThis(),
-      getCount: jest.fn().mockResolvedValue(1),
-    });
-    mantenimientoRepository.find.mockResolvedValue([{ camionId: 1, costoReal: '200' }]);
-    documentosCamionRepository.find.mockResolvedValue([]);
-    choferDocumentosRepository.createQueryBuilder.mockReturnValue(createQueryBuilderMock());
+      [{ valorViaje: '1000', costoCombustible: '100', otrosGastos: '50', gastosViaje: 0 }],
+      { pagosColumns: false, comisionesColumns: false },
+    );
+    reportesService.getCostosCamionPorPeriodo.mockResolvedValue(new Map([[1, { mantenimiento: 200, gastosFijos: 0 }]]));
 
     const resumen = await service.getResumen('2026-03-15', '2026-04-15');
 
     expect(resumen.ingresosDelMes).toBe(1000);
     expect(resumen.detalleGastosDelMes.sueldos).toBe(0);
+    expect(resumen.detalleGastosDelMes.gastosViaje).toBe(0);
     expect(resumen.gastosDelMes).toBe(350);
     expect(resumen.gananciaNetaDelMes).toBe(650);
   });
 
-  it('calcula el desempeño de camiones con costos documentales proyectados para el mes', async () => {
-    const { service, viajesRepository, camionesRepository, mantenimientoRepository, documentosCamionRepository } =
-      createService();
-    const { start, end } = getCurrentMonthRange();
+  it('calcula el desempeño de camiones con gastos del viaje, mantenimiento y gastos fijos del camión', async () => {
+    const { service, viajesRepository, camionesRepository, reportesService } = createService();
 
-    viajesRepository.query.mockImplementation((sql: string) => {
-      if (sql.includes('SHOW COLUMNS FROM viajes')) {
-        return Promise.resolve([
-          { Field: 'camion_id' },
-          { Field: 'valorViaje' },
-          { Field: 'costoCombustible' },
-          { Field: 'otrosGastos' },
-          { Field: 'kmRecorridos' },
-          { Field: 'estado' },
-          { Field: 'fechaInicio' },
-        ]);
-      }
-
-      return Promise.resolve([
-        {
-          camionId: 1,
-          valorViaje: '1000',
-          costoCombustible: '100',
-          otrosGastos: '50',
-          kmRecorridos: '250',
-        },
-      ]);
-    });
-
-    camionesRepository.findBy.mockResolvedValue([{ id: 1, patente: 'ABC123' }]);
-    mantenimientoRepository.find.mockResolvedValue([{ camionId: 1, costoReal: '200' }]);
-    documentosCamionRepository.find.mockResolvedValue([
-      { camionId: 1, costo: '310', createdAt: start, fechaVencimiento: end },
+    mockViajesQuery(viajesRepository, [
+      {
+        camionId: 1,
+        valorViaje: '1000',
+        costoCombustible: '100',
+        otrosGastos: '50',
+        gastosViaje: '40',
+        kmRecorridos: '250',
+      },
     ]);
+    camionesRepository.findBy.mockResolvedValue([{ id: 1, patente: 'ABC123' }]);
+    reportesService.getCostosCamionPorPeriodo.mockResolvedValue(new Map([[1, { mantenimiento: 200, gastosFijos: 310 }]]));
 
-    const [camion] = await service.getDesempenoCamiones(
-      start.toISOString().slice(0, 10),
-      end.toISOString().slice(0, 10),
-    );
+    const [camion] = await service.getDesempenoCamiones('2026-10-01', '2026-10-31');
 
     expect(camion).toMatchObject({
       id: 1,
       patente: 'ABC123',
       ingresos: 1000,
-      gastos: 660,
+      gastos: 700,
       kmRecorridos: 250,
       viajesCompletos: 1,
     });
-    expect(camion.eficiencia).toBe(34);
-
+    expect(camion.eficiencia).toBe(30);
+    expect(reportesService.getCostosCamionPorPeriodo.mock.calls[0][2]).toEqual([1]);
   });
 
   it('calcula el desempeño de choferes usando nombre y apellido del repositorio de choferes', async () => {
     const { service, viajesRepository, choferesRepository } = createService();
 
-    viajesRepository.query.mockImplementation((sql: string) => {
-      if (sql.includes('SHOW COLUMNS FROM viajes_comisiones')) {
-        return Promise.resolve([
-          { Field: 'viaje_id' },
-          { Field: 'montoTotal' },
-        ]);
-      }
-
-      if (sql.includes('SHOW COLUMNS FROM viajes')) {
-        return Promise.resolve([
-          { Field: 'id' },
-          { Field: 'chofer_id' },
-          { Field: 'valorViaje' },
-          { Field: 'estado' },
-          { Field: 'fechaInicio' },
-        ]);
-      }
-
-      return Promise.resolve([
-        {
-          choferId: 1,
-          valorViaje: '1000',
-          comisionesTotal: '150',
-        },
-      ]);
-    });
-
+    mockViajesQuery(viajesRepository, [
+      {
+        choferId: 1,
+        valorViaje: '1000',
+        comisionesTotal: '150',
+      },
+    ]);
     choferesRepository.findBy.mockResolvedValue([{ id: 1, nombre: 'Matias', apellido: 'Velazquez' }]);
 
     const [chofer] = await service.getDesempenoChoferes();

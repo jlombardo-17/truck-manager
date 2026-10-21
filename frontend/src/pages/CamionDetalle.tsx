@@ -20,6 +20,7 @@ import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
 import EstadoBadge from '../components/EstadoBadge';
 import ConfiguracionVehicularTab from '../components/ConfiguracionVehicularTab';
+import GastosFijosSection from '../components/GastosFijosSection';
 import CamionFotoCard from '../components/CamionFotoCard';
 import { estadoCamionLabel, estadoCamionTono } from '../utils/estadoCamion';
 import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue, getDaysUntil, parseDatePreservingDay } from '../utils/dateUtils';
@@ -684,6 +685,12 @@ const CamionDetalle: React.FC = () => {
           </>
         )}
       </section>
+
+      <GastosFijosSection
+        camionId={camionId}
+        collapsed={!!collapsed['gastos-fijos']}
+        onToggle={() => toggleSection('gastos-fijos')}
+      />
 
       {/* Historial de Repostadas */}
       <section className="info-section">

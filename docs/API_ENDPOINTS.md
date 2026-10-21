@@ -652,6 +652,18 @@ Response (200):
 
 ## 📈 Reportes (`/reportes`)
 
+**Criterio de "Gastos"** (común a rentabilidad, comparativa, ingresos mensuales y flujo de caja):
+
+| Componente | Origen |
+|---|---|
+| `operativosViaje` | `costoCombustible` + `otrosGastos` del viaje |
+| `gastosViaje` | Comisiones/gastos listados en el viaje (`viajes_comisiones.montoTotal`, excepto `cancelado`) |
+| `sueldoChofer` | Sueldo base prorrateado de los choferes con viajes en el período (en flujo de caja: pagos reales) |
+| `mantenimiento` | Servicios del camión (USD → UYU) + registros de mantenimiento, por fecha |
+| `gastosFijos` | Gastos fijos anuales prorrateados por día (`/camiones/:id/gastos-fijos`) |
+
+Las repostadas **no** se suman (el combustible ya está en cada viaje). `desde`/`hasta` (`YYYY-MM-DD`) incluyen el día completo.
+
 ### Rentabilidad
 ```http
 GET /reportes/rentabilidad?granularidad=mensual&desde=2026-01-01&hasta=2026-03-31&camionIds=1,2
@@ -678,11 +690,13 @@ Response (200):
       "gastos": 4800000,
       "gananciaNeta": 11200000,
       "kmRecorridos": 8500,
+      "cantidadViajes": 12,
       "detalleGastos": {
         "operativosViaje": 2000000,
-        "comisionChofer": 1500000,
+        "gastosViaje": 1500000,
         "sueldoChofer": 800000,
-        "mantenimiento": 500000
+        "mantenimiento": 500000,
+        "gastosFijos": 0
       }
     }
   ]
@@ -880,6 +894,30 @@ Content-Type: application/json
 
 Response (201):
 { ... servicio creado ... }
+```
+
+---
+
+## 📅 Gastos Fijos (`/camiones/:id/gastos-fijos`)
+
+Costos fijos anuales del camión (seguro, patente, otro). Los reportes los prorratean por día (`montoAnual / 365`) dentro de la vigencia; sin `vigenciaHasta` se consideran vigentes indefinidamente. Los montos en USD se convierten a UYU con la cotización del día.
+
+```http
+GET    /camiones/:id/gastos-fijos
+GET    /camiones/:id/gastos-fijos/:gastoFijoId
+POST   /camiones/:id/gastos-fijos
+PUT    /camiones/:id/gastos-fijos/:gastoFijoId
+DELETE /camiones/:id/gastos-fijos/:gastoFijoId
+Authorization: Bearer <token>
+
+{
+  "tipo": "seguro",            // seguro | patente | otro
+  "concepto": "Seguro BSE",
+  "montoAnual": 120000,
+  "moneda": "UYU",             // UYU | USD
+  "vigenciaDesde": "2026-01-01",
+  "vigenciaHasta": "2026-12-31" // opcional
+}
 ```
 
 ---

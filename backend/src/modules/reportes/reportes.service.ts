@@ -5,10 +5,11 @@ import { Viaje } from '../viajes/viaje.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
 import { Chofer } from '../choferes/chofer.entity';
 import { Camion } from '../camiones/camion.entity';
-import { Documento } from '../camiones/documento.entity';
-import { Repostada } from '../camiones/repostada.entity';
+import { Servicio } from '../camiones/servicio.entity';
+import { GastoFijo } from '../camiones/gasto-fijo.entity';
 import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
-import { parseDateOnly } from '../../common/utils/date-only';
+import { parseDateOnly, toDateOnly } from '../../common/utils/date-only';
+import { getUsdUyuRateInfo } from '../../common/utils/usd-uyu-rate';
 
 type Granularidad = 'diaria' | 'semanal' | 'mensual';
 type GranularidadOperacion = 'diaria' | 'semanal' | 'mensual';
@@ -22,13 +23,23 @@ interface RentabilidadFilters {
   usarFechaPago?: boolean;
 }
 
+/**
+ * Criterio de "Gastos" para todos los reportes:
+ * - operativosViaje: combustible + otros gastos cargados en el viaje
+ * - gastosViaje: comisiones/gastos listados en el viaje (no cancelados)
+ * - sueldoChofer: sueldo base prorrateado de los choferes con viajes en el período
+ * - mantenimiento: servicios del camión + registros de mantenimiento (por fecha, sin viaje)
+ * - gastosFijos: gastos fijos anuales (seguro, patente, ...) prorrateados por día
+ * Las repostadas no se suman: el combustible ya está cargado en cada viaje.
+ */
 interface BucketAccumulator {
   ingresos: number;
+  cantidadViajes: number;
   gastosOperativos: number;
-  gastosComisionChofer: number;
+  gastosViaje: number;
   gastosSueldoChofer: number;
   gastosMantenimiento: number;
-  gastosDocumentosFijos: number;
+  gastosFijos: number;
   kmRecorridos: number;
   choferIds: Set<number>;
 }
@@ -37,6 +48,30 @@ interface OperacionBucket {
   kms: number;
   toneladas: number;
 }
+
+interface CostoMantenimiento {
+  camionId: number;
+  patente: string;
+  origen: 'servicio' | 'mantenimiento';
+  concepto: string;
+  fecha: string;
+  costo: number;
+  estado: string;
+}
+
+export interface CostosCamionPeriodo {
+  mantenimiento: number;
+  gastosFijos: number;
+}
+
+interface GastoFijoProrrateable {
+  gastoFijo: GastoFijo;
+  montoAnualUyu: number;
+  vigenciaInicio: Date;
+  vigenciaFin: Date | null;
+}
+
+const DIAS_ANIO = 365;
 
 @Injectable()
 export class ReportesService {
@@ -49,10 +84,10 @@ export class ReportesService {
     private readonly choferRepository: Repository<Chofer>,
     @InjectRepository(Camion)
     private readonly camionRepository: Repository<Camion>,
-    @InjectRepository(Documento)
-    private readonly documentoRepository: Repository<Documento>,
-    @InjectRepository(Repostada)
-    private readonly repostadaRepository: Repository<Repostada>,
+    @InjectRepository(Servicio)
+    private readonly servicioRepository: Repository<Servicio>,
+    @InjectRepository(GastoFijo)
+    private readonly gastoFijoRepository: Repository<GastoFijo>,
     @InjectRepository(ChoferSalarioPago)
     private readonly salarioPagoRepository: Repository<ChoferSalarioPago>,
   ) {}
@@ -81,10 +116,10 @@ export class ReportesService {
         mes: string;
         ingresosViajes: number;
         egresosOperativosViaje: number;
-        egresosCombustibleRepostadas: number;
+        egresosGastosViaje: number;
         egresosMantenimiento: number;
         egresosPagosChoferes: number;
-        egresosDocumentosFijos: number;
+        egresosGastosFijos: number;
       }
     >();
 
@@ -93,10 +128,10 @@ export class ReportesService {
         mes: this.formatLabel(key, 'mensual'),
         ingresosViajes: 0,
         egresosOperativosViaje: 0,
-        egresosCombustibleRepostadas: 0,
+        egresosGastosViaje: 0,
         egresosMantenimiento: 0,
         egresosPagosChoferes: 0,
-        egresosDocumentosFijos: 0,
+        egresosGastosFijos: 0,
       });
     }
 
@@ -111,7 +146,8 @@ export class ReportesService {
 
       const item = flujoPorMes.get(key)!;
       item.ingresosViajes += this.getIngresoViajeUyu(viaje);
-      item.egresosOperativosViaje += this.toNumber(viaje.otrosGastos);
+      item.egresosOperativosViaje += this.getGastosOperativosViaje(viaje);
+      item.egresosGastosViaje += this.getGastosCargadosViaje(viaje);
 
       if (viaje.camionId) viajesCamionIds.add(viaje.camionId);
       if (viaje.choferId) viajesChoferIds.add(viaje.choferId);
@@ -131,65 +167,28 @@ export class ReportesService {
           ? Array.from(viajesChoferIds)
           : undefined;
 
-    const repostadasQuery = this.repostadaRepository
-      .createQueryBuilder('repostada')
-      .where('repostada.fechaRepostada BETWEEN :desde AND :hasta', { desde, hasta });
-
-    if (effectiveCamionIds && effectiveCamionIds.length > 0) {
-      repostadasQuery.andWhere('repostada.camionId IN (:...camionIds)', {
-        camionIds: effectiveCamionIds,
-      });
-    }
-
-    const repostadas = await repostadasQuery.getMany();
-    for (const repostada of repostadas) {
-      const key = this.toBucketKey(parseDateOnly(repostada.fechaRepostada), 'mensual');
-      if (!flujoPorMes.has(key)) {
-        continue;
+    const hasEffectiveCamionFilter = effectiveCamionIds !== undefined;
+    if (!hasEffectiveCamionFilter || effectiveCamionIds.length > 0) {
+      const costosMantenimiento = await this.getCostosMantenimiento(desde, hasta, effectiveCamionIds);
+      for (const costo of costosMantenimiento) {
+        const key = this.toBucketKey(parseDateOnly(costo.fecha), 'mensual');
+        const item = flujoPorMes.get(key);
+        if (item) {
+          item.egresosMantenimiento += costo.costo;
+        }
       }
 
-      const costoRepostada =
-        this.toNumber(repostada.costo) ||
-        this.toNumber(repostada.litros) * this.toNumber(repostada.precioLitro);
+      const gastosFijos = await this.getGastosFijosProrrateables(effectiveCamionIds);
+      for (const key of monthKeys) {
+        const { start, end } = this.getBucketDateRange(key, 'mensual');
+        const periodStart = new Date(Math.max(start.getTime(), desde.getTime()));
+        const periodEnd = new Date(Math.min(end.getTime(), hasta.getTime()));
+        if (periodStart > periodEnd) {
+          continue;
+        }
 
-      if (costoRepostada <= 0) {
-        continue;
+        flujoPorMes.get(key)!.egresosGastosFijos += this.sumGastosFijosForPeriod(gastosFijos, periodStart, periodEnd);
       }
-
-      flujoPorMes.get(key)!.egresosCombustibleRepostadas += costoRepostada;
-    }
-
-    const mantenimientoQuery = this.mantenimientoRepository
-      .createQueryBuilder('mantenimiento')
-      .where('(mantenimiento.fechaRealizado BETWEEN :desde AND :hasta OR mantenimiento.fechaPrograma BETWEEN :desde AND :hasta)', {
-        desde,
-        hasta,
-      });
-
-    if (effectiveCamionIds && effectiveCamionIds.length > 0) {
-      mantenimientoQuery.andWhere('mantenimiento.camionId IN (:...camionIds)', {
-        camionIds: effectiveCamionIds,
-      });
-    }
-
-    const mantenimientos = await mantenimientoQuery.getMany();
-    for (const mantenimiento of mantenimientos) {
-      const fecha = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
-      if (!fecha) {
-        continue;
-      }
-
-      const key = this.toBucketKey(parseDateOnly(fecha), 'mensual');
-      if (!flujoPorMes.has(key)) {
-        continue;
-      }
-
-      const costo = this.toNumber(mantenimiento.costoReal);
-      if (costo <= 0) {
-        continue;
-      }
-
-      flujoPorMes.get(key)!.egresosMantenimiento += costo;
     }
 
     const pagosQuery = this.salarioPagoRepository
@@ -218,41 +217,15 @@ export class ReportesService {
       flujoPorMes.get(key)!.egresosPagosChoferes += monto;
     }
 
-    const whereDocumentos: any = {};
-    if (effectiveCamionIds && effectiveCamionIds.length > 0) {
-      whereDocumentos.camionId = In(effectiveCamionIds);
-    }
-    const documentos = await this.documentoRepository.find({ where: whereDocumentos });
-    for (const documento of documentos) {
-      for (const key of monthKeys) {
-        const bucket = flujoPorMes.get(key);
-        if (!bucket) continue;
-
-        const { start, end } = this.getBucketDateRange(key, 'mensual');
-        const periodStart = new Date(Math.max(start.getTime(), desde.getTime()));
-        const periodEnd = new Date(Math.min(end.getTime(), hasta.getTime()));
-        if (periodStart > periodEnd) {
-          continue;
-        }
-
-        const projectedCost = this.getDocumentoProjectedCostForPeriod(documento, periodStart, periodEnd);
-        if (projectedCost <= 0) {
-          continue;
-        }
-
-        bucket.egresosDocumentosFijos += projectedCost;
-      }
-    }
-
     const series = monthKeys
       .map((key) => {
         const item = flujoPorMes.get(key)!;
         const totalEgresos =
           item.egresosOperativosViaje +
-          item.egresosCombustibleRepostadas +
+          item.egresosGastosViaje +
           item.egresosMantenimiento +
           item.egresosPagosChoferes +
-          item.egresosDocumentosFijos;
+          item.egresosGastosFijos;
 
         return {
           mes: item.mes,
@@ -261,10 +234,10 @@ export class ReportesService {
           resultadoNeto: this.round2(item.ingresosViajes - totalEgresos),
           detalleEgresos: {
             operativosViaje: this.round2(item.egresosOperativosViaje),
-            combustibleRepostadas: this.round2(item.egresosCombustibleRepostadas),
+            gastosViaje: this.round2(item.egresosGastosViaje),
             mantenimiento: this.round2(item.egresosMantenimiento),
             pagosChoferes: this.round2(item.egresosPagosChoferes),
-            documentosFijos: this.round2(item.egresosDocumentosFijos),
+            gastosFijos: this.round2(item.egresosGastosFijos),
           },
         };
       })
@@ -276,10 +249,10 @@ export class ReportesService {
         acc.totalEgresos += item.egresos;
         acc.resultadoNeto += item.resultadoNeto;
         acc.detalleEgresos.operativosViaje += item.detalleEgresos.operativosViaje;
-        acc.detalleEgresos.combustibleRepostadas += item.detalleEgresos.combustibleRepostadas;
+        acc.detalleEgresos.gastosViaje += item.detalleEgresos.gastosViaje;
         acc.detalleEgresos.mantenimiento += item.detalleEgresos.mantenimiento;
         acc.detalleEgresos.pagosChoferes += item.detalleEgresos.pagosChoferes;
-        acc.detalleEgresos.documentosFijos += item.detalleEgresos.documentosFijos;
+        acc.detalleEgresos.gastosFijos += item.detalleEgresos.gastosFijos;
         return acc;
       },
       {
@@ -288,18 +261,18 @@ export class ReportesService {
         resultadoNeto: 0,
         detalleEgresos: {
           operativosViaje: 0,
-          combustibleRepostadas: 0,
+          gastosViaje: 0,
           mantenimiento: 0,
           pagosChoferes: 0,
-          documentosFijos: 0,
+          gastosFijos: 0,
         },
       },
     );
 
     return {
       filtrosAplicados: {
-        desde: desde.toISOString().split('T')[0],
-        hasta: hasta.toISOString().split('T')[0],
+        desde: toDateOnly(desde),
+        hasta: toDateOnly(hasta),
         camionIds: filters.camionIds,
         choferIds: filters.choferIds,
       },
@@ -309,10 +282,10 @@ export class ReportesService {
         resultadoNeto: this.round2(resumen.resultadoNeto),
         detalleEgresos: {
           operativosViaje: this.round2(resumen.detalleEgresos.operativosViaje),
-          combustibleRepostadas: this.round2(resumen.detalleEgresos.combustibleRepostadas),
+          gastosViaje: this.round2(resumen.detalleEgresos.gastosViaje),
           mantenimiento: this.round2(resumen.detalleEgresos.mantenimiento),
           pagosChoferes: this.round2(resumen.detalleEgresos.pagosChoferes),
-          documentosFijos: this.round2(resumen.detalleEgresos.documentosFijos),
+          gastosFijos: this.round2(resumen.detalleEgresos.gastosFijos),
         },
       },
       series,
@@ -330,6 +303,21 @@ export class ReportesService {
     }
 
     return keys;
+  }
+
+  private getBucketKeysInRange(desde: Date, hasta: Date, granularidad: Granularidad): string[] {
+    if (granularidad === 'mensual') {
+      return this.getMonthlyKeysInRange(desde, hasta);
+    }
+
+    const keys = new Set<string>();
+    const cursor = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+    while (cursor <= hasta) {
+      keys.add(this.toBucketKey(cursor, granularidad));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return Array.from(keys);
   }
 
   async getRentabilidad(filters: Partial<RentabilidadFilters>) {
@@ -357,16 +345,12 @@ export class ReportesService {
     for (const viaje of viajes) {
       const key = this.toBucketKey(viaje.fechaInicio, granularidad);
       const bucket = this.ensureBucket(buckets, key);
-      const ingreso = this.getIngresoViajeUyu(viaje);
-      const gastoCombustible = this.toNumber(viaje.costoCombustible);
-      const otrosGastos = this.toNumber(viaje.otrosGastos);
-      const kmRecorridos = this.toNumber(viaje.kmRecorridos);
-      const porcentajeComision = this.toNumber(viaje.chofer?.porcentajeComision);
 
-      bucket.ingresos += ingreso;
-      bucket.gastosOperativos += gastoCombustible + otrosGastos;
-      bucket.gastosComisionChofer += (ingreso * porcentajeComision) / 100;
-      bucket.kmRecorridos += kmRecorridos;
+      bucket.ingresos += this.getIngresoViajeUyu(viaje);
+      bucket.cantidadViajes += 1;
+      bucket.gastosOperativos += this.getGastosOperativosViaje(viaje);
+      bucket.gastosViaje += this.getGastosCargadosViaje(viaje);
+      bucket.kmRecorridos += this.toNumber(viaje.kmRecorridos);
 
       if (viaje.choferId) {
         bucket.choferIds.add(viaje.choferId);
@@ -379,17 +363,17 @@ export class ReportesService {
 
     await this.addSueldoToBuckets(buckets, choferesById, granularidad);
     await this.addMantenimientoToBuckets(buckets, parsedFilters);
-    await this.addDocumentosFijosToBuckets(buckets, parsedFilters);
+    await this.addGastosFijosToBuckets(buckets, parsedFilters);
 
     const series = Array.from(buckets.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, bucket]) => {
         const gastosTotales =
           bucket.gastosOperativos +
-          bucket.gastosComisionChofer +
+          bucket.gastosViaje +
           bucket.gastosSueldoChofer +
           bucket.gastosMantenimiento +
-          bucket.gastosDocumentosFijos;
+          bucket.gastosFijos;
         const gananciaNeta = bucket.ingresos - gastosTotales;
 
         return {
@@ -399,12 +383,13 @@ export class ReportesService {
           gastos: this.round2(gastosTotales),
           gananciaNeta: this.round2(gananciaNeta),
           kmRecorridos: this.round2(bucket.kmRecorridos),
+          cantidadViajes: bucket.cantidadViajes,
           detalleGastos: {
             operativosViaje: this.round2(bucket.gastosOperativos),
-            comisionChofer: this.round2(bucket.gastosComisionChofer),
+            gastosViaje: this.round2(bucket.gastosViaje),
             sueldoChofer: this.round2(bucket.gastosSueldoChofer),
             mantenimiento: this.round2(bucket.gastosMantenimiento),
-            documentosFijos: this.round2(bucket.gastosDocumentosFijos),
+            gastosFijos: this.round2(bucket.gastosFijos),
           },
         };
       });
@@ -424,8 +409,8 @@ export class ReportesService {
         granularidad,
         camionIds: parsedFilters.camionIds,
         choferIds: parsedFilters.choferIds,
-        desde: parsedFilters.desde.toISOString().split('T')[0],
-        hasta: parsedFilters.hasta.toISOString().split('T')[0],
+        desde: toDateOnly(parsedFilters.desde),
+        hasta: toDateOnly(parsedFilters.hasta),
         criterioFecha: parsedFilters.usarFechaPago ? 'fechaPago' : 'fechaInicio',
       },
       resumen: {
@@ -462,7 +447,7 @@ export class ReportesService {
       label: string;
       ingresos: number;
       gastosOperativos: number;
-      gastosComisionChofer: number;
+      gastosViaje: number;
       choferIds: Set<number>;
     }>();
     const choferesById = new Map<number, Chofer>();
@@ -484,18 +469,15 @@ export class ReportesService {
               : (`${viaje.chofer?.nombre || ''} ${viaje.chofer?.apellido || ''}`.trim() || `Chofer #${viaje.choferId}`),
           ingresos: 0,
           gastosOperativos: 0,
-          gastosComisionChofer: 0,
+          gastosViaje: 0,
           choferIds: new Set<number>(),
         });
       }
 
       const bucket = buckets.get(key)!;
-      const ingreso = this.getIngresoViajeUyu(viaje);
-      bucket.ingresos += ingreso;
-      bucket.gastosOperativos += this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos);
-
-      const porcentajeComision = this.toNumber(viaje.chofer?.porcentajeComision);
-      bucket.gastosComisionChofer += (ingreso * porcentajeComision) / 100;
+      bucket.ingresos += this.getIngresoViajeUyu(viaje);
+      bucket.gastosOperativos += this.getGastosOperativosViaje(viaje);
+      bucket.gastosViaje += this.getGastosCargadosViaje(viaje);
 
       if (viaje.choferId) {
         bucket.choferIds.add(viaje.choferId);
@@ -517,50 +499,10 @@ export class ReportesService {
       }
     }
 
-    const mantenimientoByCamion = new Map<number, number>();
-    const documentosFijosByCamion = new Map<number, number>();
-    if (filters.compararPor === 'camion') {
-      const camionIds = Array.from(buckets.values()).map((bucket) => bucket.id);
-      if (camionIds.length > 0) {
-        const mantenimientos = await this.mantenimientoRepository.find({
-          where: { camionId: In(camionIds) },
-        });
-
-        for (const mantenimiento of mantenimientos) {
-          const fechaBase = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
-          if (!fechaBase) {
-            continue;
-          }
-
-          const fecha = parseDateOnly(fechaBase);
-          if (fecha < desde || fecha > hasta) {
-            continue;
-          }
-
-          const costo = this.toNumber(mantenimiento.costoReal);
-          if (costo <= 0) {
-            continue;
-          }
-
-          const current = mantenimientoByCamion.get(mantenimiento.camionId) || 0;
-          mantenimientoByCamion.set(mantenimiento.camionId, current + costo);
-        }
-
-        const documentos = await this.documentoRepository.find({
-          where: { camionId: In(camionIds) },
-        });
-
-        for (const documento of documentos) {
-          const projectedCost = this.getDocumentoProjectedCostForPeriod(documento, desde, hasta);
-          if (projectedCost <= 0) {
-            continue;
-          }
-
-          const current = documentosFijosByCamion.get(documento.camionId) || 0;
-          documentosFijosByCamion.set(documento.camionId, current + projectedCost);
-        }
-      }
-    }
+    const camionIds = Array.from(buckets.values()).map((bucket) => bucket.id);
+    const costosCamion = filters.compararPor === 'camion' && camionIds.length > 0
+      ? await this.getCostosCamionPorPeriodo(desde, hasta, camionIds)
+      : new Map<number, CostosCamionPeriodo>();
 
     const comparativas = Array.from(buckets.values())
       .map((bucket) => {
@@ -569,13 +511,9 @@ export class ReportesService {
           gastosSueldo += this.toNumber(choferesById.get(choferId)?.sueldoBase);
         }
 
-        const gastosMantenimiento = filters.compararPor === 'camion'
-          ? this.toNumber(mantenimientoByCamion.get(bucket.id))
-          : 0;
-        const gastosDocumentales = filters.compararPor === 'camion'
-          ? this.toNumber(documentosFijosByCamion.get(bucket.id))
-          : 0;
-        const gastos = bucket.gastosOperativos + bucket.gastosComisionChofer + gastosSueldo + gastosMantenimiento + gastosDocumentales;
+        const gastosMantenimiento = this.toNumber(costosCamion.get(bucket.id)?.mantenimiento);
+        const gastosFijos = this.toNumber(costosCamion.get(bucket.id)?.gastosFijos);
+        const gastos = bucket.gastosOperativos + bucket.gastosViaje + gastosSueldo + gastosMantenimiento + gastosFijos;
 
         return {
           id: bucket.id,
@@ -634,8 +572,8 @@ export class ReportesService {
         compararPor: filters.compararPor,
         camionIds: filters.camionIds,
         choferIds: filters.choferIds,
-        desde: desde.toISOString().split('T')[0],
-        hasta: hasta.toISOString().split('T')[0],
+        desde: toDateOnly(desde),
+        hasta: toDateOnly(hasta),
         criterioFecha: filters.usarFechaPago ? 'fechaPago' : 'fechaInicio',
       },
       comparativas,
@@ -683,8 +621,8 @@ export class ReportesService {
       filtrosAplicados: {
         camionId: filters.camionId,
         granularidad: filters.granularidad,
-        desde: desde.toISOString().split('T')[0],
-        hasta: hasta.toISOString().split('T')[0],
+        desde: toDateOnly(desde),
+        hasta: toDateOnly(hasta),
       },
       resumen: {
         totalKms: this.round2(series.reduce((acc, item) => acc + item.kms, 0)),
@@ -700,6 +638,7 @@ export class ReportesService {
       .createQueryBuilder('viaje')
       .leftJoinAndSelect('viaje.chofer', 'chofer')
       .leftJoinAndSelect('viaje.camion', 'camion')
+      .leftJoinAndSelect('viaje.comisiones', 'comisiones')
       .where(`${dateField} BETWEEN :desde AND :hasta`, {
         desde: filters.desde,
         hasta: filters.hasta,
@@ -721,82 +660,69 @@ export class ReportesService {
     return query.getMany();
   }
 
+  /** Combustible + otros gastos cargados en el viaje (ya en UYU). */
+  private getGastosOperativosViaje(viaje: Viaje): number {
+    return this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos);
+  }
+
+  /** Comisiones y gastos listados en el viaje (ya normalizados a UYU al guardar). */
+  private getGastosCargadosViaje(viaje: Viaje): number {
+    return (viaje.comisiones || [])
+      .filter((comision) => comision.estado !== 'cancelado')
+      .reduce((sum, comision) => sum + this.toNumber(comision.montoTotal), 0);
+  }
+
+  /** Mantenimiento y gastos fijos son del camión: con filtro solo por chofer no se imputan. */
+  private includeCostosCamion(filters: RentabilidadFilters): boolean {
+    const hasChoferFilter = Boolean(filters.choferIds && filters.choferIds.length > 0);
+    const hasCamionFilter = Boolean(filters.camionIds && filters.camionIds.length > 0);
+    return !hasChoferFilter || hasCamionFilter;
+  }
+
   private async addMantenimientoToBuckets(
     buckets: Map<string, BucketAccumulator>,
     filters: RentabilidadFilters,
   ) {
-    const hasChoferFilter = Boolean(filters.choferIds && filters.choferIds.length > 0);
-    const hasCamionFilter = Boolean(filters.camionIds && filters.camionIds.length > 0);
-    const includeMantenimiento = !hasChoferFilter || hasCamionFilter;
-    if (!includeMantenimiento) {
+    if (!this.includeCostosCamion(filters)) {
       return;
     }
 
-    const where: any = {};
-    if (hasCamionFilter) {
-      where.camionId = In(filters.camionIds!);
+    const costos = await this.getCostosMantenimiento(filters.desde, filters.hasta, filters.camionIds);
+    for (const costo of costos) {
+      const key = this.toBucketKey(parseDateOnly(costo.fecha), filters.granularidad);
+      const bucket = this.ensureBucket(buckets, key);
+      bucket.gastosMantenimiento += costo.costo;
+    }
+  }
+
+  private async addGastosFijosToBuckets(
+    buckets: Map<string, BucketAccumulator>,
+    filters: RentabilidadFilters,
+  ) {
+    if (!this.includeCostosCamion(filters)) {
+      return;
     }
 
-    const mantenimientos = await this.mantenimientoRepository.find({ where });
+    const gastosFijos = await this.getGastosFijosProrrateables(filters.camionIds);
+    if (gastosFijos.length === 0) {
+      return;
+    }
 
-    for (const mantenimiento of mantenimientos) {
-      const fechaBase = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
-      if (!fechaBase) {
+    // Los gastos fijos corren todos los días, haya o no viajes: se imputan a cada período del rango
+    for (const key of this.getBucketKeysInRange(filters.desde, filters.hasta, filters.granularidad)) {
+      const { start, end } = this.getBucketDateRange(key, filters.granularidad);
+      const periodStart = new Date(Math.max(start.getTime(), filters.desde.getTime()));
+      const periodEnd = new Date(Math.min(end.getTime(), filters.hasta.getTime()));
+      if (periodStart > periodEnd) {
         continue;
       }
 
-      const fecha = parseDateOnly(fechaBase);
-      if (fecha < filters.desde || fecha > filters.hasta) {
-        continue;
-      }
-
-      const costo = this.toNumber(mantenimiento.costoReal);
+      const costo = this.sumGastosFijosForPeriod(gastosFijos, periodStart, periodEnd);
       if (costo <= 0) {
         continue;
       }
 
-      const key = this.toBucketKey(fecha, filters.granularidad);
-      const bucket = this.ensureBucket(buckets, key);
-      bucket.gastosMantenimiento += costo;
-    }
-  }
-
-  private async addDocumentosFijosToBuckets(
-    buckets: Map<string, BucketAccumulator>,
-    filters: RentabilidadFilters,
-  ) {
-    const hasChoferFilter = Boolean(filters.choferIds && filters.choferIds.length > 0);
-    const hasCamionFilter = Boolean(filters.camionIds && filters.camionIds.length > 0);
-    const includeDocumentos = !hasChoferFilter || hasCamionFilter;
-    if (!includeDocumentos || buckets.size === 0) {
-      return;
-    }
-
-    const where: any = {};
-    if (hasCamionFilter) {
-      where.camionId = In(filters.camionIds!);
-    }
-
-    const documentos = await this.documentoRepository.find({ where });
-    const bucketKeys = Array.from(buckets.keys());
-
-    for (const documento of documentos) {
-      for (const key of bucketKeys) {
-        const { start, end } = this.getBucketDateRange(key, filters.granularidad);
-        const periodStart = new Date(Math.max(start.getTime(), filters.desde.getTime()));
-        const periodEnd = new Date(Math.min(end.getTime(), filters.hasta.getTime()));
-        if (periodStart > periodEnd) {
-          continue;
-        }
-
-        const projectedCost = this.getDocumentoProjectedCostForPeriod(documento, periodStart, periodEnd);
-        if (projectedCost <= 0) {
-          continue;
-        }
-
-        const bucket = this.ensureBucket(buckets, key);
-        bucket.gastosDocumentosFijos += projectedCost;
-      }
+      this.ensureBucket(buckets, key).gastosFijos += costo;
     }
   }
 
@@ -839,6 +765,149 @@ export class ReportesService {
         }
       }
     }
+  }
+
+  /**
+   * Costos del camión que no dependen de un viaje (mantenimiento + gastos fijos prorrateados),
+   * agrupados por camión. Sin camionIds incluye todos los camiones. Lo usa también el dashboard.
+   */
+  async getCostosCamionPorPeriodo(
+    desde: Date,
+    hasta: Date,
+    camionIds?: number[],
+  ): Promise<Map<number, CostosCamionPeriodo>> {
+    const [costosMantenimiento, gastosFijos] = await Promise.all([
+      this.getCostosMantenimiento(desde, hasta, camionIds),
+      this.getGastosFijosProrrateables(camionIds),
+    ]);
+
+    const porCamion = new Map<number, CostosCamionPeriodo>();
+    const ensure = (camionId: number) => {
+      if (!porCamion.has(camionId)) {
+        porCamion.set(camionId, { mantenimiento: 0, gastosFijos: 0 });
+      }
+      return porCamion.get(camionId)!;
+    };
+
+    for (const costo of costosMantenimiento) {
+      ensure(costo.camionId).mantenimiento += costo.costo;
+    }
+
+    for (const item of gastosFijos) {
+      const costo = this.getGastoFijoCostForPeriod(item, desde, hasta);
+      if (costo > 0) {
+        ensure(item.gastoFijo.camionId).gastosFijos += costo;
+      }
+    }
+
+    return porCamion;
+  }
+
+  /**
+   * Costos de mantenimiento del camión en el rango: servicios (convertidos a UYU)
+   * + registros de mantenimiento. No están asociados a un viaje.
+   */
+  private async getCostosMantenimiento(
+    desde: Date,
+    hasta: Date,
+    camionIds?: number[],
+  ): Promise<CostoMantenimiento[]> {
+    const where: any = {};
+    if (camionIds && camionIds.length > 0) {
+      where.camionId = In(camionIds);
+    }
+
+    const [servicios, mantenimientos] = await Promise.all([
+      this.servicioRepository.find({ where, relations: ['camion'] }),
+      this.mantenimientoRepository.find({ where, relations: ['camion', 'tipo'] }),
+    ]);
+
+    const isInRange = (fecha?: string | null): fecha is string => {
+      if (!fecha) return false;
+      const parsed = parseDateOnly(fecha);
+      return parsed >= desde && parsed <= hasta;
+    };
+
+    const serviciosEnRango = servicios.filter(
+      (servicio) => isInRange(servicio.fechaServicio) && this.toNumber(servicio.costo) > 0,
+    );
+    const usdUyuRate = serviciosEnRango.some((servicio) => servicio.moneda === 'USD')
+      ? (await getUsdUyuRateInfo()).rate
+      : 1;
+
+    const costos: CostoMantenimiento[] = serviciosEnRango.map((servicio) => {
+      const costo = this.toNumber(servicio.costo);
+      return {
+        camionId: servicio.camionId,
+        patente: servicio.camion?.patente || '',
+        origen: 'servicio',
+        concepto: servicio.descripcion || (servicio.tipos || []).join(', ') || 'Servicio',
+        fecha: servicio.fechaServicio,
+        costo: this.round2(servicio.moneda === 'USD' ? costo * usdUyuRate : costo),
+        estado: 'realizado',
+      };
+    });
+
+    for (const mantenimiento of mantenimientos) {
+      const fecha = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
+      const costo = this.toNumber(mantenimiento.costoReal);
+      if (!isInRange(fecha) || costo <= 0) {
+        continue;
+      }
+
+      costos.push({
+        camionId: mantenimiento.camionId,
+        patente: mantenimiento.camion?.patente || '',
+        origen: 'mantenimiento',
+        concepto: mantenimiento.tipo?.nombre || 'Sin especificar',
+        fecha,
+        costo: this.round2(costo),
+        estado: mantenimiento.estado,
+      });
+    }
+
+    return costos;
+  }
+
+  private async getGastosFijosProrrateables(camionIds?: number[]): Promise<GastoFijoProrrateable[]> {
+    const where: any = {};
+    if (camionIds && camionIds.length > 0) {
+      where.camionId = In(camionIds);
+    }
+
+    const gastosFijos = (await this.gastoFijoRepository.find({ where }))
+      .filter((gastoFijo) => this.toNumber(gastoFijo.montoAnual) > 0 && gastoFijo.vigenciaDesde);
+    const usdUyuRate = gastosFijos.some((gastoFijo) => gastoFijo.moneda === 'USD')
+      ? (await getUsdUyuRateInfo()).rate
+      : 1;
+
+    return gastosFijos.map((gastoFijo) => {
+      const vigenciaFin = gastoFijo.vigenciaHasta ? parseDateOnly(gastoFijo.vigenciaHasta) : null;
+      vigenciaFin?.setHours(23, 59, 59, 999);
+      const montoAnual = this.toNumber(gastoFijo.montoAnual);
+
+      return {
+        gastoFijo,
+        montoAnualUyu: gastoFijo.moneda === 'USD' ? montoAnual * usdUyuRate : montoAnual,
+        vigenciaInicio: parseDateOnly(gastoFijo.vigenciaDesde),
+        vigenciaFin,
+      };
+    });
+  }
+
+  /** Prorrateo diario del monto anual por los días de vigencia que caen en el período. */
+  private getGastoFijoCostForPeriod(item: GastoFijoProrrateable, periodStart: Date, periodEnd: Date): number {
+    const vigenciaFin = item.vigenciaFin ?? periodEnd;
+    const overlapDays = this.getOverlapDays(item.vigenciaInicio, vigenciaFin, periodStart, periodEnd);
+    if (overlapDays <= 0) {
+      return 0;
+    }
+
+    return (item.montoAnualUyu / DIAS_ANIO) * overlapDays;
+  }
+
+  private sumGastosFijosForPeriod(gastosFijos: GastoFijoProrrateable[], periodStart: Date, periodEnd: Date): number {
+    return gastosFijos.reduce((sum, item) => sum + this.getGastoFijoCostForPeriod(item, periodStart, periodEnd), 0);
   }
 
   private getWeekStartKey(date: Date): string {
@@ -909,11 +978,12 @@ export class ReportesService {
     if (!map.has(key)) {
       map.set(key, {
         ingresos: 0,
+        cantidadViajes: 0,
         gastosOperativos: 0,
-        gastosComisionChofer: 0,
+        gastosViaje: 0,
         gastosSueldoChofer: 0,
         gastosMantenimiento: 0,
-        gastosDocumentosFijos: 0,
+        gastosFijos: 0,
         kmRecorridos: 0,
         choferIds: new Set<number>(),
       });
@@ -939,55 +1009,6 @@ export class ReportesService {
 
   private round2(value: number): number {
     return Math.round(value * 100) / 100;
-  }
-
-  private getDocumentoCoverageRange(documento: Documento): { start: Date; end: Date } {
-    const rawStart = documento.createdAt ? new Date(documento.createdAt) : new Date();
-    const start = Number.isNaN(rawStart.getTime()) ? new Date() : rawStart;
-    start.setHours(0, 0, 0, 0);
-
-    const rawEnd = documento.fechaVencimiento ? parseDateOnly(documento.fechaVencimiento) : null;
-    const hasValidEnd = rawEnd && !Number.isNaN(rawEnd.getTime());
-    const end = hasValidEnd ? new Date(rawEnd) : new Date(start);
-
-    if (!hasValidEnd || end < start) {
-      end.setDate(start.getDate() + 364);
-    }
-
-    end.setHours(23, 59, 59, 999);
-
-    return { start, end };
-  }
-
-  private getDocumentoCoverageDays(documento: Documento): number {
-    const { start, end } = this.getDocumentoCoverageRange(documento);
-    const days = this.getDaysInclusive(start, end);
-    return days > 0 ? days : 365;
-  }
-
-  private getDocumentoWeeklyCost(documento: Documento): number {
-    const costo = this.toNumber(documento.costo);
-    if (costo <= 0) {
-      return 0;
-    }
-
-    const coberturaDias = this.getDocumentoCoverageDays(documento);
-    return (costo / coberturaDias) * 7;
-  }
-
-  private getDocumentoProjectedCostForPeriod(documento: Documento, periodStart: Date, periodEnd: Date): number {
-    const weeklyCost = this.getDocumentoWeeklyCost(documento);
-    if (weeklyCost <= 0) {
-      return 0;
-    }
-
-    const { start, end } = this.getDocumentoCoverageRange(documento);
-    const overlapDays = this.getOverlapDays(start, end, periodStart, periodEnd);
-    if (overlapDays <= 0) {
-      return 0;
-    }
-
-    return weeklyCost * (overlapDays / 7);
   }
 
   private getDaysInclusive(start: Date, end: Date): number {
@@ -1093,8 +1114,8 @@ export class ReportesService {
 
     return {
       filtrosAplicados: {
-        desde: desde.toISOString().split('T')[0],
-        hasta: hasta.toISOString().split('T')[0],
+        desde: toDateOnly(desde),
+        hasta: toDateOnly(hasta),
         choferIds: filters.choferIds,
       },
       desempenio,
@@ -1109,56 +1130,30 @@ export class ReportesService {
     const hasta = filters.hasta || new Date();
     const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const where: any = {};
-    if (filters.camionIds && filters.camionIds.length > 0) {
-      where.camionId = In(filters.camionIds);
-    }
-
-    const mantenimientos = await this.mantenimientoRepository.find({
-      relations: ['camion', 'tipo'],
-      where,
-    });
-
-    const gastosPorCamion = new Map<number, {
-      camionId: number;
-      patente: string;
-      tipoMantenimiento: string;
-      fecha: string;
-      costo: number;
-      estado: string;
-    }[]>();
-
-    for (const mantenimiento of mantenimientos) {
-      const fecha = mantenimiento.fechaRealizado || mantenimiento.fechaPrograma;
-      if (!fecha || parseDateOnly(fecha) < desde || parseDateOnly(fecha) > hasta) {
-        continue;
+    const costos = await this.getCostosMantenimiento(desde, hasta, filters.camionIds);
+    const gastosPorCamion = new Map<number, CostoMantenimiento[]>();
+    for (const costo of costos) {
+      if (!gastosPorCamion.has(costo.camionId)) {
+        gastosPorCamion.set(costo.camionId, []);
       }
-
-      const costo = this.toNumber(mantenimiento.costoReal);
-      if (costo <= 0) {
-        continue;
-      }
-
-      const camionId = mantenimiento.camionId;
-      if (!gastosPorCamion.has(camionId)) {
-        gastosPorCamion.set(camionId, []);
-      }
-
-      gastosPorCamion.get(camionId)!.push({
-        camionId,
-        patente: mantenimiento.camion?.patente || '',
-        tipoMantenimiento: mantenimiento.tipo?.nombre || 'Sin especificar',
-        fecha,
-        costo: this.round2(costo),
-        estado: mantenimiento.estado,
-      });
+      gastosPorCamion.get(costo.camionId)!.push(costo);
     }
 
     const gastos = Array.from(gastosPorCamion.entries())
       .map(([camionId, registros]) => ({
         camionId,
         patente: registros[0]?.patente || '',
-        registros,
+        registros: registros
+          .sort((a, b) => b.fecha.localeCompare(a.fecha))
+          .map((registro) => ({
+            camionId: registro.camionId,
+            patente: registro.patente,
+            origen: registro.origen,
+            tipoMantenimiento: registro.concepto,
+            fecha: registro.fecha,
+            costo: registro.costo,
+            estado: registro.estado,
+          })),
         totalGastos: this.round2(registros.reduce((sum, r) => sum + r.costo, 0)),
         cantidadRegistros: registros.length,
       }))
@@ -1168,8 +1163,8 @@ export class ReportesService {
 
     return {
       filtrosAplicados: {
-        desde: desde.toISOString().split('T')[0],
-        hasta: hasta.toISOString().split('T')[0],
+        desde: toDateOnly(desde),
+        hasta: toDateOnly(hasta),
         camionIds: filters.camionIds,
       },
       resumenTotal,
@@ -1177,7 +1172,7 @@ export class ReportesService {
     };
   }
 
-  async getGastosDocumentales(filters: {
+  async getGastosFijos(filters: {
     desde?: Date;
     hasta?: Date;
     camionIds?: number[];
@@ -1185,69 +1180,56 @@ export class ReportesService {
     const hasta = filters.hasta || new Date();
     const desde = filters.desde || new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const where: any = {};
-    if (filters.camionIds && filters.camionIds.length > 0) {
-      where.camionId = In(filters.camionIds);
-    }
-
-    const documentos = await this.documentoRepository.find({ where });
-    const gastosPorCamion = new Map<number, {
-      camionId: number;
-      patente: string;
-      documentos: Array<{
-        documentoId: number;
-        tipo: string;
-        nombre: string;
-        fechaInicio: Date;
-        fechaFin: Date;
-        costoSemanal: number;
-        costoActual: number;
-        coberturaDias: number;
-        costoProyectado: number;
-        fechaVencimiento?: string;
-      }>;
-    }>();
-
-    const camionIds = [...new Set(documentos.map((documento) => documento.camionId).filter(Boolean))];
+    const gastosFijos = await this.getGastosFijosProrrateables(filters.camionIds);
+    const camionIds = [...new Set(gastosFijos.map((item) => item.gastoFijo.camionId))];
     const camiones = camionIds.length > 0
       ? await this.camionRepository.find({ where: { id: In(camionIds) } })
       : [];
     const camionPatenteById = new Map(camiones.map((camion) => [camion.id, camion.patente]));
 
-    for (const documento of documentos) {
-      const costoActual = this.toNumber(documento.costo);
-      if (costoActual <= 0) {
+    const gastosPorCamion = new Map<number, {
+      camionId: number;
+      patente: string;
+      items: Array<{
+        gastoFijoId: number;
+        tipo: string;
+        concepto: string;
+        moneda: string;
+        montoAnual: number;
+        montoAnualUyu: number;
+        costoMensualUyu: number;
+        vigenciaDesde: string;
+        vigenciaHasta: string | null;
+        costoPeriodo: number;
+      }>;
+    }>();
+
+    for (const item of gastosFijos) {
+      const costoPeriodo = this.getGastoFijoCostForPeriod(item, desde, hasta);
+      if (costoPeriodo <= 0) {
         continue;
       }
 
-      const { start: fechaInicio, end: fechaFin } = this.getDocumentoCoverageRange(documento);
-      const costoSemanal = this.getDocumentoWeeklyCost(documento);
-      const costoProyectado = this.getDocumentoProjectedCostForPeriod(documento, desde, hasta);
-      if (costoProyectado <= 0) {
-        continue;
-      }
-
-      const coberturaDias = this.getDocumentoCoverageDays(documento);
-
-      if (!gastosPorCamion.has(documento.camionId)) {
-        gastosPorCamion.set(documento.camionId, {
-          camionId: documento.camionId,
-          patente: camionPatenteById.get(documento.camionId) || '',
-          documentos: [],
+      const { gastoFijo } = item;
+      if (!gastosPorCamion.has(gastoFijo.camionId)) {
+        gastosPorCamion.set(gastoFijo.camionId, {
+          camionId: gastoFijo.camionId,
+          patente: camionPatenteById.get(gastoFijo.camionId) || '',
+          items: [],
         });
       }
 
-      gastosPorCamion.get(documento.camionId)!.documentos.push({
-        documentoId: documento.id,
-        tipo: documento.tipo,
-        nombre: documento.nombre || 'Documento sin nombre',
-        fechaInicio,
-        fechaFin,
-        costoSemanal: this.round2(costoSemanal),
-        costoActual: this.round2(costoActual),
-        coberturaDias,
-        costoProyectado: this.round2(costoProyectado),
-        fechaVencimiento: documento.fechaVencimiento,
+      gastosPorCamion.get(gastoFijo.camionId)!.items.push({
+        gastoFijoId: gastoFijo.id,
+        tipo: gastoFijo.tipo,
+        concepto: gastoFijo.concepto || gastoFijo.tipo,
+        moneda: gastoFijo.moneda,
+        montoAnual: this.round2(this.toNumber(gastoFijo.montoAnual)),
+        montoAnualUyu: this.round2(item.montoAnualUyu),
+        costoMensualUyu: this.round2(item.montoAnualUyu / 12),
+        vigenciaDesde: gastoFijo.vigenciaDesde,
+        vigenciaHasta: gastoFijo.vigenciaHasta,
+        costoPeriodo: this.round2(costoPeriodo),
       });
     }
 
@@ -1255,23 +1237,21 @@ export class ReportesService {
       .map((item) => ({
         camionId: item.camionId,
         patente: item.patente,
-        cantidadDocumentos: item.documentos.length,
-        totalCostoSemanal: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoSemanal, 0)),
-        totalCostoActual: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoActual, 0)),
-        totalCostoProyectado: this.round2(item.documentos.reduce((sum, doc) => sum + doc.costoProyectado, 0)),
-        documentos: item.documentos.sort((a, b) => b.costoProyectado - a.costoProyectado),
+        cantidad: item.items.length,
+        totalAnualUyu: this.round2(item.items.reduce((sum, gasto) => sum + gasto.montoAnualUyu, 0)),
+        totalCostoPeriodo: this.round2(item.items.reduce((sum, gasto) => sum + gasto.costoPeriodo, 0)),
+        items: item.items.sort((a, b) => b.costoPeriodo - a.costoPeriodo),
       }))
-      .sort((a, b) => b.totalCostoProyectado - a.totalCostoProyectado);
+      .sort((a, b) => b.totalCostoPeriodo - a.totalCostoPeriodo);
 
     return {
       filtrosAplicados: {
-        desde: desde.toISOString().split('T')[0],
-        hasta: hasta.toISOString().split('T')[0],
+        desde: toDateOnly(desde),
+        hasta: toDateOnly(hasta),
         camionIds: filters.camionIds,
       },
-      resumenTotalSemanal: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoSemanal, 0)),
-      resumenTotalActual: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoActual, 0)),
-      resumenTotalProyectado: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoProyectado, 0)),
+      resumenTotalAnual: this.round2(gastos.reduce((sum, item) => sum + item.totalAnualUyu, 0)),
+      resumenTotalPeriodo: this.round2(gastos.reduce((sum, item) => sum + item.totalCostoPeriodo, 0)),
       gastos,
     };
   }
@@ -1285,7 +1265,8 @@ export class ReportesService {
     const hasta = filters.hasta || new Date();
     const desde = filters.desde || new Date(hasta.getFullYear(), hasta.getMonth(), 1);
 
-    const viajes = await this.getViajes({
+    // Mismo criterio de gastos que el gráfico de rentabilidad, agrupado por mes
+    const rentabilidad = await this.getRentabilidad({
       granularidad: 'mensual',
       desde,
       hasta,
@@ -1293,50 +1274,16 @@ export class ReportesService {
       choferIds: filters.choferIds,
     });
 
-    const ingresosPorMes = new Map<string, {
-      mes: string;
-      viajesCompletos: number;
-      ingresos: number;
-      gastos: number;
-      gananciaNeta: number;
-    }>();
-
-    for (const viaje of viajes) {
-      const mesKey = this.toBucketKey(viaje.fechaInicio, 'mensual');
-      if (!ingresosPorMes.has(mesKey)) {
-        ingresosPorMes.set(mesKey, {
-          mes: this.formatLabel(mesKey, 'mensual'),
-          viajesCompletos: 0,
-          ingresos: 0,
-          gastos: 0,
-          gananciaNeta: 0,
-        });
-      }
-
-      const mes = ingresosPorMes.get(mesKey)!;
-      mes.viajesCompletos += 1;
-      const ingreso = this.getIngresoViajeUyu(viaje);
-      mes.ingresos += ingreso;
-
-      // Gastos
-      const gastoCombustible = this.toNumber(viaje.costoCombustible);
-      const otrosGastos = this.toNumber(viaje.otrosGastos);
-      const porcentajeComision = this.toNumber(viaje.chofer?.porcentajeComision);
-      const gastoComision = (ingreso * porcentajeComision) / 100;
-
-      mes.gastos += gastoCombustible + otrosGastos + gastoComision;
-      mes.gananciaNeta = mes.ingresos - mes.gastos;
-    }
-
-    const ingresos = Array.from(ingresosPorMes.values())
-      .map((mes) => ({
-        ...mes,
-        ingresos: this.round2(mes.ingresos),
-        gastos: this.round2(mes.gastos),
-        gananciaNeta: this.round2(mes.gananciaNeta),
-        rentabilidad: mes.ingresos > 0 ? this.round2((mes.gananciaNeta / mes.ingresos) * 100) : 0,
-      }))
-      .sort((a, b) => a.mes.localeCompare(b.mes));
+    const ingresos = rentabilidad.series
+      .filter((point) => point.cantidadViajes > 0 || point.gastos > 0)
+      .map((point) => ({
+        mes: point.etiqueta,
+        viajesCompletos: point.cantidadViajes,
+        ingresos: point.ingresos,
+        gastos: point.gastos,
+        gananciaNeta: point.gananciaNeta,
+        rentabilidad: point.ingresos > 0 ? this.round2((point.gananciaNeta / point.ingresos) * 100) : 0,
+      }));
 
     const resumen = {
       totalViajesCompletos: ingresos.reduce((sum, m) => sum + m.viajesCompletos, 0),
@@ -1347,8 +1294,8 @@ export class ReportesService {
 
     return {
       filtrosAplicados: {
-        desde: desde.toISOString().split('T')[0],
-        hasta: hasta.toISOString().split('T')[0],
+        desde: toDateOnly(desde),
+        hasta: toDateOnly(hasta),
         camionIds: filters.camionIds,
         choferIds: filters.choferIds,
       },
