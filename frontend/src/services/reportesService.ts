@@ -37,6 +37,37 @@ export interface RentabilidadResponse {
   series: RentabilidadPoint[];
 }
 
+export type CategoriaDetalleRentabilidad =
+  | 'ingreso'
+  | 'operativosViaje'
+  | 'gastosViaje'
+  | 'mantenimiento'
+  | 'gastosFijos'
+  | 'sueldoChofer';
+
+export interface DetalleRentabilidadItem {
+  categoria: CategoriaDetalleRentabilidad;
+  fecha: string | null;
+  concepto: string;
+  patente: string | null;
+  chofer: string | null;
+  monto: number;
+  referencia: {
+    tipo: 'viaje' | 'servicio' | 'mantenimiento' | 'gastoFijo' | 'chofer';
+    id: number;
+    camionId?: number;
+    viajeId?: number;
+    choferId?: number;
+  };
+}
+
+export interface RentabilidadDetalleResponse {
+  periodo: string;
+  etiqueta: string;
+  granularidad: 'diaria' | 'semanal' | 'mensual';
+  items: DetalleRentabilidadItem[];
+}
+
 export interface RentabilidadComparativaResponse {
   filtrosAplicados: {
     compararPor: 'camion' | 'chofer';
@@ -236,6 +267,26 @@ class ReportesService {
         ...(filters.desde ? { desde: filters.desde } : {}),
         ...(filters.hasta ? { hasta: filters.hasta } : {}),
         ...(filters.usarFechaPago ? { usarFechaPago: true } : {}),
+      },
+    });
+
+    return response.data;
+  }
+
+  /** Registros que componen un período de getRentabilidad (mismos filtros + clave del período). */
+  async getRentabilidadDetalle(
+    periodo: string,
+    filters: RentabilidadResponse['filtrosAplicados'],
+  ): Promise<RentabilidadDetalleResponse> {
+    const response = await this.api.get<RentabilidadDetalleResponse>('/reportes/rentabilidad/detalle', {
+      params: {
+        periodo,
+        granularidad: filters.granularidad,
+        ...(filters.camionIds?.length ? { camionIds: filters.camionIds.join(',') } : {}),
+        ...(filters.choferIds?.length ? { choferIds: filters.choferIds.join(',') } : {}),
+        desde: filters.desde,
+        hasta: filters.hasta,
+        ...(filters.criterioFecha === 'fechaPago' ? { usarFechaPago: true } : {}),
       },
     });
 

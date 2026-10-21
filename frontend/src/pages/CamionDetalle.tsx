@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import camionesService from '../services/camionesService';
 import serviciosService from '../services/serviciosService';
 import documentosService from '../services/documentosService';
@@ -38,9 +38,14 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 2,
   }).format(value);
 
+// Secciones a las que se puede enlazar con ?seccion=<clave> (ej. desde el detalle de Reportes)
+const SECCIONES_ENLAZABLES = ['servicios', 'gastos-fijos', 'mantenimiento'];
+
 const CamionDetalle: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const camionId = id ? parseInt(id) : 0;
+  const [searchParams] = useSearchParams();
+  const seccionParam = searchParams.get('seccion');
 
   const [camion, setCamion] = useState<Camion | null>(null);
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -60,6 +65,29 @@ const CamionDetalle: React.FC = () => {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleSection = (key: string) =>
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  const [seccionDestacada, setSeccionDestacada] = useState<string | null>(null);
+  const seccionAplicada = useRef<string | null>(null);
+  const seccionClassName = (key: string) => `info-section${seccionDestacada === key ? ' seccion-destacada' : ''}`;
+
+  // Con ?seccion=<clave>: al terminar la carga expande la sección, la lleva a la vista y la resalta.
+  // Solo una vez por valor del parámetro, para no volver a saltar cuando loadData recarga.
+  useEffect(() => {
+    if (isLoading || !seccionParam || seccionAplicada.current === seccionParam) return;
+    if (!SECCIONES_ENLAZABLES.includes(seccionParam)) return;
+
+    seccionAplicada.current = seccionParam;
+    setCollapsed((prev) => ({ ...prev, [seccionParam]: false }));
+    setSeccionDestacada(seccionParam);
+    requestAnimationFrame(() =>
+      document.getElementById(`seccion-${seccionParam}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    );
+  }, [isLoading, seccionParam]);
+
+  useEffect(() => {
+    if (!seccionDestacada) return;
+    const timeout = window.setTimeout(() => setSeccionDestacada(null), 2500);
+    return () => window.clearTimeout(timeout);
+  }, [seccionDestacada]);
 
   const getDocumentoArchivos = (doc: Documento): string[] => {
     if (doc.rutasArchivos && doc.rutasArchivos.length > 0) {
@@ -603,7 +631,7 @@ const CamionDetalle: React.FC = () => {
       )}
 
       {/* Historial de Servicios */}
-      <section className="info-section">
+      <section id="seccion-servicios" className={seccionClassName('servicios')}>
         <div className="section-header">
           <div className="section-title-toggle" onClick={() => toggleSection('servicios')}>
             <span className={`section-chevron${collapsed['servicios'] ? ' is-collapsed' : ''}`}>▼</span>
@@ -690,6 +718,8 @@ const CamionDetalle: React.FC = () => {
         camionId={camionId}
         collapsed={!!collapsed['gastos-fijos']}
         onToggle={() => toggleSection('gastos-fijos')}
+        sectionId="seccion-gastos-fijos"
+        destacada={seccionDestacada === 'gastos-fijos'}
       />
 
       {/* Historial de Repostadas */}
@@ -816,7 +846,7 @@ const CamionDetalle: React.FC = () => {
       </section>
 
       {/* Mantenimiento */}
-      <section className="info-section">
+      <section id="seccion-mantenimiento" className={seccionClassName('mantenimiento')}>
         <div className="section-header">
           <div className="section-title-toggle" onClick={() => toggleSection('mantenimiento')}>
             <span className={`section-chevron${collapsed['mantenimiento'] ? ' is-collapsed' : ''}`}>▼</span>

@@ -703,6 +703,37 @@ Response (200):
 }
 ```
 
+### Rentabilidad — Detalle de un período
+Desglose de un punto de `series`: cada registro que suma en ese período, con la referencia a su origen.
+Acepta los mismos filtros que `/reportes/rentabilidad` más `periodo` (la clave `periodo` de la serie).
+La suma de los `monto` por `categoria` coincide con la fila del período.
+
+```http
+GET /reportes/rentabilidad/detalle?periodo=2026-01&granularidad=mensual&desde=2026-01-01&hasta=2026-03-31&camionIds=1,2
+Authorization: Bearer <token>
+
+Response (200):
+{
+  "periodo": "2026-01",
+  "etiqueta": "01/2026",
+  "granularidad": "mensual",
+  "items": [
+    {
+      "categoria": "operativosViaje",
+      "fecha": "2026-01-12",
+      "concepto": "Combustible · Viaje VIAJE-20260112-1234 (Melo → Montevideo)",
+      "patente": "STP2207",
+      "chofer": "Hugo Rey",
+      "monto": 22000,
+      "referencia": { "tipo": "viaje", "id": 22, "viajeId": 22, "camionId": 6, "choferId": 4 }
+    }
+  ]
+}
+```
+
+`categoria`: `ingreso` | `operativosViaje` | `gastosViaje` | `mantenimiento` | `gastosFijos` | `sueldoChofer`.
+`referencia.tipo`: `viaje` | `servicio` | `mantenimiento` | `gastoFijo` | `chofer`.
+
 ### Rentabilidad Comparativa
 ```http
 GET /reportes/rentabilidad-comparativa?compararPor=camion&desde=2026-01-01&hasta=2026-03-31

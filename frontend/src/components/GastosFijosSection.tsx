@@ -17,13 +17,21 @@ interface GastosFijosSectionProps {
   camionId: number;
   collapsed: boolean;
   onToggle: () => void;
+  sectionId?: string;
+  destacada?: boolean;
 }
 
 /**
  * Gastos fijos anuales del camión (seguro, patente, ...).
  * Los reportes los prorratean por día dentro de la vigencia.
  */
-const GastosFijosSection: React.FC<GastosFijosSectionProps> = ({ camionId, collapsed, onToggle }) => {
+const GastosFijosSection: React.FC<GastosFijosSectionProps> = ({
+  camionId,
+  collapsed,
+  onToggle,
+  sectionId,
+  destacada = false,
+}) => {
   const [gastosFijos, setGastosFijos] = useState<GastoFijo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -55,7 +63,7 @@ const GastosFijosSection: React.FC<GastosFijosSectionProps> = ({ camionId, colla
   const getLabel = (gastoFijo: GastoFijo) => gastoFijo.concepto || TipoGastoFijoLabels[gastoFijo.tipo];
 
   return (
-    <section className="info-section">
+    <section id={sectionId} className={`info-section${destacada ? ' seccion-destacada' : ''}`}>
       <div className="section-header">
         <div className="section-title-toggle" onClick={onToggle}>
           <span className={`section-chevron${collapsed ? ' is-collapsed' : ''}`}>▼</span>

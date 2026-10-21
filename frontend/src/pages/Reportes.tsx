@@ -31,6 +31,7 @@ import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
 import AppNavbar from '../components/AppNavbar';
 import BackButton from '../components/BackButton';
+import DetallePeriodoModal from '../components/DetallePeriodoModal';
 import heroAnalyticsGreen from '../assets/hero-analytics-green.svg';
 import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import '../styles/Reportes.css';
@@ -131,6 +132,7 @@ const Reportes: React.FC = () => {
   const [ingresosLimitCount, setIngresosLimitCount] = useState(DEFAULT_RESOURCE_LIMIT);
   const [rentabilidadDetalleCamion, setRentabilidadDetalleCamion] = useState<Record<number, RentabilidadResponse>>({});
   const [loadingRentabilidadDetalle, setLoadingRentabilidadDetalle] = useState(false);
+  const [periodoDetalle, setPeriodoDetalle] = useState<{ periodo: string; etiqueta: string } | null>(null);
   const [camionIds, setCamionIds] = useState<string[]>([]);
   const [choferIds, setChoferIds] = useState<string[]>([]);
   const [desde, setDesde] = useState<string>(defaultDesdeDiario);
@@ -1556,11 +1558,17 @@ const Reportes: React.FC = () => {
               <th>Mantenimiento</th>
               <th>Gastos Fijos</th>
               <th>Sueldo Chofer</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {(reporte?.series || []).map((point) => (
-              <tr key={point.periodo}>
+              <tr
+                key={point.periodo}
+                className="fila-clickeable"
+                title="Ver los registros que componen este período"
+                onClick={() => setPeriodoDetalle({ periodo: point.periodo, etiqueta: point.etiqueta })}
+              >
                 <td>{point.etiqueta}</td>
                 <td>${point.ingresos.toFixed(2)}</td>
                 <td>${point.gastos.toFixed(2)}</td>
@@ -1571,16 +1579,30 @@ const Reportes: React.FC = () => {
                 <td>${point.detalleGastos.mantenimiento.toFixed(2)}</td>
                 <td>${point.detalleGastos.gastosFijos.toFixed(2)}</td>
                 <td>${point.detalleGastos.sueldoChofer.toFixed(2)}</td>
+                <td>
+                  <button type="button" className="btn-rapido btn-rapido--ghost">
+                    Ver detalle
+                  </button>
+                </td>
               </tr>
             ))}
             {(reporte?.series || []).length === 0 && (
               <tr>
-                <td colSpan={10}>No hay datos para el filtro seleccionado.</td>
+                <td colSpan={11}>No hay datos para el filtro seleccionado.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {periodoDetalle && reporte && (
+        <DetallePeriodoModal
+          periodo={periodoDetalle.periodo}
+          etiqueta={periodoDetalle.etiqueta}
+          filtros={reporte.filtrosAplicados}
+          onClose={() => setPeriodoDetalle(null)}
+        />
+      )}
 
       <div className="tabla-container">
         <div className="section-header-inline">

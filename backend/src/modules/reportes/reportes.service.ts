@@ -50,6 +50,7 @@ interface OperacionBucket {
 }
 
 interface CostoMantenimiento {
+  id: number;
   camionId: number;
   patente: string;
   origen: 'servicio' | 'mantenimiento';
@@ -69,6 +70,31 @@ interface GastoFijoProrrateable {
   montoAnualUyu: number;
   vigenciaInicio: Date;
   vigenciaFin: Date | null;
+}
+
+export type CategoriaDetalleRentabilidad =
+  | 'ingreso'
+  | 'operativosViaje'
+  | 'gastosViaje'
+  | 'mantenimiento'
+  | 'gastosFijos'
+  | 'sueldoChofer';
+
+/** Registro que compone un período de rentabilidad, con la referencia a su origen. */
+export interface DetalleRentabilidadItem {
+  categoria: CategoriaDetalleRentabilidad;
+  fecha: string | null;
+  concepto: string;
+  patente: string | null;
+  chofer: string | null;
+  monto: number;
+  referencia: {
+    tipo: 'viaje' | 'servicio' | 'mantenimiento' | 'gastoFijo' | 'chofer';
+    id: number;
+    camionId?: number;
+    viajeId?: number;
+    choferId?: number;
+  };
 }
 
 const DIAS_ANIO = 365;
@@ -320,7 +346,7 @@ export class ReportesService {
     return Array.from(keys);
   }
 
-  async getRentabilidad(filters: Partial<RentabilidadFilters>) {
+  private resolveRentabilidadFilters(filters: Partial<RentabilidadFilters>): RentabilidadFilters {
     const granularidad: Granularidad = filters.granularidad || 'diaria';
     const hasta = filters.hasta || new Date();
     const desde =
@@ -329,7 +355,7 @@ export class ReportesService {
         ? new Date(hasta.getTime() - 30 * 24 * 60 * 60 * 1000)
         : new Date(hasta.getFullYear(), hasta.getMonth() - 5, 1));
 
-    const parsedFilters: RentabilidadFilters = {
+    return {
       granularidad,
       camionIds: filters.camionIds,
       choferIds: filters.choferIds,
@@ -337,6 +363,11 @@ export class ReportesService {
       hasta,
       usarFechaPago: filters.usarFechaPago,
     };
+  }
+
+  async getRentabilidad(filters: Partial<RentabilidadFilters>) {
+    const parsedFilters = this.resolveRentabilidadFilters(filters);
+    const { granularidad } = parsedFilters;
 
     const viajes = await this.getViajes(parsedFilters);
     const buckets = new Map<string, BucketAccumulator>();
@@ -419,6 +450,163 @@ export class ReportesService {
         totalGananciaNeta: this.round2(resumen.totalGananciaNeta),
       },
       series,
+    };
+  }
+
+  /**
+   * Desglose de un período de getRentabilidad: cada viaje, comisión, mantenimiento, gasto fijo
+   * y sueldo que suma en ese período. Usa los mismos criterios, así los totales coinciden.
+   */
+  async getRentabilidadDetalle(filters: Partial<RentabilidadFilters>, periodo: string) {
+    const parsedFilters = this.resolveRentabilidadFilters(filters);
+    const { granularidad } = parsedFilters;
+    const items: DetalleRentabilidadItem[] = [];
+    const nombreChofer = (chofer?: Chofer | null) =>
+      chofer ? `${chofer.nombre || ''} ${chofer.apellido || ''}`.trim() : null;
+
+    const viajes = (await this.getViajes(parsedFilters)).filter(
+      (viaje) => this.toBucketKey(viaje.fechaInicio, granularidad) === periodo,
+    );
+    const choferesById = new Map<number, Chofer>();
+
+    for (const viaje of viajes) {
+      const base = {
+        fecha: viaje.fechaInicio ? toDateOnly(viaje.fechaInicio) : null,
+        patente: viaje.camion?.patente || null,
+        chofer: nombreChofer(viaje.chofer),
+      };
+      const referencia = {
+        tipo: 'viaje' as const,
+        id: viaje.id,
+        viajeId: viaje.id,
+        camionId: viaje.camionId,
+        choferId: viaje.choferId,
+      };
+      const ruta = [viaje.origen, viaje.destino].filter(Boolean).join(' → ');
+      const nombreViaje = `Viaje ${viaje.numeroViaje || `#${viaje.id}`}${ruta ? ` (${ruta})` : ''}`;
+
+      const ingreso = this.getIngresoViajeUyu(viaje);
+      if (ingreso !== 0) {
+        items.push({ ...base, categoria: 'ingreso', concepto: nombreViaje, monto: this.round2(ingreso), referencia });
+      }
+
+      const combustible = this.toNumber(viaje.costoCombustible);
+      if (combustible !== 0) {
+        items.push({
+          ...base,
+          categoria: 'operativosViaje',
+          concepto: `Combustible · ${nombreViaje}`,
+          monto: this.round2(combustible),
+          referencia,
+        });
+      }
+
+      const otrosGastos = this.toNumber(viaje.otrosGastos);
+      if (otrosGastos !== 0) {
+        items.push({
+          ...base,
+          categoria: 'operativosViaje',
+          concepto: `Otros gastos · ${nombreViaje}`,
+          monto: this.round2(otrosGastos),
+          referencia,
+        });
+      }
+
+      for (const comision of viaje.comisiones || []) {
+        const monto = this.toNumber(comision.montoTotal);
+        if (comision.estado === 'cancelado' || monto === 0) {
+          continue;
+        }
+
+        const concepto = [comision.concepto || comision.tipo, comision.beneficiario].filter(Boolean).join(' · ');
+        items.push({
+          ...base,
+          categoria: 'gastosViaje',
+          concepto: `${concepto || 'Gasto'} · ${nombreViaje}`,
+          monto: this.round2(monto),
+          referencia,
+        });
+      }
+
+      if (viaje.chofer?.id) {
+        choferesById.set(viaje.chofer.id, viaje.chofer);
+      }
+    }
+
+    const missingChoferIds = [
+      ...new Set(viajes.map((viaje) => viaje.choferId).filter((id): id is number => Boolean(id))),
+    ].filter((id) => !choferesById.has(id));
+    if (missingChoferIds.length > 0) {
+      for (const chofer of await this.choferRepository.find({ where: { id: In(missingChoferIds) } })) {
+        choferesById.set(chofer.id, chofer);
+      }
+    }
+
+    for (const chofer of choferesById.values()) {
+      const sueldoBase = this.toNumber(chofer.sueldoBase);
+      if (sueldoBase <= 0) {
+        continue;
+      }
+
+      items.push({
+        categoria: 'sueldoChofer',
+        fecha: null,
+        concepto: granularidad === 'mensual' ? 'Sueldo base' : 'Sueldo base (prorrateo diario)',
+        patente: null,
+        chofer: nombreChofer(chofer),
+        monto: this.round2(this.getSueldoChoferForBucket(sueldoBase, periodo, granularidad)),
+        referencia: { tipo: 'chofer', id: chofer.id, choferId: chofer.id },
+      });
+    }
+
+    if (this.includeCostosCamion(parsedFilters)) {
+      const costos = await this.getCostosMantenimiento(parsedFilters.desde, parsedFilters.hasta, parsedFilters.camionIds);
+      for (const costo of costos) {
+        if (this.toBucketKey(parseDateOnly(costo.fecha), granularidad) !== periodo) {
+          continue;
+        }
+
+        items.push({
+          categoria: 'mantenimiento',
+          fecha: costo.fecha,
+          concepto: `${costo.origen === 'servicio' ? 'Servicio' : 'Mantenimiento'}: ${costo.concepto}`,
+          patente: costo.patente || null,
+          chofer: null,
+          monto: costo.costo,
+          referencia: { tipo: costo.origen, id: costo.id, camionId: costo.camionId },
+        });
+      }
+
+      const { start, end } = this.getBucketDateRange(periodo, granularidad);
+      const periodStart = new Date(Math.max(start.getTime(), parsedFilters.desde.getTime()));
+      const periodEnd = new Date(Math.min(end.getTime(), parsedFilters.hasta.getTime()));
+      if (periodStart <= periodEnd) {
+        for (const item of await this.getGastosFijosProrrateables(parsedFilters.camionIds)) {
+          const costo = this.getGastoFijoCostForPeriod(item, periodStart, periodEnd);
+          if (costo <= 0) {
+            continue;
+          }
+
+          const { gastoFijo } = item;
+          const dias = this.getOverlapDays(item.vigenciaInicio, item.vigenciaFin ?? periodEnd, periodStart, periodEnd);
+          items.push({
+            categoria: 'gastosFijos',
+            fecha: null,
+            concepto: `${gastoFijo.concepto || gastoFijo.tipo} (prorrateo ${dias} día${dias === 1 ? '' : 's'})`,
+            patente: gastoFijo.camion?.patente || null,
+            chofer: null,
+            monto: this.round2(costo),
+            referencia: { tipo: 'gastoFijo', id: gastoFijo.id, camionId: gastoFijo.camionId },
+          });
+        }
+      }
+    }
+
+    return {
+      periodo,
+      etiqueta: this.formatLabel(periodo, granularidad),
+      granularidad,
+      items,
     };
   }
 
@@ -756,15 +944,20 @@ export class ReportesService {
           continue;
         }
 
-        if (granularidad === 'mensual') {
-          bucket.gastosSueldoChofer += sueldoBase;
-        } else {
-          const [year, month] = key.split('-').map((v) => Number(v));
-          const daysInMonth = new Date(year, month, 0).getDate();
-          bucket.gastosSueldoChofer += sueldoBase / daysInMonth;
-        }
+        bucket.gastosSueldoChofer += this.getSueldoChoferForBucket(sueldoBase, key, granularidad);
       }
     }
+  }
+
+  /** Mensual: sueldo completo. Diaria/semanal: sueldo / días del mes, por período con viajes. */
+  private getSueldoChoferForBucket(sueldoBase: number, key: string, granularidad: Granularidad): number {
+    if (granularidad === 'mensual') {
+      return sueldoBase;
+    }
+
+    const [year, month] = key.split('-').map((v) => Number(v));
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return sueldoBase / daysInMonth;
   }
 
   /**
@@ -838,6 +1031,7 @@ export class ReportesService {
     const costos: CostoMantenimiento[] = serviciosEnRango.map((servicio) => {
       const costo = this.toNumber(servicio.costo);
       return {
+        id: servicio.id,
         camionId: servicio.camionId,
         patente: servicio.camion?.patente || '',
         origen: 'servicio',
@@ -856,6 +1050,7 @@ export class ReportesService {
       }
 
       costos.push({
+        id: mantenimiento.id,
         camionId: mantenimiento.camionId,
         patente: mantenimiento.camion?.patente || '',
         origen: 'mantenimiento',
@@ -875,7 +1070,7 @@ export class ReportesService {
       where.camionId = In(camionIds);
     }
 
-    const gastosFijos = (await this.gastoFijoRepository.find({ where }))
+    const gastosFijos = (await this.gastoFijoRepository.find({ where, relations: ['camion'] }))
       .filter((gastoFijo) => this.toNumber(gastoFijo.montoAnual) > 0 && gastoFijo.vigenciaDesde);
     const usdUyuRate = gastosFijos.some((gastoFijo) => gastoFijo.moneda === 'USD')
       ? (await getUsdUyuRateInfo()).rate

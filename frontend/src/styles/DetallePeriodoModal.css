@@ -1,0 +1,63 @@
+.modal-content.detalle-periodo-modal {
+  max-width: 1100px;
+  width: 95%;
+}
+
+.detalle-periodo-body {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.detalle-periodo-empty {
+  color: var(--text-muted);
+  margin: 1rem 0;
+}
+
+.detalle-periodo-grupo {
+  margin-bottom: 1.75rem;
+  overflow-x: auto;
+}
+
+.detalle-periodo-grupo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.detalle-periodo-grupo-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.detalle-periodo-grupo-header span {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.detalle-periodo-table thead th,
+.detalle-periodo-table td {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.detalle-periodo-monto {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.detalle-periodo-link {
+  color: var(--primary-blue);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.detalle-periodo-link:hover {
+  text-decoration: underline;
+}
+
+/* Filas clickeables de la tabla "Detalle por período" */
+.reportes-table tbody tr.fila-clickeable {
+  cursor: pointer;
+}

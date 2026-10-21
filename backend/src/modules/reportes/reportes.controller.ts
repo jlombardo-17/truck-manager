@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
 import { parseDateOnly } from '../../common/utils/date-only';
 
@@ -50,6 +50,34 @@ export class ReportesController {
       hasta: parseHasta(hasta),
       usarFechaPago: usarFechaPago === 'true',
     });
+  }
+
+  /** Registros que componen un período de /rentabilidad (periodo = clave de la serie). */
+  @Get('rentabilidad/detalle')
+  async getRentabilidadDetalle(
+    @Query('periodo') periodo: string,
+    @Query('granularidad') granularidad: 'diaria' | 'semanal' | 'mensual' = 'diaria',
+    @Query('camionIds') camionIds?: string,
+    @Query('choferIds') choferIds?: string,
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+    @Query('usarFechaPago') usarFechaPago?: string,
+  ) {
+    if (!periodo) {
+      throw new BadRequestException('El parámetro periodo es obligatorio');
+    }
+
+    return this.reportesService.getRentabilidadDetalle(
+      {
+        granularidad,
+        camionIds: parseIds(camionIds),
+        choferIds: parseIds(choferIds),
+        desde: parseDesde(desde),
+        hasta: parseHasta(hasta),
+        usarFechaPago: usarFechaPago === 'true',
+      },
+      periodo,
+    );
   }
 
   @Get('rentabilidad/comparativa')
