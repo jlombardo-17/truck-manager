@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, RelationId, UpdateDateColumn } from 'typeorm';
 import { Camion } from '../camiones/camion.entity';
 import { Chofer } from '../choferes/chofer.entity';
+import { Cliente } from '../clientes/cliente.entity';
 import { ViajRuta } from './viaje-ruta.entity';
 import { ViajComision } from './viaje-comision.entity';
 
@@ -31,6 +32,13 @@ export class Viaje {
 
   @RelationId((viaje: Viaje) => viaje.chofer)
   choferId: number;
+
+  @ManyToOne(() => Cliente, { cascade: false, eager: true, nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'cliente_id' })
+  cliente: Cliente | null;
+
+  @RelationId((viaje: Viaje) => viaje.cliente)
+  clienteId: number | null;
 
   // Fechas
   @Column({ type: 'datetime' })

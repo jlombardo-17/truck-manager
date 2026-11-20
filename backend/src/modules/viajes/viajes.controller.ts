@@ -20,13 +20,14 @@ export class ViajsController {
 
   /**
    * GET /api/viajes - Obtener todos los viajes con filtros opcionales
-   * Query params: ?estado=completado&camionId=1&choferId=2
+   * Query params: ?estado=completado&camionId=1&choferId=2&clienteId=3
    */
   @Get()
   async findAll(
     @Query('estado') estado?: string,
     @Query('camionId') camionId?: string,
     @Query('choferId') choferId?: string,
+    @Query('clienteId') clienteId?: string,
     @Query('fechaInicio') fechaInicio?: string,
     @Query('fechaFin') fechaFin?: string,
     @Query('fechaPagoDesde') fechaPagoDesde?: string,
@@ -36,6 +37,7 @@ export class ViajsController {
       ...(estado && { estado }),
       ...(camionId && { camionId: parseInt(camionId) }),
       ...(choferId && { choferId: parseInt(choferId) }),
+      ...(clienteId && { clienteId: parseInt(clienteId) }),
       ...(fechaInicio && { fechaInicio: new Date(fechaInicio) }),
       ...(fechaFin && { fechaFin: new Date(fechaFin) }),
       // fechaPago es DATE: se filtra con 'YYYY-MM-DD' para no correr el día por zona horaria

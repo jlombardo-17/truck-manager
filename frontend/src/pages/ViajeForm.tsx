@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { viajsService, Viaje, ViajRuta, ViajComision, ViajeDocumentoAdjunto } from '../services/viajsService';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
+import clientesService from '../services/clientesService';
+import { Cliente } from '../types/cliente';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
 import { MapEditor } from '../components/MapEditor';
@@ -144,6 +146,7 @@ const ViajeForm: React.FC = () => {
     numeroViaje: viajsService.generateNroViaje(),
     camionId: 0,
     choferId: 0,
+    clienteId: null,
     fechaInicio: getTodayLocalInputValue(),
     origen: '',
     destino: '',
@@ -160,6 +163,7 @@ const ViajeForm: React.FC = () => {
   // Datos complementarios
   const [camiones, setCamiones] = useState<Camion[]>([]);
   const [choferes, setChoferes] = useState<Chofer[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
 
   // Estados de UI
   const [loading, setLoading] = useState(false);
@@ -199,9 +203,10 @@ const ViajeForm: React.FC = () => {
       setLoading(true);
 
       // Cargar camiones y choferes
-      const [camionesData, choferesData] = await Promise.all([
+      const [camionesData, choferesData, clientesData] = await Promise.all([
         camionesService.getAll(),
         choferesService.getAll(),
+        clientesService.getAll(),
       ]);
 
       try {
@@ -215,6 +220,7 @@ const ViajeForm: React.FC = () => {
 
       setCamiones(camionesData);
       setChoferes(choferesData);
+      setClientes(clientesData);
 
       // Si es edición, cargar datos del viaje
       if (id) {
@@ -274,6 +280,7 @@ const ViajeForm: React.FC = () => {
           ...viaje,
           camionId: toNumberOrZero(viajeCamionId),
           choferId: toNumberOrZero(viajeChoferId),
+          clienteId: viaje.clienteId ?? null,
           fechaInicio: toDateInputValue(viaje.fechaInicio),
           fechaFin: toDateInputValue(viaje.fechaFin),
           fechaPago: toDateInputValue(viaje.fechaPago),
@@ -368,6 +375,7 @@ const ViajeForm: React.FC = () => {
         moneda: formData.moneda === 'USD' ? 'USD' : 'UYU',
         camionId: toNumberOrZero(formData.camionId),
         choferId: toNumberOrZero(formData.choferId),
+        clienteId: formData.clienteId ? Number(formData.clienteId) : null,
         valorViaje: toNumberOrZero(formData.valorViaje),
         kmRecorridos: toNumberOrUndefined(formData.kmRecorridos),
         pesoCargaKg: toNumberOrUndefined(formData.pesoCargaKg),
@@ -539,7 +547,7 @@ const ViajeForm: React.FC = () => {
 
         {/* Sección 2: Camión y Chofer */}
         <section className="form-section">
-          <h2>🚚 Camión y Operador</h2>
+          <h2>🚚 Camión, Operador y Cliente</h2>
 
           <div className="form-grid">
             <div className="form-field">
@@ -577,6 +585,29 @@ const ViajeForm: React.FC = () => {
                     {ch.nombre} {ch.apellido}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="clienteId">Cliente</label>
+              <select
+                id="clienteId"
+                name="clienteId"
+                value={formData.clienteId ?? ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, clienteId: e.target.value ? Number(e.target.value) : null }))
+                }
+                className="form-input"
+              >
+                <option value="">Sin cliente</option>
+                {clientes
+                  .filter((cl) => cl.activo || cl.id === formData.clienteId)
+                  .map((cl) => (
+                    <option key={cl.id} value={cl.id}>
+                      {cl.nombre}
+                      {cl.activo ? '' : ' (inactivo)'}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

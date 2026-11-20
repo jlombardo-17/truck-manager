@@ -10,6 +10,7 @@ import { ViajsModule } from './modules/viajes/viajes.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { JornadasModule } from './modules/jornadas/jornadas.module';
+import { ClientesModule } from './modules/clientes/clientes.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { JornadasModule } from './modules/jornadas/jornadas.module';
     ReportesModule,
     DashboardModule,
     JornadasModule,
+    ClientesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

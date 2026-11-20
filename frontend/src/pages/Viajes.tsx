@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { viajsService, Viaje } from '../services/viajsService';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
+import clientesService from '../services/clientesService';
+import { Cliente } from '../types/cliente';
 import { Camion } from '../types/camion';
 import { Chofer } from '../types/chofer';
 import AppNavbar from '../components/AppNavbar';
@@ -13,12 +15,45 @@ import heroRoutesViolet from '../assets/hero-routes-violet.svg';
 import { parseDatePreservingDay } from '../utils/dateUtils';
 import '../styles/Viajes.css';
 
+// Los anchos se asignan por clase (col-*) y no por posición, para que agregar
+// o quitar columnas no desplace los estilos del resto.
+const VIAJES_COLUMNS: { key: string; label: string }[] = [
+  { key: 'numero', label: 'Nro. Viaje' },
+  { key: 'camion', label: 'Camión' },
+  { key: 'chofer', label: 'Chofer' },
+  { key: 'cliente', label: 'Cliente' },
+  { key: 'origen', label: 'Origen' },
+  { key: 'destino', label: 'Destino' },
+  { key: 'doc', label: 'Doc.' },
+  { key: 'valor', label: 'Valor' },
+  { key: 'inicio', label: 'Inicio' },
+  { key: 'fin', label: 'Fin' },
+  { key: 'pago', label: 'Pago' },
+  { key: 'km', label: 'KM' },
+  { key: 'estado', label: 'Estado' },
+  { key: 'acciones', label: 'Acciones' },
+];
+
+const ViajesTableHead: React.FC = () => (
+  <thead>
+    <tr>
+      {VIAJES_COLUMNS.map((col) => (
+        <th key={col.key} className={`col-${col.key}`}>
+          {col.label}
+        </th>
+      ))}
+    </tr>
+  </thead>
+);
+
 const Viajes: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const skeletonRows = Array.from({ length: 6 }, (_, index) => index);
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [camiones, setCamiones] = useState<Record<number, Camion>>({});
   const [choferes, setChoferes] = useState<Record<number, Chofer>>({});
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +62,8 @@ const Viajes: React.FC = () => {
     estado: '',
     camionId: '',
     choferId: '',
+    // Permite llegar filtrado desde la página de clientes: /viajes?clienteId=3
+    clienteId: searchParams.get('clienteId') ?? '',
     fechaPagoDesde: '',
     fechaPagoHasta: '',
   });
@@ -34,6 +71,23 @@ const Viajes: React.FC = () => {
   useEffect(() => {
     loadViajes();
   }, [filtros]);
+
+  useEffect(() => {
+    clientesService
+      .getAll()
+      .then(setClientes)
+      .catch((err) => console.error('Error al cargar clientes:', err));
+  }, []);
+
+  // Mantiene ?clienteId= en la URL para que el filtro sea compartible y sobreviva un refresh
+  useEffect(() => {
+    const current = searchParams.get('clienteId') ?? '';
+    if (current === filtros.clienteId) return;
+    const next = new URLSearchParams(searchParams);
+    if (filtros.clienteId) next.set('clienteId', filtros.clienteId);
+    else next.delete('clienteId');
+    setSearchParams(next, { replace: true });
+  }, [filtros.clienteId]);
 
   const loadViajes = async () => {
     try {
@@ -44,6 +98,7 @@ const Viajes: React.FC = () => {
         ...(filtros.estado && { estado: filtros.estado }),
         ...(filtros.camionId && { camionId: parseInt(filtros.camionId) }),
         ...(filtros.choferId && { choferId: parseInt(filtros.choferId) }),
+        ...(filtros.clienteId && { clienteId: parseInt(filtros.clienteId) }),
         ...(filtros.fechaPagoDesde && { fechaPagoDesde: filtros.fechaPagoDesde }),
         ...(filtros.fechaPagoHasta && { fechaPagoHasta: filtros.fechaPagoHasta }),
       };
@@ -282,6 +337,24 @@ const Viajes: React.FC = () => {
         </div>
 
         <div className="filter-group">
+          <label htmlFor="filtro-cliente">Cliente</label>
+          <select
+            id="filtro-cliente"
+            value={filtros.clienteId}
+            onChange={(e) => handleFiltroChange('clienteId', e.target.value)}
+            className="filter-input"
+          >
+            <option value="">Todos</option>
+            {clientes.map((cl) => (
+              <option key={cl.id} value={String(cl.id)}>
+                {cl.nombre}
+                {cl.activo ? '' : ' (inactivo)'}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="filter-group">
           <label>Pago Desde</label>
           <input
             type="date"
@@ -303,7 +376,7 @@ const Viajes: React.FC = () => {
 
         <button
           className="btn-secondary"
-          onClick={() => setFiltros({ estado: '', camionId: '', choferId: '', fechaPagoDesde: '', fechaPagoHasta: '' })}
+          onClick={() => setFiltros({ estado: '', camionId: '', choferId: '', clienteId: '', fechaPagoDesde: '', fechaPagoHasta: '' })}
         >
           Limpiar Filtros
         </button>
@@ -313,27 +386,11 @@ const Viajes: React.FC = () => {
       {loading ? (
         <div className="table-responsive skeleton-table">
           <table className="viajes-table">
-            <thead>
-              <tr>
-                <th>Nro. Viaje</th>
-                <th>Camión</th>
-                <th>Chofer</th>
-                <th>Origen</th>
-                <th>Destino</th>
-                <th>Doc.</th>
-                <th>Valor</th>
-                <th>Inicio</th>
-                <th>Fin</th>
-                <th>Pago</th>
-                <th>KM</th>
-                <th className="estado-header">Estado</th>
-                <th className="acciones-header">Acciones</th>
-              </tr>
-            </thead>
+            <ViajesTableHead />
             <tbody>
               {skeletonRows.map((row) => (
                 <tr key={row}>
-                  <td colSpan={13}>
+                  <td colSpan={VIAJES_COLUMNS.length}>
                     <div className="skeleton-line" />
                   </td>
                 </tr>
@@ -351,23 +408,7 @@ const Viajes: React.FC = () => {
       ) : (
         <div className="table-responsive">
           <table className="viajes-table">
-            <thead>
-              <tr>
-                <th>Nro. Viaje</th>
-                <th>Camión</th>
-                <th>Chofer</th>
-                <th>Origen</th>
-                <th>Destino</th>
-                <th>Doc.</th>
-                <th>Valor</th>
-                <th>Inicio</th>
-                <th>Fin</th>
-                <th>Pago</th>
-                <th>KM</th>
-                <th className="estado-header">Estado</th>
-                <th className="acciones-header">Acciones</th>
-              </tr>
-            </thead>
+            <ViajesTableHead />
             <tbody>
               {viajes.map((viaje) => (
                 <tr key={viaje.id} className="viaje-row">
@@ -388,6 +429,7 @@ const Viajes: React.FC = () => {
                       ? `${choferes[viaje.choferId].nombre} ${choferes[viaje.choferId].apellido}`
                       : `ID: ${viaje.choferId}`}
                   </td>
+                  <td title={viaje.cliente?.nombre || ''}>{viaje.cliente?.nombre || '-'}</td>
                   <td title={viaje.origen}>{viaje.origen}</td>
                   <td title={viaje.destino}>{viaje.destino}</td>
                   <td className="doc-status-cell">
@@ -447,7 +489,8 @@ const Viajes: React.FC = () => {
                       <option value="cancelado">Cancelado</option>
                     </select>
                   </td>
-                  <td className="acciones-cell">
+                  <td className="col-acciones acciones-cell">
+                    <div className="acciones-wrap">
                     <button
                       className="table-action-btn table-action-btn--edit"
                       onClick={() => handleEdit(viaje.id!)}
@@ -464,6 +507,7 @@ const Viajes: React.FC = () => {
                     >
                       Eliminar
                     </button>
+                    </div>
                   </td>
                 </tr>
               ))}

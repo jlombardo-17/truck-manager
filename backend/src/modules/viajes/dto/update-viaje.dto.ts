@@ -85,6 +85,11 @@ export class UpdateViajDTO {
   @IsOptional()
   choferId?: number;
 
+  // null desasigna el cliente
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @IsOptional()
+  clienteId?: number | null;
+
   @IsDateString()
   @IsOptional()
   fechaInicio?: string;

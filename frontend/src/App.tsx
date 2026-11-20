@@ -15,6 +15,7 @@ import ViajeForm from './pages/ViajeForm';
 import Reportes from './pages/Reportes';
 import Clima from './pages/Clima';
 import Jornadas from './pages/Jornadas';
+import Clientes from './pages/Clientes';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 import './styles/accessibility.css';
@@ -135,6 +136,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ViajeForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clientes"
+            element={
+              <ProtectedRoute>
+                <Clientes />
               </ProtectedRoute>
             }
           />

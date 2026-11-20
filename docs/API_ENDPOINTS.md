@@ -362,11 +362,40 @@ Response (201):
 
 ---
 
+## 🤝 Clientes (`/clientes`)
+
+Dadores de carga. Un viaje puede tener un cliente opcional (`clienteId`; `null` lo desasigna).
+
+### Listar Clientes
+```http
+GET /clientes
+Authorization: Bearer <token>
+
+Response (200): ordenados por nombre
+[
+  { "id": 2, "nombre": "Calmer", "rut": null, "telefono": null, "email": null,
+    "direccion": null, "notas": null, "activo": true, "createdAt": "...", "updatedAt": "..." }
+]
+```
+
+### Obtener / Crear / Actualizar / Eliminar
+```http
+GET    /clientes/:id
+POST   /clientes        { "nombre": "Calmer", "rut"?, "telefono"?, "email"?, "direccion"?, "notas"?, "activo"? }
+PATCH  /clientes/:id    (mismos campos, todos opcionales)
+DELETE /clientes/:id
+```
+
+- `nombre` es único (sin distinguir mayúsculas): duplicado → `409 Conflict`.
+- `DELETE` con viajes asociados → `400 Bad Request`; en ese caso marcar `activo: false`.
+
+---
+
 ## 🚗 Viajes (`/viajes`)
 
 ### Listar Viajes (con filtros)
 ```http
-GET /viajes?estado=en_progreso&camionId=1&choferId=1
+GET /viajes?estado=en_progreso&camionId=1&choferId=1&clienteId=2
 Authorization: Bearer <token>
 
 Response (200):
@@ -376,6 +405,8 @@ Response (200):
     "numeroViaje": "VJ-2026-003741",
     "camionId": 1,
     "choferId": 1,
+    "clienteId": 2,
+    "cliente": { "id": 2, "nombre": "Calmer", "...": "..." },
     "fechaInicio": "2026-03-07",
     "fechaFin": "2026-03-08",
     "origen": "Asunción",

@@ -15,6 +15,7 @@ import { UpdateViajDTO } from './dto/update-viaje.dto';
 import { CamionesService } from '../camiones/camiones.service';
 import { Camion } from '../camiones/camion.entity';
 import { Chofer } from '../choferes/chofer.entity';
+import { Cliente } from '../clientes/cliente.entity';
 import { getUsdUyuRateInfo, UsdUyuRateInfo } from '../../common/utils/usd-uyu-rate';
 
 type RoutePointInput = {
@@ -92,6 +93,9 @@ export class ViajsService {
     try {
       await this.assertCamionExists(createViajDTO.camionId);
       await this.assertChoferExists(createViajDTO.choferId);
+      if (createViajDTO.clienteId) {
+        await this.assertClienteExists(createViajDTO.clienteId);
+      }
 
       const requestedCurrency = this.normalizeCurrency(createViajDTO.moneda);
       const rateInfo = requestedCurrency === 'USD' ? await this.getUsdUyuRateInfo() : null;
@@ -109,6 +113,7 @@ export class ViajsService {
         numeroViaje: createViajDTO.numeroViaje,
         camion: { id: createViajDTO.camionId } as Camion,
         chofer: { id: createViajDTO.choferId } as Chofer,
+        cliente: createViajDTO.clienteId ? ({ id: createViajDTO.clienteId } as Cliente) : null,
         fechaInicio: new Date(createViajDTO.fechaInicio),
         fechaFin: createViajDTO.fechaFin ? new Date(createViajDTO.fechaFin) : null,
         fechaPago: createViajDTO.fechaPago || null,
@@ -178,6 +183,7 @@ export class ViajsService {
     estado?: string;
     camionId?: number;
     choferId?: number;
+    clienteId?: number;
     fechaInicio?: Date;
     fechaFin?: Date;
     fechaPagoDesde?: string; // YYYY-MM-DD
@@ -186,6 +192,7 @@ export class ViajsService {
     let query = this.viajRepository.createQueryBuilder('viaje')
       .leftJoinAndSelect('viaje.camion', 'camion')
       .leftJoinAndSelect('viaje.chofer', 'chofer')
+      .leftJoinAndSelect('viaje.cliente', 'cliente')
       .leftJoinAndSelect('viaje.rutas', 'rutas')
       .leftJoinAndSelect('viaje.comisiones', 'comisiones')
       .orderBy('viaje.fechaInicio', 'DESC');
@@ -200,6 +207,10 @@ export class ViajsService {
 
     if (filters?.choferId) {
       query = query.andWhere('viaje.chofer_id = :choferId', { choferId: filters.choferId });
+    }
+
+    if (filters?.clienteId) {
+      query = query.andWhere('viaje.cliente_id = :clienteId', { clienteId: filters.clienteId });
     }
 
     if (filters?.fechaInicio) {
@@ -228,7 +239,7 @@ export class ViajsService {
   async findOneWithRelations(id: number): Promise<Viaje> {
     const viaje = await this.viajRepository.findOne({
       where: { id },
-      relations: ['camion', 'chofer', 'rutas', 'comisiones'],
+      relations: ['camion', 'chofer', 'cliente', 'rutas', 'comisiones'],
     });
 
     if (!viaje) {
@@ -260,6 +271,10 @@ export class ViajsService {
 
     if (!viaje.choferId && viaje.chofer?.id) {
       viaje.choferId = viaje.chofer.id;
+    }
+
+    if (!viaje.clienteId && viaje.cliente?.id) {
+      viaje.clienteId = viaje.cliente.id;
     }
 
     return viaje;
@@ -303,10 +318,12 @@ export class ViajsService {
         comisiones,
         camionId,
         choferId,
+        clienteId,
         valorViaje,
         moneda,
         ...viajeChanges
       } = updateViajDTO;
+      const hasClienteChange = Object.prototype.hasOwnProperty.call(updateViajDTO, 'clienteId');
 
       const hasCurrencyChange = Object.prototype.hasOwnProperty.call(updateViajDTO, 'moneda');
       const hasAmountChange = Object.prototype.hasOwnProperty.call(updateViajDTO, 'valorViaje');
@@ -337,10 +354,15 @@ export class ViajsService {
         await this.assertChoferExists(choferId);
       }
 
+      if (clienteId) {
+        await this.assertClienteExists(clienteId);
+      }
+
       Object.assign(viaje, {
         ...viajeChanges,
         ...(camionId ? { camion: { id: camionId } as Camion } : {}),
         ...(choferId ? { chofer: { id: choferId } as Chofer } : {}),
+        ...(hasClienteChange ? { cliente: clienteId ? ({ id: clienteId } as Cliente) : null } : {}),
         ...(hasAmountChange || hasCurrencyChange
           ? {
               valorViaje: Number.isFinite(nextOriginalAmount) ? nextOriginalAmount : Number(viaje.valorViaje),
@@ -630,6 +652,16 @@ export class ViajsService {
 
     if (!chofer) {
       throw new BadRequestException('Chofer no encontrado');
+    }
+  }
+
+  private async assertClienteExists(clienteId: number): Promise<void> {
+    const cliente = await this.viajRepository.manager.getRepository(Cliente).findOne({
+      where: { id: clienteId },
+    });
+
+    if (!cliente) {
+      throw new BadRequestException('Cliente no encontrado');
     }
   }
 

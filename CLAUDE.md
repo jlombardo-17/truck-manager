@@ -25,6 +25,7 @@ truck-manager/
 │   │   ├── camiones/      # Camiones, documentos, mantenimiento, combustible
 │   │   ├── choferes/      # Choferes, documentos, salarios, pagos
 │   │   ├── viajes/        # Viajes, rutas, comisiones
+│   │   ├── clientes/      # Clientes (dadores de carga) asignables a viajes
 │   │   ├── dashboard/     # KPIs y métricas
 │   │   └── reportes/      # Exportación PDF/Excel
 │   └── common/guards/     # jwt-auth.guard.ts
@@ -54,7 +55,8 @@ truck-manager/
 | `ChoferDocumento` | `chofer_documento` | id, choferId, tipo, numeroDocumento, fechaVencimiento |
 | `ChoferSalario` | `chofer_salario` | id, choferId, sueldoBase, porcentajeComision |
 | `ChoferSalarioPago` | `chofer_salario_pago` | id, choferId, monto, fecha |
-| `Viaje` | `viajes` | id, numeroViaje, camionId, choferId, origen, destino, valorViaje, moneda, kmRecorridos |
+| `Cliente` | `clientes` | id, nombre (único), rut, telefono, email, activo |
+| `Viaje` | `viajes` | id, numeroViaje, camionId, choferId, clienteId (opcional), origen, destino, valorViaje, moneda, kmRecorridos |
 | `ViajRuta` | `viaje_ruta` | id, viajeId, orden, latitud, longitud, direccion |
 | `ViajComision` | `viaje_comision` | id, viajeId, tipo, concepto, montoBase, porcentaje, beneficiario |
 
@@ -122,6 +124,7 @@ Los tipos viven en `frontend/src/types/<entidad>.ts`.
 | Salario Detalle | `SalarioDetalle.tsx` | Detalle y pagos |
 | Viajes | `Viajes.tsx` | Listado con exportación PDF |
 | Viaje Form | `ViajeForm.tsx` | Crear/editar con mapa de rutas (Leaflet) |
+| Clientes | `Clientes.tsx` | Listado + alta/edición en modal; link a viajes filtrados |
 | Reportes | `Reportes.tsx` | Reportes financieros + exportación PDF/Excel |
 | Clima | `Clima.tsx` | Widget de clima integrado |
 | Login | `Login.tsx` | Autenticación |

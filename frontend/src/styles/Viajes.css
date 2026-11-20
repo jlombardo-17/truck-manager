@@ -133,16 +133,17 @@
 
 .viajes-table {
   width: 100%;
-  border-collapse: collapse;
+  /* Suma de los anchos de columna: por debajo de esto la tabla scrollea en
+     horizontal en lugar de comprimir/ocultar columnas */
+  min-width: 1695px;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
 }
 
-.viajes-table thead {
-  background: #f5f8fc;
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.viajes-table th {
+/* thead/tbody en el selector: index.css tiene reglas genéricas para
+   .viajes-table td / thead th que de otro modo ganan y agrandan la tabla */
+.viajes-table thead th {
   padding: 10px 8px;
   text-align: left;
   font-weight: 600;
@@ -150,82 +151,60 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.2px;
-  position: sticky;
-  top: 0;
-  z-index: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Encabezado fijo al scrollear: necesita fondo propio (el de <thead> no
+     acompaña al th pegado) y quedar por encima de las celdas */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f5f8fc;
+  border-bottom: 1px solid var(--border-soft);
 }
 
-.viajes-table td {
+.viajes-table tbody td {
   padding: 0.65rem 0.5rem;
   border-bottom: 1px solid #edf2f7;
   font-size: 13px;
+  line-height: 1.4;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.viajes-table th:nth-child(1),
-.viajes-table td:nth-child(1) {
-  width: 8%;
+/* Anchos por columna (table-layout: fixed toma los del encabezado) */
+.viajes-table .col-numero { width: 165px; }
+.viajes-table .col-camion { width: 95px; }
+.viajes-table .col-chofer { width: 155px; }
+.viajes-table .col-cliente { width: 130px; }
+.viajes-table .col-origen { width: 140px; }
+.viajes-table .col-destino { width: 130px; }
+.viajes-table .col-doc { width: 115px; text-align: center; }
+.viajes-table .col-valor { width: 100px; }
+.viajes-table .col-inicio,
+.viajes-table .col-fin,
+.viajes-table .col-pago { width: 100px; }
+.viajes-table .col-km { width: 90px; }
+.viajes-table .col-estado { width: 125px; text-align: center; }
+.viajes-table .col-acciones { width: 150px; text-align: center; }
+
+/* Acciones siempre visibles: columna pegada a la derecha aunque la tabla scrollee */
+.viajes-table .col-acciones {
+  position: sticky;
+  right: 0;
+  background: #ffffff;
+  box-shadow: -6px 0 8px -6px rgba(15, 35, 60, 0.18);
 }
 
-.viajes-table th:nth-child(2),
-.viajes-table td:nth-child(2) {
-  width: 6%;
+.viajes-table th.col-acciones {
+  z-index: 3;
+  background: #f5f8fc;
 }
 
-.viajes-table th:nth-child(3),
-.viajes-table td:nth-child(3) {
-  width: 10%;
-}
-
-.viajes-table th:nth-child(4),
-.viajes-table td:nth-child(4) {
-  width: 11%;
-}
-
-.viajes-table th:nth-child(5),
-.viajes-table td:nth-child(5) {
-  width: 11%;
-}
-
-.viajes-table th:nth-child(6),
-.viajes-table td:nth-child(6) {
-  width: 6%;
-}
-
-.viajes-table th:nth-child(7),
-.viajes-table td:nth-child(7) {
-  width: 8%;
-}
-
-.viajes-table th:nth-child(8),
-.viajes-table td:nth-child(8),
-.viajes-table th:nth-child(9),
-.viajes-table td:nth-child(9),
-.viajes-table th:nth-child(10),
-.viajes-table td:nth-child(10) {
-  width: 6%;
-}
-
-.viajes-table th:nth-child(11),
-.viajes-table td:nth-child(11) {
-  width: 6%;
-}
-
-.viajes-table th:nth-child(12),
-.viajes-table td:nth-child(12) {
-  width: 9%;
-}
-
-.viajes-table th:nth-child(13),
-.viajes-table td:nth-child(13) {
-  width: 11%;
-  min-width: 140px;
+.viaje-row:hover .col-acciones {
+  background: #f9fbff;
 }
 
 .skeleton-table tbody td {
@@ -346,27 +325,22 @@
   border-color: #f44336;
 }
 
-.estado-header {
-  text-align: center !important;
-}
-
 .estado-cell {
   text-align: center;
 }
 
-.acciones-header {
-  text-align: center !important;
-}
-
 /* Acciones */
 .acciones-cell {
+  overflow: visible;
+  text-overflow: initial;
+}
+
+.acciones-wrap {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: initial;
 }
 
 
@@ -444,8 +418,8 @@
     table-layout: auto;
   }
 
-  .viajes-table th,
-  .viajes-table td {
+  .viajes-table thead th,
+  .viajes-table tbody td {
     padding: 10px;
   }
 }
@@ -478,18 +452,17 @@
   }
 
   .viajes-table {
-    min-width: 600px;
     font-size: 12px;
     table-layout: auto;
   }
 
-  .viajes-table th,
-  .viajes-table td {
+  .viajes-table thead th,
+  .viajes-table tbody td {
     padding: 8px;
     word-break: break-word;
   }
 
-  .acciones-cell {
+  .acciones-wrap {
     gap: 4px;
   }
 

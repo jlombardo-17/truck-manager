@@ -322,6 +322,12 @@ const Dashboard: React.FC = () => {
               <button className="btn-secondary feature-button">Ver Viajes →</button>
             </div>
 
+            <div className="feature-card clickable" onClick={() => navigate('/clientes')}>
+              <h3>Clientes</h3>
+              <p>Dadores de carga y sus viajes</p>
+              <button className="btn-secondary feature-button">Ver Clientes →</button>
+            </div>
+
             <div className="feature-card clickable" onClick={() => navigate('/jornadas')}>
               <h3>Jornadas y Viáticos</h3>
               <p>Calendario diario por chofer: días trabajados, licencias y viáticos</p>

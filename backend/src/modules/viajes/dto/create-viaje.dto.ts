@@ -77,6 +77,10 @@ export class CreateViajDTO {
   @IsNumber({ allowNaN: false, allowInfinity: false })
   choferId: number;
 
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @IsOptional()
+  clienteId?: number | null;
+
   @IsDateString()
   fechaInicio: string;
 

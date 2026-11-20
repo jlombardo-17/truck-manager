@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
+import { Cliente } from '../types/cliente';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -55,6 +56,7 @@ const normalizeViajeResponse = (value: unknown): Viaje => {
       toNumberOrUndefined(viaje.cotizacionUsdUyu) ?? toNumberOrUndefined(viaje.cotizacion_usd_uyu),
     camionId: toNumberOrUndefined(viaje.camionId) ?? toNumberOrUndefined((viaje.camion as { id?: unknown } | undefined)?.id) ?? 0,
     choferId: toNumberOrUndefined(viaje.choferId) ?? toNumberOrUndefined((viaje.chofer as { id?: unknown } | undefined)?.id) ?? 0,
+    clienteId: toNumberOrUndefined(viaje.clienteId) ?? toNumberOrUndefined(viaje.cliente?.id) ?? null,
     rutas: normalizeArrayResponse<ViajRuta>(viaje.rutas, 'rutas'),
     comisiones: normalizeArrayResponse<ViajComision>(viaje.comisiones, 'comisiones'),
   };
@@ -98,6 +100,8 @@ const sanitizeViajePayload = (
     moneda: viaje.moneda === 'USD' ? 'USD' : 'UYU',
     camionId: toNumberOrUndefined(viaje.camionId),
     choferId: toNumberOrUndefined(viaje.choferId),
+    // null desasigna el cliente; undefined (sin la clave) lo deja como está
+    clienteId: viaje.clienteId === undefined ? undefined : toNumberOrUndefined(viaje.clienteId) ?? null,
     valorViaje: toNumberOrUndefined(viaje.valorViaje),
     kmRecorridos: toNumberOrUndefined(viaje.kmRecorridos),
     consumoCombustible: toNumberOrUndefined(viaje.consumoCombustible),
@@ -130,6 +134,8 @@ export interface Viaje {
   numeroViaje: string;
   camionId: number;
   choferId: number;
+  clienteId?: number | null;
+  cliente?: Pick<Cliente, 'id' | 'nombre'> | null;
   fechaInicio: string;
   fechaFin?: string;
   fechaPago?: string;
@@ -203,6 +209,7 @@ export const viajsService = {
     estado?: string;
     camionId?: number;
     choferId?: number;
+    clienteId?: number;
     fechaInicio?: string;
     fechaFin?: string;
     fechaPagoDesde?: string;
@@ -216,6 +223,7 @@ export const viajsService = {
         if (filters.estado) params.append('estado', filters.estado);
         if (filters.camionId) params.append('camionId', filters.camionId.toString());
         if (filters.choferId) params.append('choferId', filters.choferId.toString());
+        if (filters.clienteId) params.append('clienteId', filters.clienteId.toString());
         if (filters.fechaInicio) params.append('fechaInicio', filters.fechaInicio);
         if (filters.fechaFin) params.append('fechaFin', filters.fechaFin);
         if (filters.fechaPagoDesde) params.append('fechaPagoDesde', filters.fechaPagoDesde);
