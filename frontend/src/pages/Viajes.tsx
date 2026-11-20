@@ -10,6 +10,7 @@ import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
 import heroRoutesViolet from '../assets/hero-routes-violet.svg';
+import { parseDatePreservingDay } from '../utils/dateUtils';
 import '../styles/Viajes.css';
 
 const Viajes: React.FC = () => {
@@ -173,9 +174,8 @@ const Viajes: React.FC = () => {
 
   const formatViajeDate = (value?: string) => {
     if (!value) return '-';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return '-';
-    return parsed.toLocaleDateString('es-UY');
+    const parsed = parseDatePreservingDay(value);
+    return parsed ? parsed.toLocaleDateString('es-UY') : '-';
   };
 
   return (

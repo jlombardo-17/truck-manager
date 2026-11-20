@@ -1,4 +1,7 @@
-const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+// Acepta 'YYYY-MM-DD' y también ISO a medianoche UTC ('YYYY-MM-DDT00:00:00(.000)Z'),
+// que es como el backend serializa columnas datetime guardadas desde un input de fecha.
+// Parsear este último con new Date() en UTC-3 corre la fecha un día hacia atrás.
+const DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00:00(?:\.0+)?Z)?$/;
 
 export const parseDatePreservingDay = (value?: string | Date | null): Date | null => {
   if (!value) return null;
