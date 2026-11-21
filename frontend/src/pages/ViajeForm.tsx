@@ -6,7 +6,7 @@ import choferesService from '../services/choferesService';
 import clientesService from '../services/clientesService';
 import { Cliente } from '../types/cliente';
 import { Camion } from '../types/camion';
-import { Chofer } from '../types/chofer';
+import { Chofer, EstadoChofer, estadoChoferLabels } from '../types/chofer';
 import { MapEditor } from '../components/MapEditor';
 import CommissionsTable from '../components/CommissionsTable';
 import AppNavbar from '../components/AppNavbar';
@@ -580,11 +580,20 @@ const ViajeForm: React.FC = () => {
                 className="form-input"
               >
                 <option value={0}>Selecciona un chofer</option>
-                {choferes.map((ch) => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.nombre} {ch.apellido}
-                  </option>
-                ))}
+                {choferes
+                  .filter(
+                    (ch) =>
+                      ch.estado === EstadoChofer.ACTIVO ||
+                      ch.id === Number(formData.choferId)
+                  )
+                  .map((ch) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.nombre} {ch.apellido}
+                      {ch.estado !== EstadoChofer.ACTIVO
+                        ? ` (${estadoChoferLabels[ch.estado] ?? ch.estado})`
+                        : ''}
+                    </option>
+                  ))}
               </select>
             </div>
 

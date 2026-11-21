@@ -92,7 +92,7 @@ export class ViajsService {
   async create(createViajDTO: CreateViajDTO): Promise<Viaje> {
     try {
       await this.assertCamionExists(createViajDTO.camionId);
-      await this.assertChoferExists(createViajDTO.choferId);
+      await this.assertChoferExists(createViajDTO.choferId, { requireActivo: true });
       if (createViajDTO.clienteId) {
         await this.assertClienteExists(createViajDTO.clienteId);
       }
@@ -351,7 +351,12 @@ export class ViajsService {
       }
 
       if (choferId) {
-        await this.assertChoferExists(choferId);
+        // Solo exigir chofer activo si se está reasignando; permite editar viajes
+        // históricos cuyo chofer quedó inactivo después.
+        const currentChoferId = viaje.choferId ?? viaje.chofer?.id;
+        await this.assertChoferExists(choferId, {
+          requireActivo: Number(choferId) !== Number(currentChoferId),
+        });
       }
 
       if (clienteId) {
@@ -645,13 +650,22 @@ export class ViajsService {
     }
   }
 
-  private async assertChoferExists(choferId: number): Promise<void> {
+  private async assertChoferExists(
+    choferId: number,
+    options: { requireActivo?: boolean } = {},
+  ): Promise<void> {
     const chofer = await this.viajRepository.manager.getRepository(Chofer).findOne({
       where: { id: choferId },
     });
 
     if (!chofer) {
       throw new BadRequestException('Chofer no encontrado');
+    }
+
+    if (options.requireActivo && chofer.estado !== 'activo') {
+      throw new BadRequestException(
+        `El chofer ${chofer.nombre} ${chofer.apellido} no está activo (estado: ${chofer.estado})`,
+      );
     }
   }
 
