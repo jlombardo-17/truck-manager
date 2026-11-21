@@ -344,3 +344,18 @@ select.form-input {
 .alert {
   animation: fadeIn 0.3s ease;
 }
+
+/* Botón con apariencia de link (p. ej. "Usar valor por tarifa") */
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #1565c0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: #0d47a1;
+}

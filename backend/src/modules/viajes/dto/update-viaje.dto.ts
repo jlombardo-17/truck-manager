@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested, IsIn } from 'class-validator';
+import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested, IsIn, Min } from 'class-validator';
 import { IsDateOnly } from '../../../common/utils/date-only';
 import { Type, Exclude } from 'class-transformer';
 
@@ -151,6 +151,16 @@ export class UpdateViajDTO {
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()
   pesoCargaKg?: number;
+
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(0)
+  @IsOptional()
+  tarifaPorTonelada?: number | null;
+
+  @IsString()
+  @IsIn(['UYU', 'USD'])
+  @IsOptional()
+  monedaTarifa?: string | null;
 
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsOptional()

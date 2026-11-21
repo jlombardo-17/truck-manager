@@ -85,6 +85,14 @@ export class Viaje {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   pesoCargaKg: number;
 
+  // Tarifa por tonelada con la que se calcula el valor del viaje (referencia;
+  // valorViaje puede editarse a mano y es el monto que cuenta).
+  @Column({ name: 'tarifa_por_tonelada', type: 'decimal', precision: 12, scale: 2, nullable: true })
+  tarifaPorTonelada: number | null;
+
+  @Column({ name: 'moneda_tarifa', type: 'varchar', length: 3, nullable: true })
+  monedaTarifa: string | null;
+
   // Valores económicos
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   valorViaje: number;

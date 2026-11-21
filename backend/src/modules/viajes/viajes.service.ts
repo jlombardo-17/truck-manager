@@ -129,6 +129,9 @@ export class ViajsService {
         documentoDescargaAdjunto: createViajDTO.documentoDescargaAdjunto,
         documentosDescargaAdjuntos: createViajDTO.documentosDescargaAdjuntos ?? null,
         pesoCargaKg: createViajDTO.pesoCargaKg as any || null,
+        tarifaPorTonelada: createViajDTO.tarifaPorTonelada ?? null,
+        monedaTarifa:
+          createViajDTO.tarifaPorTonelada != null ? createViajDTO.monedaTarifa || 'UYU' : null,
         valorViaje: valorViajeOriginal,
         valorViajeUyu,
         moneda: requestedCurrency,

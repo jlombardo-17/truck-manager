@@ -23,6 +23,8 @@ export interface Viaje {
   documentoDescargaAdjunto?: string;
   documentosDescargaAdjuntos?: ViajeDocumentoAdjunto[];
   pesoCargaKg?: number;
+  tarifaPorTonelada?: number | null;
+  monedaTarifa?: 'UYU' | 'USD' | null;
   valorViaje: number;
   moneda?: 'UYU' | 'USD';
   valorViajeUyu?: number;

@@ -184,6 +184,27 @@ const ViajeForm: React.FC = () => {
       ? Number(formData.valorViaje || 0) * usdUyuRate
       : Number(formData.valorViaje || 0);
   const gananciaAntesDeComisiones = valorViajeEquivalenteUyu - gastosOperativos;
+
+  // Valor por tarifa: toneladas × tarifa por tonelada, en la moneda de la tarifa
+  const calcularValorPorTarifa = (peso?: number | null, tarifa?: number | null): number | null => {
+    const kg = Number(peso);
+    const t = Number(tarifa);
+    if (!Number.isFinite(kg) || !Number.isFinite(t) || kg <= 0 || t <= 0) return null;
+    return Math.round((kg / 1000) * t * 100) / 100;
+  };
+  const monedaTarifaActual: 'UYU' | 'USD' = formData.monedaTarifa === 'USD' ? 'USD' : 'UYU';
+  const valorPorTarifa = calcularValorPorTarifa(formData.pesoCargaKg, formData.tarifaPorTonelada);
+  const valorEditadoManualmente =
+    valorPorTarifa !== null &&
+    (Math.abs(Number(formData.valorViaje || 0) - valorPorTarifa) > 0.005 ||
+      (formData.moneda || 'UYU') !== monedaTarifaActual);
+  const formatMonto = (monto: number, moneda: 'UYU' | 'USD') =>
+    new Intl.NumberFormat('es-UY', { style: 'currency', currency: moneda, maximumFractionDigits: 2 }).format(monto);
+
+  const aplicarValorPorTarifa = () => {
+    if (valorPorTarifa === null) return;
+    setFormData((prev) => ({ ...prev, valorViaje: valorPorTarifa, moneda: monedaTarifaActual }));
+  };
   const totalComisiones = comisiones.reduce(
     (sum, comision) => sum + (Number(comision.montoTotal) || 0),
     0,
@@ -291,6 +312,8 @@ const ViajeForm: React.FC = () => {
           costoCombustible: toNumberOrUndefined(viaje.costoCombustible),
           otrosGastos: toNumberOrUndefined(viaje.otrosGastos),
           pesoCargaKg: toNumberOrUndefined(viaje.pesoCargaKg),
+          tarifaPorTonelada: toNumberOrUndefined(viaje.tarifaPorTonelada) ?? null,
+          monedaTarifa: viaje.monedaTarifa === 'USD' ? 'USD' : 'UYU',
           latitudOrigen: toNumberOrUndefined(viaje.latitudOrigen) ?? toNumberOrUndefined(firstRoute?.latitud),
           longitudOrigen: toNumberOrUndefined(viaje.longitudOrigen) ?? toNumberOrUndefined(firstRoute?.longitud),
           latitudDestino: toNumberOrUndefined(viaje.latitudDestino) ?? toNumberOrUndefined(lastRoute?.latitud),
@@ -326,6 +349,7 @@ const ViajeForm: React.FC = () => {
     const optionalNumericFields = [
       'kmRecorridos',
       'pesoCargaKg',
+      'tarifaPorTonelada',
       'consumoCombustible',
       'costoCombustible',
       'otrosGastos',
@@ -343,10 +367,22 @@ const ViajeForm: React.FC = () => {
       nextValue = toNumberOrUndefined(value);
     }
     
-    setFormData({
+    const next: Viaje = {
       ...formData,
       [name]: nextValue,
-    });
+    };
+
+    // Al cambiar peso, tarifa o su moneda, recalcular el valor del viaje.
+    // El usuario puede pisarlo después editando "Valor del Viaje" a mano.
+    if (['pesoCargaKg', 'tarifaPorTonelada', 'monedaTarifa'].includes(name)) {
+      const calculado = calcularValorPorTarifa(next.pesoCargaKg, next.tarifaPorTonelada);
+      if (calculado !== null) {
+        next.valorViaje = calculado;
+        next.moneda = next.monedaTarifa === 'USD' ? 'USD' : 'UYU';
+      }
+    }
+
+    setFormData(next);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -379,6 +415,8 @@ const ViajeForm: React.FC = () => {
         valorViaje: toNumberOrZero(formData.valorViaje),
         kmRecorridos: toNumberOrUndefined(formData.kmRecorridos),
         pesoCargaKg: toNumberOrUndefined(formData.pesoCargaKg),
+        tarifaPorTonelada: toNumberOrUndefined(formData.tarifaPorTonelada) ?? null,
+        monedaTarifa: toNumberOrUndefined(formData.tarifaPorTonelada) != null ? monedaTarifaActual : null,
         consumoCombustible: toNumberOrUndefined(formData.consumoCombustible),
         costoCombustible: toNumberOrUndefined(formData.costoCombustible),
         otrosGastos: toNumberOrUndefined(formData.otrosGastos),
@@ -825,6 +863,45 @@ const ViajeForm: React.FC = () => {
                 step="0.01"
                 className="form-input"
               />
+              {formData.pesoCargaKg ? (
+                <small className="field-hint">
+                  = {new Intl.NumberFormat('es-UY', { maximumFractionDigits: 3 }).format(Number(formData.pesoCargaKg) / 1000)} toneladas
+                </small>
+              ) : null}
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="tarifaPorTonelada">Tarifa por tonelada</label>
+              <input
+                type="number"
+                id="tarifaPorTonelada"
+                name="tarifaPorTonelada"
+                value={formData.tarifaPorTonelada ?? ''}
+                onChange={handleInputChange}
+                step="0.01"
+                min="0"
+                placeholder="Ej: 12.50"
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="monedaTarifa">Moneda de la tarifa</label>
+              <select
+                id="monedaTarifa"
+                name="monedaTarifa"
+                value={monedaTarifaActual}
+                onChange={handleInputChange}
+                className="form-input"
+              >
+                <option value="UYU">Pesos (UYU)</option>
+                <option value="USD">Dolares (USD)</option>
+              </select>
+              {valorPorTarifa !== null && (
+                <small className="field-hint">
+                  Valor calculado: {formatMonto(valorPorTarifa, monedaTarifaActual)}
+                </small>
+              )}
             </div>
           </div>
         </section>
@@ -849,6 +926,17 @@ const ViajeForm: React.FC = () => {
               <small className="field-hint">
                 Equivalente estimado en UYU: {new Intl.NumberFormat('es-UY', { style: 'currency', currency: 'UYU', maximumFractionDigits: 2 }).format(valorViajeEquivalenteUyu)}
               </small>
+              {valorPorTarifa !== null && !valorEditadoManualmente && (
+                <small className="field-hint">Calculado por tarifa (toneladas × tarifa). Podés editarlo.</small>
+              )}
+              {valorEditadoManualmente && valorPorTarifa !== null && (
+                <small className="field-hint">
+                  Editado manualmente. Por tarifa sería {formatMonto(valorPorTarifa, monedaTarifaActual)}.{' '}
+                  <button type="button" className="link-button" onClick={aplicarValorPorTarifa}>
+                    Usar valor por tarifa
+                  </button>
+                </small>
+              )}
             </div>
 
             <div className="form-field">

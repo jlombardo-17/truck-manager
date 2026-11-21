@@ -46,6 +46,9 @@ const normalizeArrayResponse = <T>(value: unknown, fieldName?: string): T[] => {
   return [];
 };
 
+const normalizeMonedaTarifa = (value: unknown): 'UYU' | 'USD' | null =>
+  value === 'USD' ? 'USD' : value ? 'UYU' : null;
+
 const normalizeViajeResponse = (value: unknown): Viaje => {
   const viaje = (value || {}) as Viaje & Record<string, unknown>;
   return {
@@ -54,6 +57,9 @@ const normalizeViajeResponse = (value: unknown): Viaje => {
     valorViajeUyu: toNumberOrUndefined(viaje.valorViajeUyu) ?? toNumberOrUndefined(viaje.valor_viaje_uyu),
     cotizacionUsdUyu:
       toNumberOrUndefined(viaje.cotizacionUsdUyu) ?? toNumberOrUndefined(viaje.cotizacion_usd_uyu),
+    tarifaPorTonelada:
+      toNumberOrUndefined(viaje.tarifaPorTonelada) ?? toNumberOrUndefined(viaje.tarifa_por_tonelada) ?? null,
+    monedaTarifa: normalizeMonedaTarifa(viaje.monedaTarifa ?? viaje.moneda_tarifa),
     camionId: toNumberOrUndefined(viaje.camionId) ?? toNumberOrUndefined((viaje.camion as { id?: unknown } | undefined)?.id) ?? 0,
     choferId: toNumberOrUndefined(viaje.choferId) ?? toNumberOrUndefined((viaje.chofer as { id?: unknown } | undefined)?.id) ?? 0,
     clienteId: toNumberOrUndefined(viaje.clienteId) ?? toNumberOrUndefined(viaje.cliente?.id) ?? null,
@@ -108,6 +114,12 @@ const sanitizeViajePayload = (
     costoCombustible: toNumberOrUndefined(viaje.costoCombustible),
     otrosGastos: toNumberOrUndefined(viaje.otrosGastos),
     pesoCargaKg: toNumberOrUndefined(viaje.pesoCargaKg),
+    // null explícito para poder borrar la tarifa al editar
+    tarifaPorTonelada: toNumberOrUndefined(viaje.tarifaPorTonelada) ?? null,
+    monedaTarifa:
+      toNumberOrUndefined(viaje.tarifaPorTonelada) != null
+        ? viaje.monedaTarifa === 'USD' ? 'USD' : 'UYU'
+        : null,
     latitudOrigen: toNumberOrUndefined(viaje.latitudOrigen),
     longitudOrigen: toNumberOrUndefined(viaje.longitudOrigen),
     latitudDestino: toNumberOrUndefined(viaje.latitudDestino),
@@ -151,6 +163,8 @@ export interface Viaje {
   documentoDescargaAdjunto?: string;
   documentosDescargaAdjuntos?: ViajeDocumentoAdjunto[];
   pesoCargaKg?: number;
+  tarifaPorTonelada?: number | null;
+  monedaTarifa?: 'UYU' | 'USD' | null;
   valorViaje: number;
   moneda?: 'UYU' | 'USD';
   valorViajeUyu?: number;
