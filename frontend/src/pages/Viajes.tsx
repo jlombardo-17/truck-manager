@@ -6,7 +6,7 @@ import choferesService from '../services/choferesService';
 import clientesService from '../services/clientesService';
 import { Cliente } from '../types/cliente';
 import { Camion } from '../types/camion';
-import { Chofer } from '../types/chofer';
+import { Chofer, EstadoChofer, estadoChoferLabels } from '../types/chofer';
 import AppNavbar from '../components/AppNavbar';
 import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
@@ -54,6 +54,9 @@ const Viajes: React.FC = () => {
   const [camiones, setCamiones] = useState<Record<number, Camion>>({});
   const [choferes, setChoferes] = useState<Record<number, Chofer>>({});
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  // Listas completas para los selects de filtro (independientes de los viajes cargados)
+  const [camionesOpciones, setCamionesOpciones] = useState<Camion[]>([]);
+  const [choferesOpciones, setChoferesOpciones] = useState<Chofer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +80,20 @@ const Viajes: React.FC = () => {
       .getAll()
       .then(setClientes)
       .catch((err) => console.error('Error al cargar clientes:', err));
+    camionesService
+      .getAll()
+      .then((data) => setCamionesOpciones([...data].sort((a, b) => a.patente.localeCompare(b.patente))))
+      .catch((err) => console.error('Error al cargar camiones:', err));
+    choferesService
+      .getAll()
+      .then((data) =>
+        setChoferesOpciones(
+          [...data].sort((a, b) =>
+            `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`),
+          ),
+        ),
+      )
+      .catch((err) => console.error('Error al cargar choferes:', err));
   }, []);
 
   // Mantiene ?clienteId= en la URL para que el filtro sea compartible y sobreviva un refresh
@@ -315,25 +332,40 @@ const Viajes: React.FC = () => {
         </div>
 
         <div className="filter-group">
-          <label>Camión</label>
-          <input
-            type="text"
+          <label htmlFor="filtro-camion">Camión</label>
+          <select
+            id="filtro-camion"
             value={filtros.camionId}
             onChange={(e) => handleFiltroChange('camionId', e.target.value)}
-            placeholder="ID del camión"
             className="filter-input"
-          />
+          >
+            <option value="">Todos</option>
+            {camionesOpciones.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.patente} - {c.marca} {c.modelo}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="filter-group">
-          <label>Chofer</label>
-          <input
-            type="text"
+          <label htmlFor="filtro-chofer">Chofer</label>
+          <select
+            id="filtro-chofer"
             value={filtros.choferId}
             onChange={(e) => handleFiltroChange('choferId', e.target.value)}
-            placeholder="ID del chofer"
             className="filter-input"
-          />
+          >
+            <option value="">Todos</option>
+            {choferesOpciones.map((ch) => (
+              <option key={ch.id} value={String(ch.id)}>
+                {ch.nombre} {ch.apellido}
+                {ch.estado !== EstadoChofer.ACTIVO
+                  ? ` (${estadoChoferLabels[ch.estado] ?? ch.estado})`
+                  : ''}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="filter-group">
