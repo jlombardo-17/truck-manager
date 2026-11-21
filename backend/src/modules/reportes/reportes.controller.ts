@@ -1,4 +1,5 @@
-import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ReportesService } from './reportes.service';
 import { parseDateOnly } from '../../common/utils/date-only';
 
@@ -24,6 +25,7 @@ const parseHasta = (value?: string): Date | undefined => {
   return date;
 };
 
+@UseGuards(JwtAuthGuard)
 @Controller('reportes')
 export class ReportesController {
   constructor(private readonly reportesService: ReportesService) {}

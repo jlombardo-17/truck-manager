@@ -6,6 +6,7 @@ import { SaveViajRutasDTO } from './dto/create-viaje-ruta.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { toDateOnly } from '../../common/utils/date-only';
 
+@UseGuards(JwtAuthGuard)
 @Controller('viajes')
 export class ViajsController {
   constructor(private readonly viajsService: ViajsService) {}

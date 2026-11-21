@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ChoferesService } from './choferes.service';
 import { CreateChoferDto, UpdateChoferDto } from './dto/chofer.dto';
 
+@UseGuards(JwtAuthGuard)
 @Controller('choferes')
 export class ChoferesController {
   constructor(private readonly choferesService: ChoferesService) {}
