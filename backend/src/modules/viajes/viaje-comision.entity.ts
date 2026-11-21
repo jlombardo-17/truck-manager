@@ -33,7 +33,12 @@ export class ViajComision {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   montoFijo: number;
 
-  // Monto final calculado
+  // Moneda de montoBase y montoFijo (tal como se ingresaron). Las filas
+  // anteriores a esta columna tienen sus montos ya convertidos a UYU.
+  @Column({ type: 'varchar', length: 3, default: 'UYU' })
+  moneda: string;
+
+  // Monto final calculado, siempre en UYU (lo suman reportes, dashboard y salarios)
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   montoTotal: number;
 

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/CommissionsTable.css';
 
+type Moneda = 'UYU' | 'USD';
+
 interface Commission {
   id?: string;
   tipo: string;
@@ -8,6 +10,8 @@ interface Commission {
   montoBase?: number;
   porcentaje?: number;
   montoFijo?: number;
+  /** Moneda de montoBase / montoFijo. montoTotal siempre en UYU. */
+  moneda?: Moneda;
   montoTotal?: number;
   beneficiario?: string;
   estado?: string;
@@ -17,11 +21,21 @@ interface Commission {
 interface CommissionsTableProps {
   commissions: Commission[];
   onCommissionsChange: (commissions: Commission[]) => void;
+  /** Valor del viaje ya convertido a UYU */
   valorViaje: number;
   costoCombustible?: number;
   otrosGastos?: number;
+  /** Cotización usada para convertir comisiones en USD a UYU */
+  usdUyuRate: number;
   commissionTypes?: string[];
 }
+
+const formatMonto = (monto: number, moneda: Moneda) =>
+  new Intl.NumberFormat('es-UY', { style: 'currency', currency: moneda, maximumFractionDigits: 2 }).format(
+    monto,
+  );
+
+const emptyCommission = (): Commission => ({ tipo: 'Contratista', moneda: 'UYU' });
 
 const CommissionsTable: React.FC<CommissionsTableProps> = ({
   commissions,
@@ -29,63 +43,65 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
   valorViaje,
   costoCombustible = 0,
   otrosGastos = 0,
+  usdUyuRate,
   commissionTypes = ['Contratista', 'Flete', 'Operario', 'Cliente', 'Otro'],
 }) => {
   const [localCommissions, setLocalCommissions] = useState<Commission[]>(commissions);
-  const [newCommission, setNewCommission] = useState<Commission>({
-    tipo: 'Contratista',
-    porcentaje: 10,
-  });
+  const [newCommission, setNewCommission] = useState<Commission>(emptyCommission());
 
   const toNumber = (value: unknown): number => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  const toUyu = (monto: number, moneda?: Moneda) =>
+    moneda === 'USD' ? monto * toNumber(usdUyuRate) : monto;
+
   useEffect(() => {
     setLocalCommissions(commissions);
   }, [commissions]);
 
-  // Calcular monto total de una comisión
+  // Monto total de una comisión, siempre en UYU (mismo criterio que el backend)
   const calculateTotal = (comm: Commission): number => {
     const montoFijo = toNumber(comm.montoFijo);
     const porcentaje = toNumber(comm.porcentaje);
     const montoBase = toNumber(comm.montoBase);
-    const valorViajeNumber = toNumber(valorViaje);
 
+    let total = 0;
     if (montoFijo > 0) {
-      return montoFijo;
+      total = toUyu(montoFijo, comm.moneda);
+    } else if (porcentaje > 0 && montoBase > 0) {
+      total = (toUyu(montoBase, comm.moneda) * porcentaje) / 100;
+    } else if (porcentaje > 0) {
+      total = (toNumber(valorViaje) * porcentaje) / 100;
     }
-    if (porcentaje > 0 && montoBase > 0) {
-      return (montoBase * porcentaje) / 100;
-    }
-    if (porcentaje > 0) {
-      return (valorViajeNumber * porcentaje) / 100;
-    }
-    return 0;
+    return Math.round(total * 100) / 100;
   };
 
-  // Agregar nueva comisión
   const addCommission = () => {
-    if (!newCommission.tipo) {
-      alert('Debes seleccionar un tipo de comisión');
-      return;
-    }
+    if (!newCommission.tipo) return;
+
+    // Con monto fijo, el porcentaje y el monto base no aplican: no guardarlos
+    // para que no quede una comisión ambigua.
+    const usaMontoFijo = toNumber(newCommission.montoFijo) > 0;
+    const base: Commission = usaMontoFijo
+      ? { ...newCommission, porcentaje: undefined, montoBase: undefined }
+      : { ...newCommission, montoFijo: undefined };
 
     const commission: Commission = {
       id: `comm-${Date.now()}`,
-      ...newCommission,
-      montoTotal: calculateTotal(newCommission),
+      ...base,
+      moneda: base.moneda === 'USD' ? 'USD' : 'UYU',
+      montoTotal: calculateTotal(base),
       estado: 'pendiente',
     };
 
     const updated = [...localCommissions, commission];
     setLocalCommissions(updated);
     onCommissionsChange(updated);
-    setNewCommission({ tipo: 'Contratista', porcentaje: 10 });
+    setNewCommission(emptyCommission());
   };
 
-  // Eliminar comisión
   const removeCommission = (id: string | undefined) => {
     if (!id) return;
     const updated = localCommissions.filter((c) => c.id !== id);
@@ -93,14 +109,13 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
     onCommissionsChange(updated);
   };
 
-  // Actualizar comisión
-  const updateCommission = (id: string | undefined, field: string, value: any) => {
+  const updateCommission = (id: string | undefined, field: keyof Commission, value: unknown) => {
     if (!id) return;
     const updated = localCommissions.map((c) => {
       if (c.id === id) {
-        const updated = { ...c, [field]: value };
-        updated.montoTotal = calculateTotal(updated);
-        return updated;
+        const next = { ...c, [field]: value } as Commission;
+        next.montoTotal = calculateTotal(next);
+        return next;
       }
       return c;
     });
@@ -108,11 +123,23 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
     onCommissionsChange(updated);
   };
 
-  // Calcular total de comisiones
+  const parseOptional = (value: string): number | undefined => {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  // Totales (todo en UYU)
   const totalComisiones = localCommissions.reduce((sum, c) => sum + toNumber(c.montoTotal), 0);
   const gastosOperativos = toNumber(costoCombustible) + toNumber(otrosGastos);
   const gananciaAntesDeComisiones = toNumber(valorViaje) - gastosOperativos;
   const gananciaNetaFinal = gananciaAntesDeComisiones - totalComisiones;
+
+  // Vista previa de la nueva comisión
+  const newMoneda: Moneda = newCommission.moneda === 'USD' ? 'USD' : 'UYU';
+  const newMontoFijo = toNumber(newCommission.montoFijo);
+  const newPorcentaje = toNumber(newCommission.porcentaje);
+  const newMontoBase = toNumber(newCommission.montoBase);
+  const newTotalUyu = calculateTotal(newCommission);
 
   return (
     <div className="commissions-container">
@@ -120,24 +147,23 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
         <h3>💰 Comisiones y Gastos</h3>
         <div className="commission-summary">
           <span className="summary-item">
-            <strong>Valor Viaje:</strong> ${Number(valorViaje || 0).toFixed(2)}
+            <strong>Valor Viaje:</strong> {formatMonto(toNumber(valorViaje), 'UYU')}
           </span>
           <span className="summary-item expense">
-            <strong>Gastos Operativos:</strong> ${gastosOperativos.toFixed(2)}
+            <strong>Gastos Operativos:</strong> {formatMonto(gastosOperativos, 'UYU')}
           </span>
           <span className="summary-item">
-            <strong>Antes de Comisiones:</strong> ${gananciaAntesDeComisiones.toFixed(2)}
+            <strong>Antes de Comisiones:</strong> {formatMonto(gananciaAntesDeComisiones, 'UYU')}
           </span>
           <span className="summary-item highlight">
-            <strong>Total Comisiones:</strong> ${Number(totalComisiones || 0).toFixed(2)}
+            <strong>Total Comisiones:</strong> {formatMonto(totalComisiones, 'UYU')}
           </span>
           <span className="summary-item net">
-            <strong>Ganancia Neta Final:</strong> ${gananciaNetaFinal.toFixed(2)}
+            <strong>Ganancia Neta Final:</strong> {formatMonto(gananciaNetaFinal, 'UYU')}
           </span>
         </div>
       </div>
 
-      {/* Tabla de comisiones existentes */}
       {localCommissions.length > 0 && (
         <div className="commissions-table-wrapper">
           <table className="commissions-table">
@@ -145,117 +171,123 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
               <tr>
                 <th>Tipo</th>
                 <th>Concepto</th>
+                <th>Moneda</th>
                 <th>Monto Base</th>
                 <th>Porcentaje</th>
                 <th>Monto Fijo</th>
-                <th>Total</th>
+                <th>Total (UYU)</th>
                 <th>Beneficiario</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {localCommissions.map((comm) => (
-                <tr key={comm.id} className="commission-row">
-                  <td>
-                    <select
-                      value={comm.tipo}
-                      onChange={(e) => updateCommission(comm.id, 'tipo', e.target.value)}
-                      className="input-small"
-                    >
-                      {commissionTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={comm.concepto || ''}
-                      onChange={(e) => updateCommission(comm.id, 'concepto', e.target.value)}
-                      placeholder="Ej: Carga"
-                      className="input-small"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={comm.montoBase || ''}
-                      onChange={(e) =>
-                        updateCommission(comm.id, 'montoBase', parseFloat(e.target.value))
-                      }
-                      placeholder="0.00"
-                      className="input-small"
-                    />
-                  </td>
-                  <td>
-                    <div className="input-with-symbol">
+              {localCommissions.map((comm) => {
+                const moneda: Moneda = comm.moneda === 'USD' ? 'USD' : 'UYU';
+                return (
+                  <tr key={comm.id} className="commission-row">
+                    <td>
+                      <select
+                        value={comm.tipo}
+                        onChange={(e) => updateCommission(comm.id, 'tipo', e.target.value)}
+                        className="input-small"
+                      >
+                        {commissionTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
                       <input
-                        type="number"
-                        value={comm.porcentaje || ''}
-                        onChange={(e) =>
-                          updateCommission(comm.id, 'porcentaje', parseFloat(e.target.value))
-                        }
-                        placeholder="0"
+                        type="text"
+                        value={comm.concepto || ''}
+                        onChange={(e) => updateCommission(comm.id, 'concepto', e.target.value)}
+                        placeholder="Ej: Carga"
                         className="input-small"
                       />
-                      <span>%</span>
-                    </div>
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={comm.montoFijo || ''}
-                      onChange={(e) =>
-                        updateCommission(comm.id, 'montoFijo', parseFloat(e.target.value))
-                      }
-                      placeholder="0.00"
-                      className="input-small"
-                    />
-                  </td>
-                  <td className="total-cell">${toNumber(comm.montoTotal).toFixed(2)}</td>
-                  <td>
-                    <input
-                      type="text"
-                      value={comm.beneficiario || ''}
-                      onChange={(e) =>
-                        updateCommission(comm.id, 'beneficiario', e.target.value)
-                      }
-                      placeholder="Nombre"
-                      className="input-small"
-                    />
-                  </td>
-                  <td>
-                    <select
-                      value={comm.estado || 'pendiente'}
-                      onChange={(e) => updateCommission(comm.id, 'estado', e.target.value)}
-                      className="input-small"
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="pagado">Pagado</option>
-                      <option value="cancelado">Cancelado</option>
-                    </select>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn-delete-row"
-                      onClick={() => removeCommission(comm.id)}
-                      title="Eliminar comisión"
-                    >
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <select
+                        value={moneda}
+                        onChange={(e) => updateCommission(comm.id, 'moneda', e.target.value)}
+                        className="input-small"
+                        aria-label="Moneda de la comisión"
+                      >
+                        <option value="UYU">UYU</option>
+                        <option value="USD">USD</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        value={comm.montoBase ?? ''}
+                        onChange={(e) => updateCommission(comm.id, 'montoBase', parseOptional(e.target.value))}
+                        placeholder="0.00"
+                        className="input-small"
+                      />
+                    </td>
+                    <td>
+                      <div className="input-with-symbol">
+                        <input
+                          type="number"
+                          value={comm.porcentaje ?? ''}
+                          onChange={(e) => updateCommission(comm.id, 'porcentaje', parseOptional(e.target.value))}
+                          placeholder="0"
+                          className="input-small"
+                        />
+                        <span>%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        value={comm.montoFijo ?? ''}
+                        onChange={(e) => updateCommission(comm.id, 'montoFijo', parseOptional(e.target.value))}
+                        placeholder="0.00"
+                        className="input-small"
+                      />
+                    </td>
+                    <td className="total-cell">{formatMonto(toNumber(comm.montoTotal), 'UYU')}</td>
+                    <td>
+                      <input
+                        type="text"
+                        value={comm.beneficiario || ''}
+                        onChange={(e) => updateCommission(comm.id, 'beneficiario', e.target.value)}
+                        placeholder="Nombre"
+                        className="input-small"
+                      />
+                    </td>
+                    <td>
+                      <select
+                        value={comm.estado || 'pendiente'}
+                        onChange={(e) => updateCommission(comm.id, 'estado', e.target.value)}
+                        className="input-small"
+                      >
+                        <option value="pendiente">Pendiente</option>
+                        <option value="pagado">Pagado</option>
+                        <option value="cancelado">Cancelado</option>
+                      </select>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-delete-row"
+                        onClick={() => removeCommission(comm.id)}
+                        title="Eliminar comisión"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Formulario para agregar nueva comisión */}
       <div className="add-commission-form">
         <h4>Agregar Nueva Comisión</h4>
         <div className="form-fields">
@@ -286,16 +318,23 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
           </div>
 
           <div className="form-field">
+            <label>Moneda</label>
+            <select
+              value={newMoneda}
+              onChange={(e) => setNewCommission({ ...newCommission, moneda: e.target.value as Moneda })}
+              className="form-input"
+            >
+              <option value="UYU">Pesos (UYU)</option>
+              <option value="USD">Dólares (USD)</option>
+            </select>
+          </div>
+
+          <div className="form-field">
             <label>Monto Base</label>
             <input
               type="number"
-              value={newCommission.montoBase || ''}
-              onChange={(e) =>
-                setNewCommission({
-                  ...newCommission,
-                  montoBase: parseFloat(e.target.value) || undefined,
-                })
-              }
+              value={newCommission.montoBase ?? ''}
+              onChange={(e) => setNewCommission({ ...newCommission, montoBase: parseOptional(e.target.value) })}
               placeholder="0.00"
               className="form-input"
             />
@@ -305,13 +344,8 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
             <label>Porcentaje (%)</label>
             <input
               type="number"
-              value={newCommission.porcentaje || ''}
-              onChange={(e) =>
-                setNewCommission({
-                  ...newCommission,
-                  porcentaje: parseFloat(e.target.value) || undefined,
-                })
-              }
+              value={newCommission.porcentaje ?? ''}
+              onChange={(e) => setNewCommission({ ...newCommission, porcentaje: parseOptional(e.target.value) })}
               placeholder="0"
               className="form-input"
             />
@@ -321,13 +355,8 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
             <label>Monto Fijo</label>
             <input
               type="number"
-              value={newCommission.montoFijo || ''}
-              onChange={(e) =>
-                setNewCommission({
-                  ...newCommission,
-                  montoFijo: parseFloat(e.target.value) || undefined,
-                })
-              }
+              value={newCommission.montoFijo ?? ''}
+              onChange={(e) => setNewCommission({ ...newCommission, montoFijo: parseOptional(e.target.value) })}
               placeholder="0.00"
               className="form-input"
             />
@@ -338,27 +367,41 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
             <input
               type="text"
               value={newCommission.beneficiario || ''}
-              onChange={(e) =>
-                setNewCommission({ ...newCommission, beneficiario: e.target.value })
-              }
+              onChange={(e) => setNewCommission({ ...newCommission, beneficiario: e.target.value })}
               placeholder="Nombre del beneficiario"
               className="form-input"
             />
           </div>
 
-          <button type="button" className="btn-add-commission" onClick={addCommission}>
+          <button
+            type="button"
+            className="btn-add-commission"
+            onClick={addCommission}
+            disabled={newTotalUyu <= 0}
+          >
             + Agregar Comisión
           </button>
         </div>
 
-        {newCommission.porcentaje && (
+        {newMontoFijo > 0 ? (
           <div className="preview-total">
             <p>
-              Cálculo: ${toNumber(newCommission.montoBase) > 0 ? toNumber(newCommission.montoBase).toFixed(2) : toNumber(valorViaje).toFixed(2)} × {toNumber(newCommission.porcentaje)}% ={' '}
-              <strong>${(((toNumber(newCommission.montoBase) > 0 ? toNumber(newCommission.montoBase) : toNumber(valorViaje)) * toNumber(newCommission.porcentaje)) / 100).toFixed(2)}</strong>
+              Monto fijo: {formatMonto(newMontoFijo, newMoneda)}
+              {newMoneda === 'USD' && <> = <strong>{formatMonto(newTotalUyu, 'UYU')}</strong></>}
+              {newPorcentaje > 0 && ' (el porcentaje no se aplica cuando hay monto fijo)'}
             </p>
           </div>
-        )}
+        ) : newPorcentaje > 0 ? (
+          <div className="preview-total">
+            <p>
+              Cálculo:{' '}
+              {newMontoBase > 0
+                ? formatMonto(newMontoBase, newMoneda)
+                : `${formatMonto(toNumber(valorViaje), 'UYU')} (valor del viaje)`}{' '}
+              × {newPorcentaje}% = <strong>{formatMonto(newTotalUyu, 'UYU')}</strong>
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {localCommissions.length === 0 && (

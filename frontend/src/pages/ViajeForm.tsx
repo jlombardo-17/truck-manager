@@ -330,6 +330,7 @@ const ViajeForm: React.FC = () => {
             montoBase: toNumberOrUndefined(comision.montoBase),
             porcentaje: toNumberOrUndefined(comision.porcentaje),
             montoFijo: toNumberOrUndefined(comision.montoFijo),
+            moneda: comision.moneda === 'USD' ? 'USD' : 'UYU',
             montoTotal: toNumberOrUndefined(comision.montoTotal),
           })),
         );
@@ -1074,6 +1075,7 @@ const ViajeForm: React.FC = () => {
             valorViaje={valorViajeEquivalenteUyu}
             costoCombustible={formData.costoCombustible}
             otrosGastos={formData.otrosGastos}
+            usdUyuRate={usdUyuRate}
             commissionTypes={['Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Otro']}
           />
         </section>

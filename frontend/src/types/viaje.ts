@@ -62,6 +62,8 @@ export interface ViajComision {
   montoBase?: number;
   porcentaje?: number;
   montoFijo?: number;
+  /** Moneda de montoBase/montoFijo. montoTotal siempre en UYU. */
+  moneda?: 'UYU' | 'USD';
   montoTotal?: number;
   beneficiario?: string;
   estado?: string;

@@ -56,20 +56,12 @@ export class ViajsService {
     return this.roundToTwo(parsed);
   }
 
-  private normalizeComisionesToUyu(
-    comisiones: any[] | undefined,
-    currency: ViajeCurrency,
-    usdUyuRate: number,
-  ): any[] | undefined {
-    if (!Array.isArray(comisiones)) {
-      return comisiones;
-    }
+  private comisionCurrency(comision: { moneda?: string } | undefined): ViajeCurrency {
+    return comision?.moneda === 'USD' ? 'USD' : 'UYU';
+  }
 
-    return comisiones.map((comision) => ({
-      ...comision,
-      montoBase: this.toUyuAmount(comision?.montoBase, currency, usdUyuRate) ?? comision?.montoBase,
-      montoFijo: this.toUyuAmount(comision?.montoFijo, currency, usdUyuRate) ?? comision?.montoFijo,
-    }));
+  private hasUsdComision(comisiones: any[] | undefined): boolean {
+    return Array.isArray(comisiones) && comisiones.some((c) => this.comisionCurrency(c) === 'USD');
   }
 
   async getUsdUyuRate() {
@@ -98,16 +90,13 @@ export class ViajsService {
       }
 
       const requestedCurrency = this.normalizeCurrency(createViajDTO.moneda);
-      const rateInfo = requestedCurrency === 'USD' ? await this.getUsdUyuRateInfo() : null;
+      const needsRate =
+        requestedCurrency === 'USD' || this.hasUsdComision(createViajDTO.comisiones);
+      const rateInfo = needsRate ? await this.getUsdUyuRateInfo() : null;
       const usdUyuRate = rateInfo?.rate ?? 1;
       const valorViajeOriginal = Number(createViajDTO.valorViaje) || 0;
       const valorViajeUyu =
         this.toUyuAmount(valorViajeOriginal, requestedCurrency, usdUyuRate) ?? 0;
-      const comisionesNormalized = this.normalizeComisionesToUyu(
-        createViajDTO.comisiones,
-        requestedCurrency,
-        usdUyuRate,
-      );
 
       const viaje = this.viajRepository.create({
         numeroViaje: createViajDTO.numeroViaje,
@@ -156,11 +145,12 @@ export class ViajsService {
         await this.viajRutaRepository.save(rutas);
       }
 
-      if (comisionesNormalized && comisionesNormalized.length > 0) {
+      if (createViajDTO.comisiones && createViajDTO.comisiones.length > 0) {
         await this.guardarComisiones(
           savedViaje.id,
           savedViaje.valorViajeUyu,
-          comisionesNormalized,
+          createViajDTO.comisiones,
+          usdUyuRate,
         );
       }
 
@@ -332,7 +322,9 @@ export class ViajsService {
       const hasAmountChange = Object.prototype.hasOwnProperty.call(updateViajDTO, 'valorViaje');
       const effectiveCurrency = this.normalizeCurrency(moneda ?? viaje.moneda);
 
-      const shouldResolveRate = effectiveCurrency === 'USD' && (hasCurrencyChange || hasAmountChange || Boolean(comisiones));
+      const shouldResolveRate =
+        (effectiveCurrency === 'USD' && (hasCurrencyChange || hasAmountChange || Boolean(comisiones))) ||
+        this.hasUsdComision(comisiones);
       const rateInfo = shouldResolveRate ? await this.getUsdUyuRateInfo() : null;
       const usdUyuRate = rateInfo?.rate || Number(viaje.cotizacionUsdUyu) || 1;
 
@@ -342,12 +334,6 @@ export class ViajsService {
 
       const nextValorViajeUyu =
         this.toUyuAmount(nextOriginalAmount, effectiveCurrency, usdUyuRate) ?? Number(viaje.valorViajeUyu || viaje.valorViaje || 0);
-
-      const comisionesNormalized = this.normalizeComisionesToUyu(
-        comisiones,
-        effectiveCurrency,
-        usdUyuRate,
-      );
 
       if (camionId) {
         await this.assertCamionExists(camionId);
@@ -407,12 +393,12 @@ export class ViajsService {
         await this.viajRutaRepository.save(rutasToSave);
       }
 
-      if (comisionesNormalized) {
+      if (comisiones) {
         await this.viajComisionRepository.delete({ viajeId: id });
         const baseMontoParaComisiones = Number(
           (hasAmountChange || hasCurrencyChange ? nextValorViajeUyu : viaje.valorViajeUyu) || viaje.valorViaje,
         );
-        await this.guardarComisiones(id, baseMontoParaComisiones, comisionesNormalized);
+        await this.guardarComisiones(id, baseMontoParaComisiones, comisiones, usdUyuRate);
       }
 
       return this.findOneWithRelations(id);
@@ -460,34 +446,48 @@ export class ViajsService {
   /**
    * Calcular ycrear una comisión
    */
-  private calcularYCrearComision(viajeId: number, montoBase: number, comisionDTO: any) {
-    let montoTotal = 0;
+  /**
+   * montoFijo y montoBase se guardan tal cual, en la moneda de la comisión.
+   * montoTotal siempre en UYU: es lo que suman reportes, dashboard y salarios.
+   */
+  private calcularYCrearComision(
+    viajeId: number,
+    valorViajeUyu: number,
+    comisionDTO: any,
+    usdUyuRate: number,
+  ) {
+    const moneda = this.comisionCurrency(comisionDTO);
+    const montoFijo = Number(comisionDTO.montoFijo) || 0;
+    const montoBase = Number(comisionDTO.montoBase) || 0;
+    const porcentaje = Number(comisionDTO.porcentaje) || 0;
+    let montoTotalUyu = 0;
 
-    // Calcular monto total
-    if (comisionDTO.montoFijo) {
-      montoTotal = comisionDTO.montoFijo;
-    } else if (comisionDTO.porcentaje && comisionDTO.montoBase) {
-      montoTotal = (comisionDTO.montoBase * comisionDTO.porcentaje) / 100;
-    } else if (comisionDTO.porcentaje) {
-      // Si no hay montoBase especificado, usar el montoBase del viaje
-      montoTotal = (montoBase * comisionDTO.porcentaje) / 100;
+    if (montoFijo > 0) {
+      montoTotalUyu = this.toUyuAmount(montoFijo, moneda, usdUyuRate) ?? 0;
+    } else if (porcentaje > 0 && montoBase > 0) {
+      montoTotalUyu = ((this.toUyuAmount(montoBase, moneda, usdUyuRate) ?? 0) * porcentaje) / 100;
+    } else if (porcentaje > 0) {
+      // Sin monto base: porcentaje sobre el valor del viaje (ya en UYU)
+      montoTotalUyu = (Number(valorViajeUyu) * porcentaje) / 100;
     }
 
     return {
       viajeId,
       ...comisionDTO,
-      montoTotal: Math.round(montoTotal * 100) / 100, // Redondear a 2 decimales
+      moneda,
+      montoTotal: this.roundToTwo(montoTotalUyu),
       estado: comisionDTO.estado || 'pendiente',
     };
   }
 
   private async guardarComisiones(
     viajeId: number,
-    montoBase: number,
+    valorViajeUyu: number,
     comisionesDTO: any[],
+    usdUyuRate: number,
   ): Promise<void> {
     for (const comisionDTO of comisionesDTO) {
-      const comision = this.calcularYCrearComision(viajeId, montoBase, comisionDTO);
+      const comision = this.calcularYCrearComision(viajeId, valorViajeUyu, comisionDTO, usdUyuRate);
 
       await this.viajComisionRepository.query(
         `
@@ -499,6 +499,7 @@ export class ViajsService {
             montoBase,
             porcentaje,
             montoFijo,
+            moneda,
             montoTotal,
             beneficiario,
             estado,
@@ -506,7 +507,7 @@ export class ViajsService {
             created_at,
             updated_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         `,
         [
           viajeId,
@@ -516,6 +517,7 @@ export class ViajsService {
           comision.montoBase ?? null,
           comision.porcentaje ?? null,
           comision.montoFijo ?? null,
+          comision.moneda,
           comision.montoTotal,
           comision.beneficiario ?? null,
           comision.estado,

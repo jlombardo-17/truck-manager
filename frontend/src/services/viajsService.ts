@@ -80,6 +80,7 @@ const sanitizeComisiones = (
     montoBase: toNumberOrUndefined(comision.montoBase),
     porcentaje: toNumberOrUndefined(comision.porcentaje),
     montoFijo: toNumberOrUndefined(comision.montoFijo),
+    moneda: comision.moneda === 'USD' ? 'USD' : 'UYU',
     beneficiario: comision.beneficiario,
     ...(options?.includeEstado ? { estado: comision.estado } : {}),
     notas: comision.notas,
@@ -197,6 +198,8 @@ export interface ViajComision {
   montoBase?: number;
   porcentaje?: number;
   montoFijo?: number;
+  /** Moneda de montoBase/montoFijo. montoTotal siempre en UYU. */
+  moneda?: 'UYU' | 'USD';
   montoTotal?: number;
   beneficiario?: string;
   estado?: string;

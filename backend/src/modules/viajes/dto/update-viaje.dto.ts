@@ -56,6 +56,12 @@ class ViajComisionDTO {
   @IsOptional()
   montoFijo?: number;
 
+  // Moneda en la que se expresan montoFijo y montoBase. montoTotal se guarda siempre en UYU.
+  @IsString()
+  @IsIn(['UYU', 'USD'])
+  @IsOptional()
+  moneda?: string;
+
   @IsString()
   @IsOptional()
   beneficiario?: string;

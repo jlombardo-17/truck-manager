@@ -295,3 +295,8 @@
     word-break: break-word;
   }
 }
+
+.btn-add-commission:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
