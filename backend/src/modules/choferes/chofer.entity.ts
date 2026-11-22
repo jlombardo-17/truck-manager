@@ -40,6 +40,12 @@ export class Chofer {
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, comment: 'Porcentaje de comisión sobre el valor del viaje' })
   porcentajeComision: number;
 
+  // Costo mensual total para la empresa (sueldo + aportes patronales, aguinaldo, etc.).
+  // Se carga a mano; es la referencia para precargar el costo empresa de cada salario
+  // y para el costo del chofer en Reportes. No afecta lo que se le paga al chofer.
+  @Column({ name: 'costo_empresa', type: 'decimal', precision: 12, scale: 2, nullable: true })
+  costoEmpresa: number;
+
   @Column({ nullable: true })
   userId: number;
 

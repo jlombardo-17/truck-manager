@@ -58,6 +58,16 @@ export class ViajsController {
   }
 
   /**
+   * POST /api/viajes/comisiones-chofer/sincronizar - Vuelve a generar en las jornadas las
+   * comisiones tipo "Chofer" de todos los viajes y recalcula los salarios pendientes.
+   * Idempotente; se usa una vez tras migrar datos viejos.
+   */
+  @Post('comisiones-chofer/sincronizar')
+  async sincronizarComisionesChofer() {
+    return this.viajsService.sincronizarComisionesChofer();
+  }
+
+  /**
    * GET /api/viajes/combustible/precio-gasoil?fecha=YYYY-MM-DD - Precio del litro de gasoil
    * 50-S (ANCAP) vigente en la fecha indicada (default: hoy)
    */

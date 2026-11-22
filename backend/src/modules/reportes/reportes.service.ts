@@ -28,7 +28,8 @@ interface RentabilidadFilters {
  * Criterio de "Gastos" para todos los reportes:
  * - operativosViaje: combustible + otros gastos + peajes cargados en el viaje
  * - gastosViaje: comisiones/gastos listados en el viaje (no cancelados, sin peajes)
- * - sueldoChofer: sueldo base prorrateado de los choferes con viajes en el período
+ * - sueldoChofer: costo empresa del chofer (o su sueldo base si no lo tiene cargado), prorrateado,
+ *   de los choferes con viajes en el período. Las comisiones del chofer ya están en gastosViaje.
  * - mantenimiento: servicios del camión + registros de mantenimiento (por fecha, sin viaje)
  * - gastosFijos: gastos fijos anuales (seguro, patente, ...) prorrateados por día
  * Las repostadas no se suman: el combustible ya está cargado en cada viaje.
@@ -544,15 +545,16 @@ export class ReportesService {
     }
 
     for (const chofer of choferesById.values()) {
-      const sueldoBase = this.toNumber(chofer.sueldoBase);
+      const sueldoBase = this.getCostoMensualChofer(chofer);
       if (sueldoBase <= 0) {
         continue;
       }
 
+      const conceptoSueldo = this.toNumber(chofer.costoEmpresa) > 0 ? 'Costo empresa' : 'Sueldo base';
       items.push({
         categoria: 'sueldoChofer',
         fecha: null,
-        concepto: granularidad === 'mensual' ? 'Sueldo base' : 'Sueldo base (prorrateo diario)',
+        concepto: granularidad === 'mensual' ? conceptoSueldo : `${conceptoSueldo} (prorrateo diario)`,
         patente: null,
         chofer: nombreChofer(chofer),
         monto: this.round2(this.getSueldoChoferForBucket(sueldoBase, periodo, granularidad)),
@@ -697,7 +699,8 @@ export class ReportesService {
       .map((bucket) => {
         let gastosSueldo = 0;
         for (const choferId of bucket.choferIds) {
-          gastosSueldo += this.toNumber(choferesById.get(choferId)?.sueldoBase);
+          const chofer = choferesById.get(choferId);
+          gastosSueldo += chofer ? this.getCostoMensualChofer(chofer) : 0;
         }
 
         const gastosMantenimiento = this.toNumber(costosCamion.get(bucket.id)?.mantenimiento);
@@ -948,7 +951,7 @@ export class ReportesService {
           continue;
         }
 
-        const sueldoBase = this.toNumber(chofer.sueldoBase);
+        const sueldoBase = this.getCostoMensualChofer(chofer);
         if (sueldoBase <= 0) {
           continue;
         }
@@ -959,6 +962,12 @@ export class ReportesService {
   }
 
   /** Mensual: sueldo completo. Diaria/semanal: sueldo / días del mes, por período con viajes. */
+  /** Costo mensual del chofer para la empresa: el costo empresa cargado o, si no hay, el sueldo base. */
+  private getCostoMensualChofer(chofer: Chofer): number {
+    const costoEmpresa = this.toNumber(chofer.costoEmpresa);
+    return costoEmpresa > 0 ? costoEmpresa : this.toNumber(chofer.sueldoBase);
+  }
+
   private getSueldoChoferForBucket(sueldoBase: number, key: string, granularidad: Granularidad): number {
     if (granularidad === 'mensual') {
       return sueldoBase;

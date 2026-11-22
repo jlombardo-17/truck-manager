@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Chofer } from '../types/chofer';
 import {
   CategoriaJornada,
@@ -22,6 +23,9 @@ interface ViaticoForm {
   concepto: string;
   cantidad: string;
   monto: string; // unitario
+  /** Generada desde la comisión "Chofer" de un viaje: solo lectura, se edita desde el viaje */
+  viajeId: number | null;
+  observaciones: string;
 }
 
 interface JornadaForm {
@@ -54,6 +58,8 @@ const formDesdeJornada = (jornada?: ChoferJornada): JornadaForm => ({
     concepto: v.concepto,
     cantidad: String(v.cantidad ?? 1),
     monto: String(Number(v.monto)),
+    viajeId: v.viajeId ?? null,
+    observaciones: v.observaciones ?? '',
   })),
   dirty: false,
 });
@@ -93,6 +99,8 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
       concepto: tipoViaticoLabels[TipoViatico.VIATICO],
       cantidad: '1',
       monto: '',
+      viajeId: null,
+      observaciones: '',
     };
     updateForm(choferId, { viaticos: [...forms[choferId].viaticos, nuevo] });
   };
@@ -135,10 +143,13 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
     for (const chofer of choferes) {
       const form = forms[chofer.id];
       if (!form.dirty) continue;
+      if (!form.categoria && form.viaticos.some((v) => v.viajeId)) {
+        return `${chofer.nombre} ${chofer.apellido}: la jornada tiene comisiones de viaje; quitalas desde el viaje para dejarla sin registro.`;
+      }
       if (!form.categoria && form.viaticos.length > 0) {
         return `${chofer.nombre} ${chofer.apellido}: seleccioná una categoría o quitá los viáticos.`;
       }
-      for (const v of form.viaticos) {
+      for (const v of form.viaticos.filter((x) => !x.viajeId)) {
         if (!v.concepto.trim()) return `${chofer.nombre} ${chofer.apellido}: todos los viáticos necesitan un concepto.`;
         const cantidad = Number(v.cantidad);
         if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 99) {
@@ -183,7 +194,8 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
           lugarTrabajo: form.lugarTrabajo.trim() || undefined,
           viajeId: form.viajeId ?? undefined,
           observaciones: form.observaciones.trim() || undefined,
-          viaticos: form.viaticos.map((v) => ({
+          // Las líneas generadas desde viajes las mantiene el backend: no se envían
+          viaticos: form.viaticos.filter((v) => !v.viajeId).map((v) => ({
             viaticoTipoId: v.viaticoTipoId === '' ? undefined : v.viaticoTipoId,
             tipo: v.tipo,
             concepto: v.concepto.trim(),
@@ -328,6 +340,26 @@ const JornadaDiaDialog: React.FC<JornadaDiaDialogProps> = ({
                       </div>
                     )}
                     {form.viaticos.map((v, i) => {
+                      if (v.viajeId) {
+                        return (
+                          <div
+                            key={i}
+                            className="jornada-viaticos__row jornada-viaticos__row--viaje"
+                            title="Generada desde la comisión del viaje. Se edita desde el viaje."
+                          >
+                            <span>{tipoViaticoLabels[v.tipo]}</span>
+                            <span>
+                              {v.concepto}
+                              {v.observaciones && <small> · {v.observaciones}</small>}
+                            </span>
+                            <span>{v.cantidad}</span>
+                            <span>{formatUYU(Number(v.monto) || 0)}</span>
+                            <Link to={`/viajes/${v.viajeId}`} className="jornada-viaticos__link" aria-label="Ver viaje">
+                              🚚
+                            </Link>
+                          </div>
+                        );
+                      }
                       return (
                         <div key={i} className="jornada-viaticos__row">
                           <select

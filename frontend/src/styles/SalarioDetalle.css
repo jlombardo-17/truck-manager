@@ -378,3 +378,38 @@
     width: 100%;
   }
 }
+
+.costo-empresa-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px dashed #b8c4d0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.costo-empresa-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.costo-empresa-box small {
+  color: #64748b;
+}
+
+.costo-empresa-box__input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.costo-empresa-box__input input {
+  width: 11rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}

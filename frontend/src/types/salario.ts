@@ -9,6 +9,8 @@ export interface ChoferSalario {
   bonos: number;
   deducciones: number;
   salarioNeto: number;
+  /** Costo total del mes para la empresa (cargado a mano). Informativo: no suma al neto. */
+  costoEmpresa?: number | null;
   estado: EstadoSalario;
   fechaPago?: string;
   observaciones?: string;
@@ -57,6 +59,7 @@ export interface CreateSalarioDto {
   totalComisiones?: number;
   bonos?: number;
   deducciones?: number;
+  costoEmpresa?: number | null;
   estado?: EstadoSalario;
   fechaPago?: string;
   metodoPago?: string;
@@ -69,6 +72,7 @@ export interface UpdateSalarioDto {
   totalComisiones?: number;
   bonos?: number;
   deducciones?: number;
+  costoEmpresa?: number | null;
   estado?: EstadoSalario;
   fechaPago?: string;
   metodoPago?: string;

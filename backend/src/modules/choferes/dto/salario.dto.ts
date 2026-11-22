@@ -36,6 +36,11 @@ export class CreateSalarioDto {
   bonos?: number;
 
   @IsOptional()
+  @IsNumber({}, { message: 'El costo empresa debe ser un número' })
+  @Type(() => Number)
+  costoEmpresa?: number;
+
+  @IsOptional()
   @IsNumber({}, { message: 'Las deducciones deben ser un número' })
   @Type(() => Number)
   deducciones?: number;
@@ -76,6 +81,11 @@ export class UpdateSalarioDto {
   @IsNumber({}, { message: 'Los bonos deben ser un número' })
   @Type(() => Number)
   bonos?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El costo empresa debe ser un número' })
+  @Type(() => Number)
+  costoEmpresa?: number;
 
   @IsOptional()
   @IsNumber({}, { message: 'Las deducciones deben ser un número' })

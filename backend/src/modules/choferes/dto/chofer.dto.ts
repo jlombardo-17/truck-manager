@@ -42,6 +42,9 @@ export class CreateChoferDto {
   sueldoBase?: number;
 
   @IsOptional()
+  costoEmpresa?: number;
+
+  @IsOptional()
   porcentajeComision?: number;
 
   @IsOptional()
@@ -87,6 +90,9 @@ export class UpdateChoferDto {
 
   @IsOptional()
   sueldoBase?: number;
+
+  @IsOptional()
+  costoEmpresa?: number;
 
   @IsOptional()
   porcentajeComision?: number;

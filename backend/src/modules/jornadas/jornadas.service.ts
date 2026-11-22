@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull, Not, Repository } from 'typeorm';
 import { CategoriaJornada, ChoferJornada } from './chofer-jornada.entity';
 import { ChoferViatico } from './chofer-viatico.entity';
 import { TipoViatico } from './tipo-viatico.enum';
@@ -10,6 +10,8 @@ import { Viaje } from '../viajes/viaje.entity';
 import { SalariosService } from '../choferes/salarios.service';
 import { EstadoSalario } from '../choferes/chofer-salario.entity';
 import { BulkJornadaDto, UpsertJornadaDto } from './dto/jornada.dto';
+import { esComisionChofer } from '../viajes/viaje-comision.entity';
+import { toDateOnly } from '../../common/utils/date-only';
 
 const MAX_DIAS_RANGO = 62;
 const MAX_DIAS_REPORTE = 366;
@@ -428,9 +430,10 @@ export class JornadasService {
         observaciones: dto.observaciones?.trim() || null,
       });
 
-      // undefined = no tocar los viáticos; [] = eliminarlos todos
+      // undefined = no tocar los viáticos; [] = eliminarlos todos.
+      // Las líneas generadas desde un viaje (viajeId) no se tocan: se mantienen desde el viaje.
       if (dto.viaticos !== undefined) {
-        await manager.delete(ChoferViatico, { jornadaId: jornada.id });
+        await manager.delete(ChoferViatico, { jornadaId: jornada.id, viajeId: IsNull() });
         if (dto.viaticos.length) {
           await manager.save(
             ChoferViatico,
@@ -491,9 +494,106 @@ export class JornadasService {
     if (!jornada) {
       throw new NotFoundException(`Jornada con ID ${id} no encontrada`);
     }
+    const lineasDeViaje = await this.viaticoRepository.count({ where: { jornadaId: id, viajeId: Not(IsNull()) } });
+    if (lineasDeViaje > 0) {
+      throw new BadRequestException(
+        'La jornada tiene comisiones generadas desde un viaje. Quitá la comisión "Chofer" del viaje para eliminarla.',
+      );
+    }
     await this.jornadaRepository.remove(jornada);
     const [salario] = await this.recalcularSalarios([{ choferId: jornada.choferId, ...this.periodoDe(jornada.fecha) }]);
     return { salario: salario ?? null };
+  }
+
+  // ---------- comisiones de viaje → jornadas ----------
+
+  /**
+   * Refleja en las jornadas del chofer las comisiones tipo "Chofer" de un viaje, como líneas
+   * "Viaje/comisión" en la fecha de inicio del viaje, y recalcula los salarios afectados.
+   * Reemplaza las líneas que el viaje haya generado antes (cambio de monto, chofer o fecha).
+   * Con `eliminar` (o si el viaje no existe / está cancelado) solo borra las líneas previas.
+   */
+  async sincronizarComisionesViaje(viajeId: number, opciones: { eliminar?: boolean } = {}): Promise<SalarioAfectado[]> {
+    const viaje = opciones.eliminar
+      ? null
+      : await this.viajeRepository.findOne({ where: { id: viajeId }, relations: ['comisiones'] });
+
+    const periodos = new Map<string, { choferId: number; mes: number; anio: number }>();
+    const agregarPeriodo = (choferId: number, fecha: string) => {
+      const p = { choferId, ...this.periodoDe(fecha) };
+      periodos.set(`${p.choferId}|${p.anio}|${p.mes}`, p);
+    };
+
+    await this.dataSource.transaction(async (manager) => {
+      const previas = await manager.find(ChoferViatico, { where: { viajeId }, relations: ['jornada'] });
+      for (const linea of previas) {
+        if (linea.jornada) agregarPeriodo(linea.jornada.choferId, linea.jornada.fecha);
+      }
+      if (previas.length) {
+        await manager.delete(ChoferViatico, { viajeId });
+      }
+
+      const fecha = toDateOnly(viaje?.fechaInicio);
+      const choferId = viaje?.choferId;
+      if (!viaje || !choferId || !fecha || viaje.estado === 'cancelado') {
+        return;
+      }
+
+      const comisiones = (viaje.comisiones || []).filter(
+        (c) => esComisionChofer(c) && c.estado !== 'cancelado' && Number(c.montoTotal) > 0,
+      );
+      if (!comisiones.length) {
+        return;
+      }
+
+      // Si el chofer no tenía jornada ese día se crea como trabajada y asociada al viaje
+      let jornada = await manager.findOne(ChoferJornada, { where: { choferId, fecha } });
+      if (!jornada) {
+        jornada = await manager.save(
+          ChoferJornada,
+          manager.create(ChoferJornada, { choferId, fecha, categoria: CategoriaJornada.TRABAJADO, viajeId: viaje.id }),
+        );
+      } else if (!jornada.viajeId) {
+        jornada.viajeId = viaje.id;
+        jornada = await manager.save(ChoferJornada, jornada);
+      }
+
+      await manager.save(
+        ChoferViatico,
+        comisiones.map((c) =>
+          manager.create(ChoferViatico, {
+            jornadaId: jornada.id,
+            viajeId: viaje.id,
+            tipo: TipoViatico.VIAJE_COMISION,
+            concepto: (c.concepto || 'Comisión viaje').trim(),
+            cantidad: 1,
+            monto: Number(c.montoTotal),
+            observaciones: `Viaje ${viaje.numeroViaje}`,
+          }),
+        ),
+      );
+      agregarPeriodo(choferId, fecha);
+    });
+
+    return this.recalcularSalarios([...periodos.values()]);
+  }
+
+  /** Re-sincroniza todos los viajes con comisiones de chofer o con líneas ya generadas. */
+  async sincronizarTodasLasComisionesDeViajes(): Promise<{ viajes: number; salarios: SalarioAfectado[] }> {
+    const filas: Array<{ viajeId: number | string }> = await this.dataSource.query(
+      `SELECT viaje_id AS viajeId FROM chofer_viatico WHERE viaje_id IS NOT NULL
+       UNION
+       SELECT viaje_id AS viajeId FROM viajes_comisiones WHERE LOWER(TRIM(tipo)) = 'chofer'`,
+    );
+    const ids = [...new Set(filas.map((r) => Number(r.viajeId)).filter((id) => id > 0))];
+
+    const salarios = new Map<string, SalarioAfectado>();
+    for (const id of ids) {
+      for (const s of await this.sincronizarComisionesViaje(id)) {
+        salarios.set(`${s.choferId}|${s.anio}|${s.mes}`, s);
+      }
+    }
+    return { viajes: ids.length, salarios: [...salarios.values()] };
   }
 
   private async guardarJornada(

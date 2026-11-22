@@ -7,12 +7,14 @@ import { ViajComision } from './viaje-comision.entity';
 import { ViajsService } from './viajes.service';
 import { ViajsController } from './viajes.controller';
 import { CamionesModule } from '../camiones/camiones.module';
+import { JornadasModule } from '../jornadas/jornadas.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Viaje, ViajRuta, ViajComision]),
     AuthModule,
     CamionesModule,
+    JornadasModule,
   ],
   controllers: [ViajsController],
   providers: [ViajsService],

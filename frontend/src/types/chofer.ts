@@ -10,6 +10,8 @@ export interface Chofer {
   fechaNacimiento?: Date | string;
   estado: EstadoChofer;
   sueldoBase?: number;
+  /** Costo mensual para la empresa (cargado a mano, incluye aportes patronales) */
+  costoEmpresa?: number | null;
   porcentajeComision?: number;
   userId?: number;
   user?: {
@@ -31,6 +33,8 @@ export interface CreateChoferDto {
   fechaNacimiento?: Date | string;
   estado?: EstadoChofer;
   sueldoBase?: number;
+  /** Costo mensual para la empresa (cargado a mano, incluye aportes patronales) */
+  costoEmpresa?: number | null;
   porcentajeComision?: number;
   userId?: number;
 }
@@ -46,6 +50,8 @@ export interface UpdateChoferDto {
   fechaNacimiento?: Date | string;
   estado?: EstadoChofer;
   sueldoBase?: number;
+  /** Costo mensual para la empresa (cargado a mano, incluye aportes patronales) */
+  costoEmpresa?: number | null;
   porcentajeComision?: number;
   userId?: number;
 }

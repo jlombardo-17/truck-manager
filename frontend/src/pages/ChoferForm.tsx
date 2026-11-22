@@ -26,6 +26,7 @@ interface FormData {
   fechaNacimiento: string;
   estado: EstadoChofer;
   sueldoBase: string;
+  costoEmpresa: string;
   porcentajeComision: string;
 }
 
@@ -68,6 +69,7 @@ const ChoferForm: React.FC = () => {
     fechaNacimiento: '',
     estado: EstadoChofer.ACTIVO,
     sueldoBase: '',
+    costoEmpresa: '',
     porcentajeComision: '',
   });
 
@@ -202,6 +204,7 @@ const ChoferForm: React.FC = () => {
         direccion: formData.direccion || undefined,
         localidadResidencia: formData.localidadResidencia.trim() || undefined,
         sueldoBase: formData.sueldoBase ? parseFloat(formData.sueldoBase) : undefined,
+        costoEmpresa: formData.costoEmpresa ? parseFloat(formData.costoEmpresa) : null,
         porcentajeComision: formData.porcentajeComision ? parseFloat(formData.porcentajeComision) : undefined,
       };
 
@@ -397,6 +400,22 @@ const ChoferForm: React.FC = () => {
               placeholder="Ej: 35000.00"
               disabled={loading}
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="costoEmpresa">Costo Empresa mensual ($)</label>
+            <input
+              type="number"
+              id="costoEmpresa"
+              name="costoEmpresa"
+              value={formData.costoEmpresa}
+              onChange={handleChange}
+              min="0"
+              step="0.01"
+              placeholder="Ej: 70000.00"
+              disabled={loading}
+            />
+            <small className="field-hint">Sueldo + aportes patronales. Informativo: no cambia lo que se le paga.</small>
           </div>
 
           <div className="form-group">

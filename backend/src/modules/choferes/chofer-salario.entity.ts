@@ -41,11 +41,12 @@ export class ChoferSalario {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   salarioBase: number;
 
-  // Total de comisiones de viajes del mes
+  // Total de comisiones de viajes del mes (líneas "Viaje/comisión" de las jornadas,
+  // que se generan solas desde las comisiones tipo "Chofer" de cada viaje)
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   totalComisiones: number;
 
-  // Total de viáticos registrados en las jornadas del mes
+  // Total de viáticos registrados en las jornadas del mes (sin las comisiones de viaje)
   @Column({ name: 'total_viaticos', type: 'decimal', precision: 12, scale: 2, default: 0 })
   totalViaticos: number;
 
@@ -56,6 +57,11 @@ export class ChoferSalario {
   // Deducciones (préstamos, adelantos, multas, etc.)
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   deducciones: number;
+
+  // Costo total del mes para la empresa (incluye aportes patronales). Se carga a mano,
+  // es solo informativo: no suma al neto ni se compara con los pagos al chofer.
+  @Column({ name: 'costo_empresa', type: 'decimal', precision: 12, scale: 2, nullable: true })
+  costoEmpresa: number;
 
   // Salario neto = salario_base + total_comisiones + total_viaticos + bonos - deducciones
   @Column({ type: 'decimal', precision: 12, scale: 2 })

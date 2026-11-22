@@ -572,9 +572,12 @@ const ChoferSalarios: React.FC = () => {
                   <th>Viáticos</th>
                   <th>Bonos</th>
                   <th>Deducciones</th>
-                  <th>Salario Neto</th>
+                  <th title="Base + comisiones + viáticos + bonos − deducciones">Total a pagar</th>
                   <th>Pagado Acum.</th>
                   <th>Saldo</th>
+                  <th title="Costo total para la empresa (cargado a mano). No suma a lo que se le paga al chofer.">
+                    Costo Empresa
+                  </th>
                   <th>Estado</th>
                   <th>Fecha Pago</th>
                   <th>Acciones</th>
@@ -600,6 +603,9 @@ const ChoferSalarios: React.FC = () => {
                     </td>
                     <td>{formatCurrency(getTotalPagado(salario))}</td>
                     <td>{formatCurrency(getSaldoPendiente(salario))}</td>
+                    <td className="costo-empresa">
+                      {salario.costoEmpresa != null ? formatCurrency(salario.costoEmpresa) : '-'}
+                    </td>
                     <td>
                       <span
                         className="estado-badge"

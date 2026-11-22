@@ -5,8 +5,9 @@ import { ChoferSalario, EstadoSalario } from './chofer-salario.entity';
 import { ChoferSalarioPago, TipoPagoSalario } from './chofer-salario-pago.entity';
 import { Chofer } from './chofer.entity';
 import { Viaje } from '../viajes/viaje.entity';
-import { ViajComision } from '../viajes/viaje-comision.entity';
+import { esComisionChofer } from '../viajes/viaje-comision.entity';
 import { ChoferViatico } from '../jornadas/chofer-viatico.entity';
+import { TipoViatico } from '../jornadas/tipo-viatico.enum';
 import { toDateOnly, todayDateOnly } from '../../common/utils/date-only';
 import {
   CreateSalarioDto,
@@ -35,6 +36,11 @@ export class SalariosService {
     return parseFloat((value ?? 0).toString()) || 0;
   }
 
+  /** Costo empresa de referencia del chofer (cargado a mano), o null si no lo tiene. */
+  private costoEmpresaDe(chofer: Chofer): number | null {
+    return chofer.costoEmpresa === null || chofer.costoEmpresa === undefined ? null : this.toNumber(chofer.costoEmpresa);
+  }
+
   private calcularNeto(salario: ChoferSalario): number {
     return (
       this.toNumber(salario.salarioBase) +
@@ -46,22 +52,33 @@ export class SalariosService {
   }
 
   /**
-   * Suma los viáticos registrados en las jornadas del chofer para el período
+   * Suma las líneas de las jornadas del chofer para el período, separando las comisiones
+   * de viaje (tipo "Viaje/comisión", incluidas las generadas desde los viajes) del resto
+   * de los viáticos.
    */
-  async sumarViaticos(choferId: number, mes: number, anio: number): Promise<number> {
+  async sumarJornadas(
+    choferId: number,
+    mes: number,
+    anio: number,
+  ): Promise<{ totalComisiones: number; totalViaticos: number }> {
     const mm = String(mes).padStart(2, '0');
     const ultimoDia = new Date(anio, mes, 0).getDate();
     const raw = await this.viaticoRepository
       .createQueryBuilder('v')
       .innerJoin('v.jornada', 'j')
-      .select('COALESCE(SUM(v.cantidad * v.monto), 0)', 'total')
+      .select('COALESCE(SUM(CASE WHEN v.tipo = :tipoComision THEN v.cantidad * v.monto ELSE 0 END), 0)', 'comisiones')
+      .addSelect('COALESCE(SUM(CASE WHEN v.tipo = :tipoComision THEN 0 ELSE v.cantidad * v.monto END), 0)', 'viaticos')
       .where('j.choferId = :choferId', { choferId })
       .andWhere('j.fecha BETWEEN :desde AND :hasta', {
         desde: `${anio}-${mm}-01`,
         hasta: `${anio}-${mm}-${String(ultimoDia).padStart(2, '0')}`,
       })
-      .getRawOne<{ total: string }>();
-    return this.toNumber(raw?.total);
+      .setParameter('tipoComision', TipoViatico.VIAJE_COMISION)
+      .getRawOne<{ comisiones: string; viaticos: string }>();
+    return {
+      totalComisiones: this.toNumber(raw?.comisiones),
+      totalViaticos: this.toNumber(raw?.viaticos),
+    };
   }
 
   /**
@@ -81,7 +98,9 @@ export class SalariosService {
       return { salarioId: salario.id, estado: salario.estado, actualizado: false };
     }
 
-    salario.totalViaticos = await this.sumarViaticos(choferId, mes, anio);
+    const { totalComisiones, totalViaticos } = await this.sumarJornadas(choferId, mes, anio);
+    salario.totalComisiones = totalComisiones;
+    salario.totalViaticos = totalViaticos;
     salario.salarioNeto = this.calcularNeto(salario);
     const saved = await this.salarioRepository.save(salario);
     const actualizado = await this.actualizarEstadoSegunPagos(saved);
@@ -143,7 +162,8 @@ export class SalariosService {
   }
 
   /**
-   * Obtener viajes del chofer en un período con sus comisiones
+   * Obtener viajes del chofer en un período con sus comisiones tipo "Chofer"
+   * (las mismas que se reflejan en sus jornadas y suman al salario)
    */
   async getViajesConComisionesPorPeriodo(
     choferId: number,
@@ -158,7 +178,6 @@ export class SalariosService {
       where: {
         chofer: { id: choferId } as Chofer,
         fechaInicio: Between(fechaInicio, fechaFin),
-        estado: 'completado', // Solo viajes completados generan comisión
       },
       relations: ['comisiones'],
       order: { fechaInicio: 'ASC' },
@@ -166,9 +185,9 @@ export class SalariosService {
 
     let totalComisiones = 0;
 
-    const viajesConTotales = viajes.map((viaje) => {
+    const viajesConTotales = viajes.filter((viaje) => viaje.estado !== 'cancelado').map((viaje) => {
       const comisionesChofer = (viaje.comisiones || []).filter(
-        (comision) => comision.beneficiario === `chofer_${choferId}` || comision.tipo === 'chofer',
+        (comision) => esComisionChofer(comision) && comision.estado !== 'cancelado',
       );
 
       const totalComisionViaje = comisionesChofer.reduce(
@@ -243,14 +262,11 @@ export class SalariosService {
     const salarioBase =
       dto.salarioBase !== undefined ? dto.salarioBase : parseFloat(chofer.sueldoBase?.toString() || '0');
 
-    // Calcular comisiones si no se especifican
-    let totalComisiones = dto.totalComisiones || 0;
-    if (!dto.totalComisiones) {
-      const resultado = await this.getViajesConComisionesPorPeriodo(dto.choferId, dto.mes, dto.anio);
-      totalComisiones = resultado.totalComisiones;
-    }
-
-    const totalViaticos = await this.sumarViaticos(dto.choferId, dto.mes, dto.anio);
+    // Comisiones de viaje y viáticos salen de las jornadas del período (salvo que se indiquen)
+    const jornadas = await this.sumarJornadas(dto.choferId, dto.mes, dto.anio);
+    const totalComisiones = dto.totalComisiones ? dto.totalComisiones : jornadas.totalComisiones;
+    const totalViaticos = jornadas.totalViaticos;
+    const costoEmpresa = dto.costoEmpresa ?? this.costoEmpresaDe(chofer);
     const bonos = dto.bonos || 0;
     const deducciones = dto.deducciones || 0;
 
@@ -266,6 +282,7 @@ export class SalariosService {
       bonos,
       deducciones,
       salarioNeto,
+      costoEmpresa,
     });
     const saved = await this.salarioRepository.save(nuevoSalario);
 
@@ -498,12 +515,11 @@ export class SalariosService {
           continue;
         }
 
-        // Calcular comisiones del período
-        const { totalComisiones } = await this.getViajesConComisionesPorPeriodo(chofer.id, dto.mes, dto.anio);
+        // Comisiones de viaje y viáticos del período (desde las jornadas)
+        const { totalComisiones, totalViaticos } = await this.sumarJornadas(chofer.id, dto.mes, dto.anio);
 
         // Crear salario
         const salarioBase = parseFloat(chofer.sueldoBase?.toString() || '0');
-        const totalViaticos = await this.sumarViaticos(chofer.id, dto.mes, dto.anio);
         const salarioNeto = salarioBase + totalComisiones + totalViaticos;
 
         const nuevoSalario = this.salarioRepository.create({
@@ -516,6 +532,7 @@ export class SalariosService {
           bonos: 0,
           deducciones: 0,
           salarioNeto,
+          costoEmpresa: this.costoEmpresaDe(chofer),
           estado: EstadoSalario.PENDIENTE,
         });
 

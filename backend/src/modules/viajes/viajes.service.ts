@@ -18,6 +18,7 @@ import { Chofer } from '../choferes/chofer.entity';
 import { Cliente } from '../clientes/cliente.entity';
 import { getUsdUyuRateInfo, UsdUyuRateInfo } from '../../common/utils/usd-uyu-rate';
 import { getPrecioGasoilInfo, PrecioGasoilInfo } from '../../common/utils/precio-gasoil';
+import { JornadasService } from '../jornadas/jornadas.service';
 
 type RoutePointInput = {
   orden?: number;
@@ -82,6 +83,7 @@ export class ViajsService {
     @InjectRepository(ViajComision)
     private viajComisionRepository: Repository<ViajComision>,
     private camionesService: CamionesService,
+    private jornadasService: JornadasService,
   ) {}
 
   /**
@@ -159,6 +161,9 @@ export class ViajsService {
           usdUyuRate,
         );
       }
+
+      // Comisiones tipo "Chofer" → jornadas y salario del chofer
+      await this.jornadasService.sincronizarComisionesViaje(savedViaje.id);
 
       return this.findOneWithRelations(savedViaje.id);
     } catch (error) {
@@ -407,6 +412,9 @@ export class ViajsService {
         await this.guardarComisiones(id, baseMontoParaComisiones, comisiones, usdUyuRate);
       }
 
+      // Puede haber cambiado el chofer, la fecha, el estado o las comisiones
+      await this.jornadasService.sincronizarComisionesViaje(id);
+
       return this.findOneWithRelations(id);
     } catch (error) {
       this.logger.error(
@@ -427,6 +435,8 @@ export class ViajsService {
    */
   async remove(id: number): Promise<void> {
     const viaje = await this.findOne(id);
+    // Quita las comisiones que el viaje generó en las jornadas y recalcula los salarios
+    await this.jornadasService.sincronizarComisionesViaje(id, { eliminar: true });
     await this.viajRepository.remove(viaje);
   }
 
@@ -446,7 +456,14 @@ export class ViajsService {
     }
 
     await this.viajRepository.save(viaje);
+    // Un viaje cancelado deja de sumar comisiones al chofer (y vuelve a sumar si se reactiva)
+    await this.jornadasService.sincronizarComisionesViaje(id);
     return this.findOneWithRelations(id);
+  }
+
+  /** Re-sincroniza las comisiones de chofer de todos los viajes con las jornadas (migración / reparación). */
+  async sincronizarComisionesChofer() {
+    return this.jornadasService.sincronizarTodasLasComisionesDeViajes();
   }
 
   /**

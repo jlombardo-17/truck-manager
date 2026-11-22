@@ -4,6 +4,12 @@ import { Viaje } from './viaje.entity';
 /** Tipos de la tabla de comisiones que cuentan como gasto operativo del viaje, no como comisión. */
 export const TIPOS_GASTO_OPERATIVO = ['peaje'];
 
+/** Tipo de comisión que se le paga al chofer del viaje: va a sus jornadas y a su salario. */
+export const TIPO_COMISION_CHOFER = 'chofer';
+
+export const esComisionChofer = (comision: { tipo?: string | null }): boolean =>
+  String(comision.tipo ?? '').trim().toLowerCase() === TIPO_COMISION_CHOFER;
+
 export const esGastoOperativo = (comision: { tipo?: string | null }): boolean =>
   TIPOS_GASTO_OPERATIVO.includes(String(comision.tipo ?? '').trim().toLowerCase());
 
@@ -19,7 +25,7 @@ export class ViajComision {
   @Column()
   viajeId: number;
 
-  // Tipo de comisión: 'contratista', 'flete', 'operario', 'cliente', 'acarreador', 'peaje', 'otro'
+  // Tipo de comisión: 'chofer', 'contratista', 'flete', 'operario', 'cliente', 'acarreador', 'peaje', 'otro'
   @Column()
   tipo: string;
 

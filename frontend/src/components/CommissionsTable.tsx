@@ -29,7 +29,13 @@ interface CommissionsTableProps {
   /** Cotización usada para convertir comisiones en USD a UYU */
   usdUyuRate: number;
   commissionTypes?: string[];
+  /** Nombre del chofer del viaje: beneficiario fijo de las comisiones tipo "Chofer" */
+  choferNombre?: string;
 }
+
+/** Tipo de comisión que se le paga al chofer del viaje (va a sus jornadas y su salario) */
+export const TIPO_COMISION_CHOFER = 'Chofer';
+const esComisionChofer = (comm: Commission) => (comm.tipo || '').trim().toLowerCase() === 'chofer';
 
 const formatMonto = (monto: number, moneda: Moneda) =>
   new Intl.NumberFormat('es-UY', { style: 'currency', currency: moneda, maximumFractionDigits: 2 }).format(
@@ -45,7 +51,8 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
   costoCombustible = 0,
   otrosGastos = 0,
   usdUyuRate,
-  commissionTypes = ['Contratista', 'Flete', 'Operario', 'Cliente', 'Peaje', 'Otro'],
+  commissionTypes = [TIPO_COMISION_CHOFER, 'Contratista', 'Flete', 'Operario', 'Cliente', 'Peaje', 'Otro'],
+  choferNombre = '',
 }) => {
   const [localCommissions, setLocalCommissions] = useState<Commission[]>(commissions);
   const [newCommission, setNewCommission] = useState<Commission>(emptyCommission());
@@ -92,6 +99,7 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
     const commission: Commission = {
       id: `comm-${Date.now()}`,
       ...base,
+      ...(esComisionChofer(base) ? { beneficiario: choferNombre } : {}),
       moneda: base.moneda === 'USD' ? 'USD' : 'UYU',
       montoTotal: calculateTotal(base),
       estado: 'pendiente',
@@ -115,6 +123,7 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
     const updated = localCommissions.map((c) => {
       if (c.id === id) {
         const next = { ...c, [field]: value } as Commission;
+        if (field === 'tipo' && esComisionChofer(next)) next.beneficiario = choferNombre;
         next.montoTotal = calculateTotal(next);
         return next;
       }
@@ -255,9 +264,11 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
                     <td>
                       <input
                         type="text"
-                        value={comm.beneficiario || ''}
+                        value={esComisionChofer(comm) ? choferNombre || comm.beneficiario || '' : comm.beneficiario || ''}
                         onChange={(e) => updateCommission(comm.id, 'beneficiario', e.target.value)}
-                        placeholder="Nombre"
+                        placeholder={esComisionChofer(comm) ? 'Chofer del viaje' : 'Nombre'}
+                        disabled={esComisionChofer(comm)}
+                        title={esComisionChofer(comm) ? 'Se paga al chofer del viaje: va a sus jornadas y su salario' : undefined}
                         className="input-small"
                       />
                     </td>
@@ -368,11 +379,15 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
             <label>Beneficiario</label>
             <input
               type="text"
-              value={newCommission.beneficiario || ''}
+              value={esComisionChofer(newCommission) ? choferNombre : newCommission.beneficiario || ''}
               onChange={(e) => setNewCommission({ ...newCommission, beneficiario: e.target.value })}
-              placeholder="Nombre del beneficiario"
+              placeholder={esComisionChofer(newCommission) ? 'Elegí el chofer del viaje' : 'Nombre del beneficiario'}
+              disabled={esComisionChofer(newCommission)}
               className="form-input"
             />
+            {esComisionChofer(newCommission) && (
+              <small className="field-hint">Se suma a las jornadas y al salario del chofer.</small>
+            )}
           </div>
 
           <button

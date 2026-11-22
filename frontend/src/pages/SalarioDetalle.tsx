@@ -28,6 +28,8 @@ const SalarioDetalle: React.FC = () => {
   const [viajes, setViajes] = useState<ViajeConComision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [costoEmpresaInput, setCostoEmpresaInput] = useState('');
+  const [guardandoCosto, setGuardandoCosto] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -51,6 +53,7 @@ const SalarioDetalle: React.FC = () => {
       }
       
       setSalario(salarioActual);
+      setCostoEmpresaInput(salarioActual?.costoEmpresa != null ? String(Number(salarioActual.costoEmpresa)) : '');
 
       // Cargar viajes con comisiones
       const viajesData = await salariosService.getViajesConComisiones(
@@ -231,6 +234,27 @@ const SalarioDetalle: React.FC = () => {
     doc.save(nombreArchivo);
   };
 
+  const guardarCostoEmpresa = async () => {
+    if (!salario) return;
+    const valor = costoEmpresaInput.trim() === '' ? null : Number(costoEmpresaInput);
+    if (valor !== null && !(valor >= 0)) {
+      setError('El costo empresa debe ser un número mayor o igual a 0');
+      return;
+    }
+    try {
+      setGuardandoCosto(true);
+      const actualizado = await salariosService.update(salario.id, { costoEmpresa: valor });
+      setSalario((prev) => (prev ? { ...prev, costoEmpresa: actualizado.costoEmpresa ?? valor } : prev));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'No se pudo guardar el costo empresa');
+    } finally {
+      setGuardandoCosto(false);
+    }
+  };
+
+  const costoEmpresaGuardado = salario?.costoEmpresa != null ? String(Number(salario.costoEmpresa)) : '';
+  const totalPagado = (salario?.pagos || []).reduce((acc, p) => acc + (Number(p.monto) || 0), 0);
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -306,8 +330,42 @@ const SalarioDetalle: React.FC = () => {
             <span className="value">- {formatCurrency(salario.deducciones)}</span>
           </div>
           <div className="resumen-item total">
-            <span className="label">SALARIO NETO</span>
+            <span className="label">TOTAL A PAGAR AL CHOFER</span>
             <span className="value">{formatCurrency(salario.salarioNeto)}</span>
+          </div>
+          <div className="resumen-item">
+            <span className="label">Pagado al chofer</span>
+            <span className="value">{formatCurrency(totalPagado)}</span>
+          </div>
+          <div className="resumen-item">
+            <span className="label">Saldo pendiente</span>
+            <span className="value">{formatCurrency(Math.max(0, Number(salario.salarioNeto) - totalPagado))}</span>
+          </div>
+        </div>
+
+        <div className="costo-empresa-box">
+          <label htmlFor="costoEmpresa">
+            <strong>Costo empresa del mes</strong>
+            <small>Sueldo + aportes patronales. Informativo: no suma al total a pagar ni a los pagos.</small>
+          </label>
+          <div className="costo-empresa-box__input">
+            <input
+              id="costoEmpresa"
+              type="number"
+              min="0"
+              step="0.01"
+              value={costoEmpresaInput}
+              placeholder={chofer?.costoEmpresa ? `Referencia del chofer: ${chofer.costoEmpresa}` : 'Ej: 70000'}
+              onChange={(e) => setCostoEmpresaInput(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-pdf"
+              onClick={guardarCostoEmpresa}
+              disabled={guardandoCosto || costoEmpresaGuardado === costoEmpresaInput}
+            >
+              {guardandoCosto ? 'Guardando…' : 'Guardar'}
+            </button>
           </div>
         </div>
 

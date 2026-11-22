@@ -267,6 +267,12 @@ const ViajeForm: React.FC = () => {
     setFormData((prev) => ({ ...prev, valorViaje: valorPorTarifa, moneda: monedaTarifaActual }));
   };
   const totalComisiones = sumComisiones(comisiones);
+
+  // Beneficiario de las comisiones tipo "Chofer": siempre el chofer del viaje
+  const choferSeleccionado = choferes.find((c) => c.id === Number(formData.choferId));
+  const choferSeleccionadoNombre = choferSeleccionado
+    ? `${choferSeleccionado.nombre} ${choferSeleccionado.apellido}`.replace(/\s+/g, ' ').trim()
+    : '';
   const gananciaNetaFinal = gananciaAntesDeComisiones - totalComisiones;
 
   const getAmountStyles = (amount: number) => ({
@@ -495,7 +501,9 @@ const ViajeForm: React.FC = () => {
         documentosDescargaAdjuntos: formData.documentosDescargaAdjuntos || [],
         documentoDescargaAdjunto: '',
         documentoDescargaNombre: '',
-        comisiones,
+        comisiones: comisiones.map((c) =>
+          (c.tipo || '').trim().toLowerCase() === 'chofer' ? { ...c, beneficiario: choferSeleccionadoNombre } : c,
+        ),
         // No incluir rutas aqui, se guardarán después
       };
 
@@ -1171,7 +1179,8 @@ const ViajeForm: React.FC = () => {
             costoCombustible={formData.costoCombustible}
             otrosGastos={formData.otrosGastos}
             usdUyuRate={usdUyuRate}
-            commissionTypes={['Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Peaje', 'Otro']}
+            commissionTypes={['Chofer', 'Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Peaje', 'Otro']}
+            choferNombre={choferSeleccionadoNombre}
           />
         </section>
 

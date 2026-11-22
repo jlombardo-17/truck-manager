@@ -73,6 +73,8 @@ export interface ChoferViatico {
   cantidad: number;
   monto: number | string; // unitario; total de la línea = cantidad * monto
   observaciones?: string | null;
+  /** Seteado si la línea se generó desde una comisión "Chofer" del viaje (solo lectura acá) */
+  viajeId?: number | null;
 }
 
 export interface ChoferJornada {

@@ -353,6 +353,24 @@
   margin-bottom: 0.4rem;
 }
 
+.jornada-viaticos__row--viaje {
+  align-items: center;
+  padding: 0.35rem 0.55rem;
+  border: 1px dashed #9bb8d3;
+  border-radius: 6px;
+  background: #f1f7fc;
+  font-size: 0.85rem;
+  color: #2c3e50;
+}
+
+.jornada-viaticos__row--viaje small {
+  color: #556b7e;
+}
+
+.jornada-viaticos__link {
+  text-decoration: none;
+}
+
 .jornada-viaticos__row--head {
   margin-bottom: 0.15rem;
   font-size: 0.75rem;

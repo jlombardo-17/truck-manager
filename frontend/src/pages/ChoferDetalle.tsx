@@ -24,6 +24,7 @@ interface ChoferEditFormData {
   fechaNacimiento: string;
   estado: EstadoChofer;
   sueldoBase: string;
+  costoEmpresa: string;
   porcentajeComision: string;
 }
 
@@ -53,6 +54,7 @@ const ChoferDetalle: React.FC = () => {
     fechaNacimiento: '',
     estado: EstadoChofer.ACTIVO,
     sueldoBase: '',
+    costoEmpresa: '',
     porcentajeComision: '',
   });
 
@@ -239,6 +241,7 @@ const ChoferDetalle: React.FC = () => {
           : '',
         estado: (choferData.estado as EstadoChofer) || EstadoChofer.ACTIVO,
         sueldoBase: choferData.sueldoBase ? String(choferData.sueldoBase) : '',
+        costoEmpresa: choferData.costoEmpresa ? String(choferData.costoEmpresa) : '',
         porcentajeComision: choferData.porcentajeComision ? String(choferData.porcentajeComision) : '',
       });
       setEditErrors({});
@@ -419,6 +422,7 @@ const ChoferDetalle: React.FC = () => {
         fechaNacimiento: editFormData.fechaNacimiento || undefined,
         estado: editFormData.estado,
         sueldoBase: editFormData.sueldoBase ? parseFloat(editFormData.sueldoBase) : undefined,
+        costoEmpresa: editFormData.costoEmpresa ? parseFloat(editFormData.costoEmpresa) : null,
         porcentajeComision: editFormData.porcentajeComision ? parseFloat(editFormData.porcentajeComision) : undefined,
       });
 
@@ -564,6 +568,11 @@ const ChoferDetalle: React.FC = () => {
                   </div>
 
                   <div className="form-group">
+                    <label>Costo Empresa mensual ($)</label>
+                    <input type="number" min="0" step="0.01" name="costoEmpresa" value={editFormData.costoEmpresa} onChange={handleEditChange} />
+                  </div>
+
+                  <div className="form-group">
                     <label>Porcentaje Comisión (%)</label>
                     <input type="number" min="0" max="100" step="0.01" name="porcentajeComision" value={editFormData.porcentajeComision} onChange={handleEditChange} />
                   </div>
@@ -632,6 +641,12 @@ const ChoferDetalle: React.FC = () => {
                     <span>${Number(chofer.sueldoBase).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 )}
+                {chofer.costoEmpresa ? (
+                  <div className="info-item">
+                    <label>Costo Empresa:</label>
+                    <span>${Number(chofer.costoEmpresa).toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                ) : null}
                 {chofer.porcentajeComision && (
                   <div className="info-item">
                     <label>% Comisión:</label>
