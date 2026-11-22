@@ -206,7 +206,27 @@ export interface ViajComision {
   notas?: string;
 }
 
+export interface PrecioGasoilInfo {
+  /** UYU por litro; null si no hay fuente disponible */
+  precioPorLitro: number | null;
+  /** YYYY-MM-DD desde la que rige el precio */
+  vigenteDesde: string | null;
+  source: 'datosuruguay.com' | 'cache' | 'fallback-env' | 'sin-datos';
+  attribution: { text: string; url: string } | null;
+}
+
 export const viajsService = {
+  /** Precio del litro de gasoil 50-S (ANCAP) vigente en `fecha` (YYYY-MM-DD). */
+  getPrecioGasoil: async (fecha?: string): Promise<PrecioGasoilInfo> => {
+    const response = await axios.get<PrecioGasoilInfo>(`${API_BASE_URL}/viajes/combustible/precio-gasoil`, {
+      params: fecha ? { fecha } : undefined,
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+      },
+    });
+    return response.data;
+  },
+
   getUsdUyuRate: async (): Promise<{ rate: number; source: string; fetchedAt: string }> => {
     const response = await axios.get<{ rate: number; source: string; fetchedAt: string }>(
       `${API_BASE_URL}/viajes/tipo-cambio/usd-uyu`,

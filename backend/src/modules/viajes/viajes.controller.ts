@@ -58,6 +58,15 @@ export class ViajsController {
   }
 
   /**
+   * GET /api/viajes/combustible/precio-gasoil?fecha=YYYY-MM-DD - Precio del litro de gasoil
+   * 50-S (ANCAP) vigente en la fecha indicada (default: hoy)
+   */
+  @Get('combustible/precio-gasoil')
+  async getPrecioGasoil(@Query('fecha') fecha?: string) {
+    return this.viajsService.getPrecioGasoil(fecha);
+  }
+
+  /**
    * GET /api/viajes/:id - Obtener un viaje por ID
    */
   @Get(':id')

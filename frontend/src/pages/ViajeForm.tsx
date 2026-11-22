@@ -1,6 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { viajsService, Viaje, ViajRuta, ViajComision, ViajeDocumentoAdjunto } from '../services/viajsService';
+import {
+  viajsService,
+  Viaje,
+  ViajRuta,
+  ViajComision,
+  ViajeDocumentoAdjunto,
+  PrecioGasoilInfo,
+} from '../services/viajsService';
 import camionesService from '../services/camionesService';
 import choferesService from '../services/choferesService';
 import clientesService from '../services/clientesService';
@@ -13,9 +20,18 @@ import AppNavbar from '../components/AppNavbar';
 import HeroSection from '../components/HeroSection';
 import BackButton from '../components/BackButton';
 import heroRoutesViolet from '../assets/hero-routes-violet.svg';
-import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
+import { formatDateForDisplay, getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
 import { sumComisiones, sumGastosOperativosComisiones } from '../utils/comisiones';
 import '../styles/ViajeForm.css';
+
+/** Costo de combustible en UYU: litros × precio por litro, redondeado a centavos. */
+const calcularCostoCombustible = (litros?: number | null, precioPorLitro?: number | null): number | null => {
+  const l = Number(litros);
+  const p = Number(precioPorLitro);
+  if (litros === undefined || litros === null || !Number.isFinite(l) || l <= 0) return null;
+  if (precioPorLitro === undefined || precioPorLitro === null || !Number.isFinite(p) || p <= 0) return null;
+  return Math.round(l * p * 100) / 100;
+};
 
 const ViajeForm: React.FC = () => {
   const navigate = useNavigate();
@@ -172,12 +188,43 @@ const ViajeForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing] = useState(!!id);
   const [usdUyuRate, setUsdUyuRate] = useState<number>(40);
+  const [precioGasoil, setPrecioGasoil] = useState<PrecioGasoilInfo | null>(null);
+  const precioGasoilRef = useRef<number | null>(null);
   const [isDocumentosDropActive, setIsDocumentosDropActive] = useState(false);
 
   // Cargar datos iniciales
   useEffect(() => {
     loadDataAndForm();
   }, [id]);
+
+  // Precio del gasoil vigente en la fecha de inicio del viaje (para sugerir el costo de combustible)
+  const fechaPrecioGasoil = toDateInputValue(formData.fechaInicio) || getTodayLocalInputValue();
+  useEffect(() => {
+    let cancelado = false;
+    viajsService
+      .getPrecioGasoil(fechaPrecioGasoil)
+      .then((info) => {
+        if (cancelado) return;
+        const anterior = precioGasoilRef.current;
+        const nuevo = info.precioPorLitro;
+        precioGasoilRef.current = nuevo;
+        setPrecioGasoil(info);
+        // Si el costo estaba calculado con el precio anterior (no editado a mano), recalcularlo
+        if (anterior !== null && nuevo !== null && anterior !== nuevo) {
+          setFormData((prev) => {
+            const previo = calcularCostoCombustible(prev.consumoCombustible, anterior);
+            if (previo === null || Math.abs(Number(prev.costoCombustible || 0) - previo) > 0.005) return prev;
+            return { ...prev, costoCombustible: calcularCostoCombustible(prev.consumoCombustible, nuevo) ?? undefined };
+          });
+        }
+      })
+      .catch((err) => {
+        if (!cancelado) console.warn('No se pudo obtener el precio del gasoil', err);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [fechaPrecioGasoil]);
 
   // Los peajes se cargan en Comisiones y Gastos pero son gasto operativo
   const gastosOperativos =
@@ -201,6 +248,17 @@ const ViajeForm: React.FC = () => {
     valorPorTarifa !== null &&
     (Math.abs(Number(formData.valorViaje || 0) - valorPorTarifa) > 0.005 ||
       (formData.moneda || 'UYU') !== monedaTarifaActual);
+  // Costo de combustible sugerido: litros × precio del gasoil vigente
+  const precioLitro = precioGasoil?.precioPorLitro ?? null;
+  const costoCombustibleSugerido = calcularCostoCombustible(formData.consumoCombustible, precioLitro);
+  const costoCombustibleEditado =
+    costoCombustibleSugerido !== null &&
+    Math.abs(Number(formData.costoCombustible || 0) - costoCombustibleSugerido) > 0.005;
+  const aplicarCostoCombustibleSugerido = () => {
+    if (costoCombustibleSugerido === null) return;
+    setFormData((prev) => ({ ...prev, costoCombustible: costoCombustibleSugerido }));
+  };
+
   const formatMonto = (monto: number, moneda: 'UYU' | 'USD') =>
     new Intl.NumberFormat('es-UY', { style: 'currency', currency: moneda, maximumFractionDigits: 2 }).format(monto);
 
@@ -372,6 +430,15 @@ const ViajeForm: React.FC = () => {
       ...formData,
       [name]: nextValue,
     };
+
+    // Al cambiar los litros, recalcular el costo con el precio del gasoil vigente.
+    // El usuario puede pisarlo después editando "Costo de Combustible" a mano.
+    if (name === 'consumoCombustible') {
+      const calculado = calcularCostoCombustible(next.consumoCombustible, precioGasoil?.precioPorLitro ?? null);
+      if (calculado !== null) {
+        next.costoCombustible = calculado;
+      }
+    }
 
     // Al cambiar peso, tarifa o su moneda, recalcular el valor del viaje.
     // El usuario puede pisarlo después editando "Valor del Viaje" a mano.
@@ -1016,6 +1083,34 @@ const ViajeForm: React.FC = () => {
                 step="0.01"
                 className="form-input"
               />
+              {precioLitro !== null && (
+                <small className="field-hint">
+                  Gasoil 50-S: {formatMonto(precioLitro, 'UYU')}/L
+                  {precioGasoil?.vigenteDesde && <> (vigente desde {formatDateForDisplay(precioGasoil.vigenteDesde, 'es-UY')})</>}
+                  {precioGasoil?.attribution ? (
+                    <>
+                      {' · '}
+                      <a href={precioGasoil.attribution.url} target="_blank" rel="noopener noreferrer">
+                        ANCAP vía {precioGasoil.attribution.text.replace(/^Datos de /, '')}
+                      </a>
+                    </>
+                  ) : (
+                    ' · valor configurado'
+                  )}
+                </small>
+              )}
+              {costoCombustibleSugerido !== null && !costoCombustibleEditado && (
+                <small className="field-hint">Calculado: litros × precio del gasoil. Podés editarlo.</small>
+              )}
+              {costoCombustibleEditado && costoCombustibleSugerido !== null && (
+                <small className="field-hint">
+                  {formData.costoCombustible ? 'Editado manualmente. ' : ''}Por consumo sería{' '}
+                  {formatMonto(costoCombustibleSugerido, 'UYU')}.{' '}
+                  <button type="button" className="link-button" onClick={aplicarCostoCombustibleSugerido}>
+                    Usar valor calculado
+                  </button>
+                </small>
+              )}
             </div>
 
             <div className="form-field">

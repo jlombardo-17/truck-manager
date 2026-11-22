@@ -17,6 +17,7 @@ import { Camion } from '../camiones/camion.entity';
 import { Chofer } from '../choferes/chofer.entity';
 import { Cliente } from '../clientes/cliente.entity';
 import { getUsdUyuRateInfo, UsdUyuRateInfo } from '../../common/utils/usd-uyu-rate';
+import { getPrecioGasoilInfo, PrecioGasoilInfo } from '../../common/utils/precio-gasoil';
 
 type RoutePointInput = {
   orden?: number;
@@ -66,6 +67,11 @@ export class ViajsService {
 
   async getUsdUyuRate() {
     return this.getUsdUyuRateInfo();
+  }
+
+  /** Precio del litro de gasoil 50-S (ANCAP) vigente en `fecha` (YYYY-MM-DD, default hoy). */
+  async getPrecioGasoil(fecha?: string): Promise<PrecioGasoilInfo> {
+    return getPrecioGasoilInfo(fecha);
   }
 
   constructor(
