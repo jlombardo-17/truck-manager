@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Viaje } from './viaje.entity';
 import { ViajRuta } from './viaje-ruta.entity';
-import { ViajComision } from './viaje-comision.entity';
+import { ViajComision, esGastoOperativo } from './viaje-comision.entity';
 import { CreateViajDTO } from './dto/create-viaje.dto';
 import { UpdateViajDTO } from './dto/update-viaje.dto';
 import { CamionesService } from '../camiones/camiones.service';
@@ -549,12 +549,16 @@ export class ViajsService {
     const viaje = await this.findOne(viajeId);
     const comisiones = await this.getComisiones(viajeId);
 
-    const totalComisiones = comisiones.reduce(
-      (sum, com) => sum + Number(com.montoTotal),
-      0,
-    );
+    // Los peajes se cargan en la tabla de comisiones pero son gasto operativo
+    const totalComisiones = comisiones
+      .filter((com) => !esGastoOperativo(com))
+      .reduce((sum, com) => sum + Number(com.montoTotal), 0);
+    const totalPeajes = comisiones
+      .filter((com) => esGastoOperativo(com) && com.estado !== 'cancelado')
+      .reduce((sum, com) => sum + Number(com.montoTotal), 0);
 
-    const costosOperacionales = Number(viaje.costoCombustible) + Number(viaje.otrosGastos);
+    const costosOperacionales =
+      Number(viaje.costoCombustible) + Number(viaje.otrosGastos) + totalPeajes;
 
     return {
       valorViaje: Number(viaje.valorViaje),

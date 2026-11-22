@@ -1,6 +1,12 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import { Viaje } from './viaje.entity';
 
+/** Tipos de la tabla de comisiones que cuentan como gasto operativo del viaje, no como comisión. */
+export const TIPOS_GASTO_OPERATIVO = ['peaje'];
+
+export const esGastoOperativo = (comision: { tipo?: string | null }): boolean =>
+  TIPOS_GASTO_OPERATIVO.includes(String(comision.tipo ?? '').trim().toLowerCase());
+
 @Entity({ name: 'viajes_comisiones' })
 export class ViajComision {
   @PrimaryGeneratedColumn()
@@ -13,7 +19,7 @@ export class ViajComision {
   @Column()
   viajeId: number;
 
-  // Tipo de comisión: 'contratista', 'flete', 'operario', 'cliente', 'otro'
+  // Tipo de comisión: 'contratista', 'flete', 'operario', 'cliente', 'acarreador', 'peaje', 'otro'
   @Column()
   tipo: string;
 

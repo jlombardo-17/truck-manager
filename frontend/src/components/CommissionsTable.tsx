@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/CommissionsTable.css';
+import { sumComisiones, sumGastosOperativosComisiones } from '../utils/comisiones';
 
 type Moneda = 'UYU' | 'USD';
 
@@ -44,7 +45,7 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
   costoCombustible = 0,
   otrosGastos = 0,
   usdUyuRate,
-  commissionTypes = ['Contratista', 'Flete', 'Operario', 'Cliente', 'Otro'],
+  commissionTypes = ['Contratista', 'Flete', 'Operario', 'Cliente', 'Peaje', 'Otro'],
 }) => {
   const [localCommissions, setLocalCommissions] = useState<Commission[]>(commissions);
   const [newCommission, setNewCommission] = useState<Commission>(emptyCommission());
@@ -128,9 +129,10 @@ const CommissionsTable: React.FC<CommissionsTableProps> = ({
     return Number.isFinite(parsed) ? parsed : undefined;
   };
 
-  // Totales (todo en UYU)
-  const totalComisiones = localCommissions.reduce((sum, c) => sum + toNumber(c.montoTotal), 0);
-  const gastosOperativos = toNumber(costoCombustible) + toNumber(otrosGastos);
+  // Totales (todo en UYU). Los peajes no cancelados suman a gastos operativos, no a comisiones.
+  const totalComisiones = sumComisiones(localCommissions);
+  const totalPeajes = sumGastosOperativosComisiones(localCommissions);
+  const gastosOperativos = toNumber(costoCombustible) + toNumber(otrosGastos) + totalPeajes;
   const gananciaAntesDeComisiones = toNumber(valorViaje) - gastosOperativos;
   const gananciaNetaFinal = gananciaAntesDeComisiones - totalComisiones;
 

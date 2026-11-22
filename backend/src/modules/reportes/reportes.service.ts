@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Viaje } from '../viajes/viaje.entity';
+import { esGastoOperativo } from '../viajes/viaje-comision.entity';
 import { MantenimientoRegistro } from '../camiones/mantenimiento-registro.entity';
 import { Chofer } from '../choferes/chofer.entity';
 import { Camion } from '../camiones/camion.entity';
@@ -25,8 +26,8 @@ interface RentabilidadFilters {
 
 /**
  * Criterio de "Gastos" para todos los reportes:
- * - operativosViaje: combustible + otros gastos cargados en el viaje
- * - gastosViaje: comisiones/gastos listados en el viaje (no cancelados)
+ * - operativosViaje: combustible + otros gastos + peajes cargados en el viaje
+ * - gastosViaje: comisiones/gastos listados en el viaje (no cancelados, sin peajes)
  * - sueldoChofer: sueldo base prorrateado de los choferes con viajes en el período
  * - mantenimiento: servicios del camión + registros de mantenimiento (por fecha, sin viaje)
  * - gastosFijos: gastos fijos anuales (seguro, patente, ...) prorrateados por día
@@ -521,7 +522,7 @@ export class ReportesService {
         const concepto = [comision.concepto || comision.tipo, comision.beneficiario].filter(Boolean).join(' · ');
         items.push({
           ...base,
-          categoria: 'gastosViaje',
+          categoria: esGastoOperativo(comision) ? 'operativosViaje' : 'gastosViaje',
           concepto: `${concepto || 'Gasto'} · ${nombreViaje}`,
           monto: this.round2(monto),
           referencia,
@@ -848,15 +849,23 @@ export class ReportesService {
     return query.getMany();
   }
 
-  /** Combustible + otros gastos cargados en el viaje (ya en UYU). */
+  /** Combustible + otros gastos + peajes cargados en el viaje (ya en UYU). */
   private getGastosOperativosViaje(viaje: Viaje): number {
-    return this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos);
+    return (
+      this.toNumber(viaje.costoCombustible) +
+      this.toNumber(viaje.otrosGastos) +
+      this.sumComisionesViaje(viaje, (comision) => esGastoOperativo(comision))
+    );
   }
 
-  /** Comisiones y gastos listados en el viaje (ya normalizados a UYU al guardar). */
+  /** Comisiones y gastos listados en el viaje, sin peajes (ya normalizados a UYU al guardar). */
   private getGastosCargadosViaje(viaje: Viaje): number {
+    return this.sumComisionesViaje(viaje, (comision) => !esGastoOperativo(comision));
+  }
+
+  private sumComisionesViaje(viaje: Viaje, predicate: (comision: { tipo?: string }) => boolean): number {
     return (viaje.comisiones || [])
-      .filter((comision) => comision.estado !== 'cancelado')
+      .filter((comision) => comision.estado !== 'cancelado' && predicate(comision))
       .reduce((sum, comision) => sum + this.toNumber(comision.montoTotal), 0);
   }
 

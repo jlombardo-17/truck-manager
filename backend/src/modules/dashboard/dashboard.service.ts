@@ -8,6 +8,7 @@ import { ChoferDocumento } from '../choferes/chofer-documento.entity';
 import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
 import { addDaysDateOnly, diffDaysDateOnly, parseDateOnly, todayDateOnly } from '../../common/utils/date-only';
 import { ReportesService } from '../reportes/reportes.service';
+import { TIPOS_GASTO_OPERATIVO } from '../viajes/viaje-comision.entity';
 
 export interface DashboardResumen {
   ingresosDelMes: number;
@@ -170,25 +171,38 @@ export class DashboardService {
 
   /**
    * Expresión SQL con la suma de comisiones/gastos listados en el viaje (no cancelados).
+   * `tipos`: 'todos', 'operativos' (solo peajes) o 'comisiones' (sin peajes).
    * Devuelve '0' si la tabla o sus columnas no existen (Railway sin migrar).
    */
-  private async getGastosViajeSelect(viajeAlias: string): Promise<string> {
+  private async getGastosViajeSelect(
+    viajeAlias: string,
+    tipos: 'todos' | 'operativos' | 'comisiones' = 'todos',
+  ): Promise<string> {
     const viajeColumns = await this.getTableColumns('viajes');
     const viajeIdColumn = this.pickColumn(viajeColumns, ['id']);
     const comisionColumns = await this.getOptionalTableColumns('viajes_comisiones');
     const comisionViajeIdColumn = this.pickOptionalColumn(comisionColumns, ['viaje_id', 'viajeId']);
     const montoTotalColumn = this.pickOptionalColumn(comisionColumns, ['montoTotal', 'monto_total']);
     const estadoColumn = this.pickOptionalColumn(comisionColumns, ['estado']);
+    const tipoColumn = this.pickOptionalColumn(comisionColumns, ['tipo']);
 
     if (!comisionViajeIdColumn || !montoTotalColumn) {
       return '0';
     }
+    if (tipos === 'operativos' && !tipoColumn) {
+      return '0';
+    }
 
     const estadoFilter = estadoColumn ? ` AND LOWER(c.${estadoColumn}) <> 'cancelado'` : '';
+    const tiposSql = TIPOS_GASTO_OPERATIVO.map((tipo) => `'${tipo}'`).join(', ');
+    const tipoFilter =
+      tipos === 'todos' || !tipoColumn
+        ? ''
+        : ` AND LOWER(TRIM(c.${tipoColumn})) ${tipos === 'operativos' ? 'IN' : 'NOT IN'} (${tiposSql})`;
     return `COALESCE((
       SELECT SUM(c.${montoTotalColumn})
       FROM viajes_comisiones c
-      WHERE c.${comisionViajeIdColumn} = ${viajeAlias}.${viajeIdColumn}${estadoFilter}
+      WHERE c.${comisionViajeIdColumn} = ${viajeAlias}.${viajeIdColumn}${estadoFilter}${tipoFilter}
     ), 0)`;
   }
 
@@ -257,11 +271,18 @@ export class DashboardService {
       const otrosGastosColumn = this.pickColumn(viajeColumns, ['otrosGastos', 'otros_gastos']);
       const estadoColumn = this.pickColumn(viajeColumns, ['estado']);
       const fechaInicioColumn = this.pickColumn(viajeColumns, ['fechaInicio', 'fecha_inicio']);
-      const gastosViajeSelect = await this.getGastosViajeSelect('viajes');
+      const gastosViajeSelect = await this.getGastosViajeSelect('viajes', 'comisiones');
+      const peajesSelect = await this.getGastosViajeSelect('viajes', 'operativos');
 
       const viajesMes = await this.safeQuery(
         'viajes de resumen',
-        [] as Array<{ valorViaje: unknown; costoCombustible: unknown; otrosGastos: unknown; gastosViaje: unknown }>,
+        [] as Array<{
+          valorViaje: unknown;
+          costoCombustible: unknown;
+          otrosGastos: unknown;
+          gastosViaje: unknown;
+          peajes: unknown;
+        }>,
         async () => {
           const rows = await this.viajesRepository.query(
             `
@@ -269,7 +290,8 @@ export class DashboardService {
                 ${valorViajeColumn} AS valorViaje,
                 ${costoCombustibleColumn} AS costoCombustible,
                 ${otrosGastosColumn} AS otrosGastos,
-                ${gastosViajeSelect} AS gastosViaje
+                ${gastosViajeSelect} AS gastosViaje,
+                ${peajesSelect} AS peajes
               FROM viajes
               WHERE LOWER(${estadoColumn}) = ?
                 AND ${fechaInicioColumn} >= ?
@@ -289,7 +311,8 @@ export class DashboardService {
       );
 
       const gastosOperativosViajes = viajesMes.reduce(
-        (sum, viaje) => sum + this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos),
+        (sum, viaje) =>
+          sum + this.toNumber(viaje.costoCombustible) + this.toNumber(viaje.otrosGastos) + this.toNumber(viaje.peajes),
         0,
       );
 

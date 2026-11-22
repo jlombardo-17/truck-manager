@@ -14,6 +14,7 @@ import HeroSection from '../components/HeroSection';
 import BackButton from '../components/BackButton';
 import heroRoutesViolet from '../assets/hero-routes-violet.svg';
 import { getTodayLocalInputValue, toDateInputValue } from '../utils/dateUtils';
+import { sumComisiones, sumGastosOperativosComisiones } from '../utils/comisiones';
 import '../styles/ViajeForm.css';
 
 const ViajeForm: React.FC = () => {
@@ -178,7 +179,9 @@ const ViajeForm: React.FC = () => {
     loadDataAndForm();
   }, [id]);
 
-  const gastosOperativos = (formData.costoCombustible || 0) + (formData.otrosGastos || 0);
+  // Los peajes se cargan en Comisiones y Gastos pero son gasto operativo
+  const gastosOperativos =
+    (formData.costoCombustible || 0) + (formData.otrosGastos || 0) + sumGastosOperativosComisiones(comisiones);
   const valorViajeEquivalenteUyu =
     formData.moneda === 'USD'
       ? Number(formData.valorViaje || 0) * usdUyuRate
@@ -205,10 +208,7 @@ const ViajeForm: React.FC = () => {
     if (valorPorTarifa === null) return;
     setFormData((prev) => ({ ...prev, valorViaje: valorPorTarifa, moneda: monedaTarifaActual }));
   };
-  const totalComisiones = comisiones.reduce(
-    (sum, comision) => sum + (Number(comision.montoTotal) || 0),
-    0,
-  );
+  const totalComisiones = sumComisiones(comisiones);
   const gananciaNetaFinal = gananciaAntesDeComisiones - totalComisiones;
 
   const getAmountStyles = (amount: number) => ({
@@ -1076,7 +1076,7 @@ const ViajeForm: React.FC = () => {
             costoCombustible={formData.costoCombustible}
             otrosGastos={formData.otrosGastos}
             usdUyuRate={usdUyuRate}
-            commissionTypes={['Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Otro']}
+            commissionTypes={['Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Peaje', 'Otro']}
           />
         </section>
 
