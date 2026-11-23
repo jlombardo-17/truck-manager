@@ -402,6 +402,25 @@ const ChoferSalarios: React.FC = () => {
       return b.salario.mes - a.salario.mes;
     });
 
+  // Historial agrupado por mes de liquidación: desglose del salario + pagos al chofer
+  const sueldoBaseActual = Number(chofer?.sueldoBase || 0);
+  const historialPorMes = salarios
+    .filter((salario) => (salario.pagos || []).length > 0)
+    .map((salario) => {
+      const pagos = [...(salario.pagos || [])].sort(
+        (a, b) => (b.fechaPago || '').localeCompare(a.fechaPago || '') || b.id - a.id,
+      );
+      const totalPagado = getTotalPagado(salario);
+      return {
+        salario,
+        pagos,
+        totalPagado,
+        extras: Number(salario.totalComisiones || 0) + Number(salario.totalViaticos || 0) + Number(salario.bonos || 0),
+        diferencia: Number(salario.salarioNeto || 0) - totalPagado,
+      };
+    })
+    .sort((a, b) => b.salario.anio - a.salario.anio || b.salario.mes - a.salario.mes);
+
   return (
     <div className="chofer-salarios-container">
       <AppNavbar />
@@ -501,56 +520,139 @@ const ChoferSalarios: React.FC = () => {
         <div className="pagos-section-header">
           <h2>Historial de Pagos</h2>
           <span className="pagados-badge">
-            Movimientos: {pagosHistoricos.length}
+            {historialPorMes.length} {historialPorMes.length === 1 ? 'mes' : 'meses'} · {pagosHistoricos.length} pagos
           </span>
         </div>
 
         {pagosHistoricos.length === 0 ? (
           <div className="pagos-empty">Aún no hay pagos registrados para este chofer.</div>
         ) : (
-          <div className="historial-grid">
-            {pagosHistoricos.map(({ salario, pago }) => (
-              <div key={`hist-${salario.id}-${pago.id}`} className="historial-item">
-                <div className="historial-main">
-                  <strong>{formatPeriodo(salario.mes, salario.anio)}</strong>
-                  <span className="historial-monto">{formatCurrency(Number(pago.monto))}</span>
-                </div>
-                <div className="historial-meta">
-                  <span>
-                    Fecha pago: {pago.fechaPago
-                      ? formatDateForDisplay(pago.fechaPago, 'es-CL')
-                      : '-'}
-                  </span>
-                  <span>Tipo: {pago.tipo === TipoPagoSalario.ADELANTO ? 'Adelanto' : 'Liquidación'}</span>
-                  <span>Método: {pago.metodoPago || '-'}</span>
-                  {pago.comprobante && <span>Comprobante: {pago.comprobante}</span>}
-                </div>
-                {pago.observaciones && <p className="historial-observaciones">{pago.observaciones}</p>}
-                <button
-                  type="button"
-                  className="btn-historial-detalle"
-                  onClick={() => handleVerDetalle(salario.id)}
-                >
-                  Ver detalle
-                </button>
-                <div className="historial-actions">
-                  <button
-                    type="button"
-                    className="btn-historial-edit"
-                    onClick={() => handleAbrirEditarPagoModal(salario.id, pago)}
-                  >
-                    Editar pago
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-historial-delete"
-                    onClick={() => handleEliminarPago(salario.id, pago.id)}
-                  >
-                    Eliminar pago
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="historial-meses">
+            {historialPorMes.map(({ salario, pagos, extras, totalPagado, diferencia }, index) => {
+              const base = Number(salario.salarioBase || 0);
+              const baseDistinta = sueldoBaseActual > 0 && Math.abs(base - sueldoBaseActual) > 0.005;
+              return (
+                <details key={`mes-${salario.id}`} className="historial-mes" open={index === 0}>
+                  <summary className="historial-mes__summary">
+                    <span className="historial-mes__periodo">{formatPeriodo(salario.mes, salario.anio)}</span>
+                    <span className="estado-badge" style={{ backgroundColor: getEstadoSalarioColor(salario.estado) }}>
+                      {getEstadoSalarioLabel(salario.estado)}
+                    </span>
+                    <span className="historial-mes__resumen">
+                      Pagado <strong>{formatCurrency(totalPagado)}</strong> de{' '}
+                      {formatCurrency(Number(salario.salarioNeto || 0))} · {pagos.length}{' '}
+                      {pagos.length === 1 ? 'pago' : 'pagos'}
+                    </span>
+                  </summary>
+
+                  <div className="historial-mes__desglose">
+                    <div className="desglose-item">
+                      <span>Sueldo base</span>
+                      <strong>{formatCurrency(base)}</strong>
+                      {baseDistinta && (
+                        <small className="desglose-alerta">
+                          Distinto al sueldo base actual ({formatCurrency(sueldoBaseActual)})
+                        </small>
+                      )}
+                    </div>
+                    <div className="desglose-item desglose-item--extra">
+                      <span>+ Comisiones por viajes</span>
+                      <strong>{formatCurrency(Number(salario.totalComisiones || 0))}</strong>
+                    </div>
+                    <div className="desglose-item desglose-item--extra">
+                      <span>+ Viáticos</span>
+                      <strong>{formatCurrency(Number(salario.totalViaticos || 0))}</strong>
+                    </div>
+                    {Number(salario.bonos || 0) !== 0 && (
+                      <div className="desglose-item desglose-item--extra">
+                        <span>+ Bonos</span>
+                        <strong>{formatCurrency(Number(salario.bonos))}</strong>
+                      </div>
+                    )}
+                    {Number(salario.deducciones || 0) !== 0 && (
+                      <div className="desglose-item desglose-item--deduccion">
+                        <span>− Deducciones</span>
+                        <strong>{formatCurrency(Number(salario.deducciones))}</strong>
+                      </div>
+                    )}
+                    <div className="desglose-item desglose-item--total">
+                      <span>= Total a pagar</span>
+                      <strong>{formatCurrency(Number(salario.salarioNeto || 0))}</strong>
+                      <small>Extras del mes: {formatCurrency(extras)}</small>
+                    </div>
+                    <div className={`desglose-item ${diferencia > 0.005 ? 'desglose-item--saldo' : ''}`}>
+                      <span>{diferencia < -0.005 ? 'Pagado de más' : 'Saldo pendiente'}</span>
+                      <strong>{formatCurrency(Math.abs(diferencia))}</strong>
+                    </div>
+                    {salario.costoEmpresa != null && (
+                      <div className="desglose-item desglose-item--empresa">
+                        <span>Costo empresa</span>
+                        <strong>{formatCurrency(Number(salario.costoEmpresa))}</strong>
+                        <small>Informativo</small>
+                      </div>
+                    )}
+                  </div>
+
+                  <table className="historial-mes__pagos">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Método</th>
+                        <th>Comprobante</th>
+                        <th className="num">Monto</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagos.map((pago) => (
+                        <tr key={`hist-${salario.id}-${pago.id}`}>
+                          <td>{pago.fechaPago ? formatDateForDisplay(pago.fechaPago, 'es-CL') : '-'}</td>
+                          <td>{pago.tipo === TipoPagoSalario.ADELANTO ? 'Adelanto' : 'Liquidación'}</td>
+                          <td>{pago.metodoPago || '-'}</td>
+                          <td>
+                            {pago.comprobante || '-'}
+                            {pago.observaciones && <div className="historial-observaciones">{pago.observaciones}</div>}
+                          </td>
+                          <td className="num">{formatCurrency(Number(pago.monto))}</td>
+                          <td className="historial-actions">
+                            <button
+                              type="button"
+                              className="btn-historial-edit"
+                              onClick={() => handleAbrirEditarPagoModal(salario.id, pago)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-historial-delete"
+                              onClick={() => handleEliminarPago(salario.id, pago.id)}
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan={4}>Total pagado en el mes</td>
+                        <td className="num">{formatCurrency(totalPagado)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn-historial-detalle"
+                            onClick={() => handleVerDetalle(salario.id)}
+                          >
+                            Ver detalle
+                          </button>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </details>
+              );
+            })}
           </div>
         )}
       </section>

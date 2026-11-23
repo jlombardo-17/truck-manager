@@ -4,6 +4,7 @@ import salariosService from '../services/salariosService';
 import choferesService from '../services/choferesService';
 import {
   ChoferSalario,
+  EstadoSalario,
   ViajeConComision,
   formatPeriodo,
   formatCurrency,
@@ -30,6 +31,9 @@ const SalarioDetalle: React.FC = () => {
   const [error, setError] = useState('');
   const [costoEmpresaInput, setCostoEmpresaInput] = useState('');
   const [guardandoCosto, setGuardandoCosto] = useState(false);
+  const [recalculando, setRecalculando] = useState(false);
+  const [usarSueldoBaseActual, setUsarSueldoBaseActual] = useState(true);
+  const [recalculoMensaje, setRecalculoMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
 
   useEffect(() => {
     cargarDatos();
@@ -252,7 +256,41 @@ const SalarioDetalle: React.FC = () => {
     }
   };
 
-  const costoEmpresaGuardado = salario?.costoEmpresa != null ? String(Number(salario.costoEmpresa)) : '';
+  const sueldoBaseActual = Number(chofer?.sueldoBase || 0);
+  const baseDistinta = !!salario && sueldoBaseActual > 0 && Math.abs(Number(salario.salarioBase) - sueldoBaseActual) > 0.005;
+
+  const recalcularDesdeJornadas = async () => {
+    if (!salario) return;
+    const actualizarSueldoBase = baseDistinta && usarSueldoBaseActual;
+    const aviso =
+      salario.estado === EstadoSalario.PAGADO
+        ? 'Este salario ya está pagado. Se recalcularán comisiones y viáticos desde las jornadas' +
+          (actualizarSueldoBase ? ` y el sueldo base pasará a ${formatCurrency(sueldoBaseActual)}` : '') +
+          '. Los pagos registrados no se modifican. ¿Continuar?'
+        : null;
+    if (aviso && !window.confirm(aviso)) return;
+    try {
+      setRecalculando(true);
+      setRecalculoMensaje(null);
+      const anterior = Number(salario.salarioNeto);
+      const actualizado = await salariosService.recalcular(salario.id, { actualizarSueldoBase });
+      setSalario(actualizado);
+      const nuevo = Number(actualizado.salarioNeto);
+      setRecalculoMensaje({
+        tipo: 'ok',
+        texto:
+          Math.abs(nuevo - anterior) < 0.005
+            ? 'Recalculado: el total no cambió.'
+            : `Recalculado: total a pagar ${formatCurrency(anterior)} → ${formatCurrency(nuevo)}.`,
+      });
+    } catch (err: any) {
+      setRecalculoMensaje({ tipo: 'error', texto: err.response?.data?.message || 'No se pudo recalcular el salario' });
+    } finally {
+      setRecalculando(false);
+    }
+  };
+
+  const costoEmpresaGuardado =salario?.costoEmpresa != null ? String(Number(salario.costoEmpresa)) : '';
   const totalPagado = (salario?.pagos || []).reduce((acc, p) => acc + (Number(p.monto) || 0), 0);
 
   if (loading) {
@@ -368,6 +406,37 @@ const SalarioDetalle: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {salario.estado !== EstadoSalario.CANCELADO && (
+          <div className="recalcular-box">
+            <div className="recalcular-box__texto">
+              <strong>Recalcular desde jornadas</strong>
+              <small>
+                Vuelve a sumar las comisiones por viajes y los viáticos cargados en Jornadas para este mes.
+                Bonos, deducciones y pagos no se tocan.
+              </small>
+              {baseDistinta && (
+                <label className="recalcular-box__check">
+                  <input
+                    type="checkbox"
+                    checked={usarSueldoBaseActual}
+                    onChange={(e) => setUsarSueldoBaseActual(e.target.checked)}
+                  />
+                  Usar el sueldo base actual del chofer ({formatCurrency(sueldoBaseActual)} en lugar de{' '}
+                  {formatCurrency(salario.salarioBase)})
+                </label>
+              )}
+              {recalculoMensaje && (
+                <small className={`recalcular-box__msg recalcular-box__msg--${recalculoMensaje.tipo}`}>
+                  {recalculoMensaje.texto}
+                </small>
+              )}
+            </div>
+            <button type="button" className="btn-pdf" onClick={recalcularDesdeJornadas} disabled={recalculando}>
+              {recalculando ? 'Recalculando…' : '↻ Recalcular'}
+            </button>
+          </div>
+        )}
 
         <div className="estado-info">
           <span

@@ -112,6 +112,20 @@ export class SalariosController {
   }
 
   /**
+   * Recalcular comisiones y viáticos desde las jornadas (también si ya está pagado)
+   */
+  @Post(':id/recalcular')
+  @HttpCode(HttpStatus.OK)
+  async recalcular(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { actualizarSueldoBase?: boolean },
+  ): Promise<ChoferSalario> {
+    return await this.salariosService.recalcularDesdeJornadas(id, {
+      actualizarSueldoBase: body?.actualizarSueldoBase === true,
+    });
+  }
+
+  /**
    * Marcar salario como pagado
    */
   @Put(':id/pagar')

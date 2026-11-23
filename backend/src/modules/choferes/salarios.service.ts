@@ -332,6 +332,45 @@ export class SalariosService {
   }
 
   /**
+   * Recalcula comisiones de viaje y viáticos desde las jornadas del período, aunque el
+   * salario ya esté pagado (los salarios pagados no se recalculan solos). Opcionalmente
+   * toma el sueldo base actual del chofer. Bonos, deducciones y pagos no se tocan; el
+   * estado se reajusta según lo pagado.
+   */
+  async recalcularDesdeJornadas(
+    id: number,
+    opciones: { actualizarSueldoBase?: boolean } = {},
+  ): Promise<ChoferSalario> {
+    const salario = await this.salarioRepository.findOne({ where: { id }, relations: ['chofer'] });
+    if (!salario) {
+      throw new NotFoundException(`Salario con ID ${id} no encontrado`);
+    }
+    if (salario.estado === EstadoSalario.CANCELADO) {
+      throw new BadRequestException('No se puede recalcular un salario cancelado');
+    }
+
+    const { totalComisiones, totalViaticos } = await this.sumarJornadas(
+      salario.choferId,
+      salario.mes,
+      salario.anio,
+    );
+    salario.totalComisiones = totalComisiones;
+    salario.totalViaticos = totalViaticos;
+    if (opciones.actualizarSueldoBase && salario.chofer) {
+      salario.salarioBase = this.toNumber(salario.chofer.sueldoBase);
+    }
+    salario.salarioNeto = this.calcularNeto(salario);
+    delete (salario as Partial<ChoferSalario>).chofer;
+
+    const saved = await this.salarioRepository.save(salario);
+    await this.actualizarEstadoSegunPagos(saved);
+    return await this.salarioRepository.findOne({
+      where: { id: saved.id },
+      relations: ['chofer', 'pagos'],
+    });
+  }
+
+  /**
    * Marcar salario como pagado
    */
   async marcarComoPagado(

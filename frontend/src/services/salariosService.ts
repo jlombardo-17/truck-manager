@@ -113,6 +113,14 @@ class SalariosService {
   }
 
   /**
+   * Recalcular comisiones y viáticos desde las jornadas (también si ya está pagado)
+   */
+  async recalcular(id: number, opciones: { actualizarSueldoBase?: boolean } = {}): Promise<ChoferSalario> {
+    const response = await this.api.post(`/salarios/${id}/recalcular`, opciones);
+    return response.data;
+  }
+
+  /**
    * Marcar salario como pagado
    */
   async marcarComoPagado(

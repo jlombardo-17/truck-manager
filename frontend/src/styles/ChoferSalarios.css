@@ -673,3 +673,160 @@
     min-width: 900px;
   }
 }
+
+/* Historial de pagos agrupado por mes */
+.historial-meses {
+  display: grid;
+  gap: 12px;
+}
+
+.historial-mes {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  background: #fcfdff;
+  overflow: hidden;
+}
+
+.historial-mes[open] {
+  border-color: #cfd8e3;
+}
+
+.historial-mes__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.historial-mes__summary::-webkit-details-marker {
+  display: none;
+}
+
+.historial-mes__summary::before {
+  content: '▸';
+  color: #6c757d;
+  transition: transform 0.15s ease;
+}
+
+.historial-mes[open] > .historial-mes__summary::before {
+  transform: rotate(90deg);
+}
+
+.historial-mes__periodo {
+  font-weight: 700;
+  color: #2c3e50;
+  text-transform: capitalize;
+}
+
+.historial-mes__resumen {
+  margin-left: auto;
+  color: #495057;
+  font-size: 14px;
+}
+
+.historial-mes__desglose {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 0 14px 12px;
+}
+
+.desglose-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f4f6f8;
+  font-size: 13px;
+  color: #495057;
+}
+
+.desglose-item strong {
+  font-size: 15px;
+  color: #2c3e50;
+}
+
+.desglose-item small {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.desglose-item--extra {
+  background: #eef7f0;
+}
+
+.desglose-item--deduccion {
+  background: #fdf0f1;
+}
+
+.desglose-item--total {
+  background: #e8f1ff;
+}
+
+.desglose-item--saldo {
+  background: #fff6e5;
+}
+
+.desglose-item--empresa {
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+}
+
+.desglose-item .desglose-alerta {
+  color: #b45309;
+}
+
+.historial-mes__pagos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.historial-mes__pagos th,
+.historial-mes__pagos td {
+  padding: 8px 14px;
+  border-top: 1px solid #edf0f3;
+  text-align: left;
+  vertical-align: top;
+}
+
+.historial-mes__pagos th {
+  color: #6c757d;
+  font-weight: 600;
+  background: #f8f9fa;
+}
+
+.historial-mes__pagos .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.historial-mes__pagos tfoot td {
+  font-weight: 700;
+  color: #2c3e50;
+  background: #f8f9fa;
+}
+
+.historial-mes__pagos .historial-actions {
+  white-space: nowrap;
+}
+
+.historial-mes__pagos .historial-observaciones {
+  margin-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .historial-mes__resumen {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .historial-mes__pagos {
+    display: block;
+    overflow-x: auto;
+  }
+}
