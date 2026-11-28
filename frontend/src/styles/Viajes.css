@@ -206,6 +206,35 @@
   background: #f5f8fc;
 }
 
+/* Fila de totales: fija al pie del contenedor al scrollear */
+.viajes-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 0.75rem 0.5rem;
+  background: #f5f8fc;
+  border-top: 2px solid var(--border-soft);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viajes-table tfoot td.col-acciones {
+  z-index: 3;
+  background: #f5f8fc;
+}
+
+.totales-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.totales-nota {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
 .viaje-row:hover .col-acciones {
   background: #f9fbff;
 }

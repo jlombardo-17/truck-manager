@@ -264,6 +264,18 @@ const Viajes: React.FC = () => {
   const formatUyu = (monto: number) =>
     new Intl.NumberFormat('es-UY', { style: 'currency', currency: 'UYU', maximumFractionDigits: 0 }).format(monto);
 
+  // Totales de los viajes listados (respetan los filtros). Los cancelados no suman.
+  const viajesParaTotales = viajes.filter((v) => v.estado !== 'cancelado');
+  const cantidadCancelados = viajes.length - viajesParaTotales.length;
+  const totales = viajesParaTotales.reduce(
+    (acc, v) => ({
+      valorUyu: acc.valorUyu + Number(v.valorViajeUyu || v.valorViaje || 0),
+      ganancia: acc.ganancia + getGananciaNetaUyu(v),
+      km: acc.km + Number(v.kmRecorridos || 0),
+    }),
+    { valorUyu: 0, ganancia: 0, km: 0 },
+  );
+
   const formatViajeDate = (value?: string) => {
     if (!value) return '-';
     const parsed = parseDatePreservingDay(value);
@@ -581,6 +593,31 @@ const Viajes: React.FC = () => {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="totales-row">
+                <td colSpan={7} className="totales-label">
+                  Totales · {viajesParaTotales.length} {viajesParaTotales.length === 1 ? 'viaje' : 'viajes'}
+                  {cantidadCancelados > 0 && (
+                    <span className="totales-nota">
+                      {' '}
+                      (sin {cantidadCancelados} {cantidadCancelados === 1 ? 'cancelado' : 'cancelados'})
+                    </span>
+                  )}
+                </td>
+                <td className="valor-cell" title="Suma del valor de los viajes en UYU (los viajes en USD, a su equivalente)">
+                  {formatUyu(totales.valorUyu)}
+                </td>
+                <td className={`ganancia-cell ${totales.ganancia < 0 ? 'ganancia-negativa' : ''}`}>
+                  {formatUyu(totales.ganancia)}
+                </td>
+                <td colSpan={3} />
+                <td className="km-cell">
+                  {new Intl.NumberFormat('es-UY', { maximumFractionDigits: 0 }).format(totales.km)} km
+                </td>
+                <td />
+                <td className="col-acciones" />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
