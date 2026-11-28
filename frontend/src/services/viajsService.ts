@@ -249,10 +249,9 @@ export const viajsService = {
     camionId?: number;
     choferId?: number;
     clienteId?: number;
-    fechaInicio?: string;
-    fechaFin?: string;
-    fechaPagoDesde?: string;
-    fechaPagoHasta?: string;
+    /** YYYY-MM-DD: rango sobre la fecha de inicio del viaje (inclusive) */
+    fechaDesde?: string;
+    fechaHasta?: string;
   }) => {
     try {
       let url = `${API_BASE_URL}/viajes`;
@@ -263,10 +262,8 @@ export const viajsService = {
         if (filters.camionId) params.append('camionId', filters.camionId.toString());
         if (filters.choferId) params.append('choferId', filters.choferId.toString());
         if (filters.clienteId) params.append('clienteId', filters.clienteId.toString());
-        if (filters.fechaInicio) params.append('fechaInicio', filters.fechaInicio);
-        if (filters.fechaFin) params.append('fechaFin', filters.fechaFin);
-        if (filters.fechaPagoDesde) params.append('fechaPagoDesde', filters.fechaPagoDesde);
-        if (filters.fechaPagoHasta) params.append('fechaPagoHasta', filters.fechaPagoHasta);
+        if (filters.fechaDesde) params.append('fechaDesde', filters.fechaDesde);
+        if (filters.fechaHasta) params.append('fechaHasta', filters.fechaHasta);
       }
 
       if (params.toString()) {

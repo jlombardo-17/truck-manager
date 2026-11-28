@@ -19,6 +19,7 @@ import { Cliente } from '../clientes/cliente.entity';
 import { getUsdUyuRateInfo, UsdUyuRateInfo } from '../../common/utils/usd-uyu-rate';
 import { getPrecioGasoilInfo, PrecioGasoilInfo } from '../../common/utils/precio-gasoil';
 import { JornadasService } from '../jornadas/jornadas.service';
+import { parseDateOnly, rangoFechaViaje } from '../../common/utils/date-only';
 
 type RoutePointInput = {
   orden?: number;
@@ -189,10 +190,8 @@ export class ViajsService {
     camionId?: number;
     choferId?: number;
     clienteId?: number;
-    fechaInicio?: Date;
-    fechaFin?: Date;
-    fechaPagoDesde?: string; // YYYY-MM-DD
-    fechaPagoHasta?: string; // YYYY-MM-DD
+    fechaDesde?: string; // YYYY-MM-DD, sobre fechaInicio
+    fechaHasta?: string; // YYYY-MM-DD, sobre fechaInicio (inclusive)
   }): Promise<Viaje[]> {
     let query = this.viajRepository.createQueryBuilder('viaje')
       .leftJoinAndSelect('viaje.camion', 'camion')
@@ -218,20 +217,15 @@ export class ViajsService {
       query = query.andWhere('viaje.cliente_id = :clienteId', { clienteId: filters.clienteId });
     }
 
-    if (filters?.fechaInicio) {
-      query = query.andWhere('viaje.fechaInicio >= :fechaInicio', { fechaInicio: filters.fechaInicio });
+    // fechaInicio es fecha de viaje (día UTC): los límites se arman con rangoFechaViaje
+    if (filters?.fechaDesde) {
+      const { desde } = rangoFechaViaje(parseDateOnly(filters.fechaDesde), parseDateOnly(filters.fechaDesde));
+      query = query.andWhere('viaje.fechaInicio >= :fechaDesde', { fechaDesde: desde });
     }
 
-    if (filters?.fechaFin) {
-      query = query.andWhere('viaje.fechaFin <= :fechaFin', { fechaFin: filters.fechaFin });
-    }
-
-    if (filters?.fechaPagoDesde) {
-      query = query.andWhere('viaje.fechaPago >= :fechaPagoDesde', { fechaPagoDesde: filters.fechaPagoDesde });
-    }
-
-    if (filters?.fechaPagoHasta) {
-      query = query.andWhere('viaje.fechaPago <= :fechaPagoHasta', { fechaPagoHasta: filters.fechaPagoHasta });
+    if (filters?.fechaHasta) {
+      const { hasta } = rangoFechaViaje(parseDateOnly(filters.fechaHasta), parseDateOnly(filters.fechaHasta));
+      query = query.andWhere('viaje.fechaInicio <= :fechaHasta', { fechaHasta: hasta });
     }
 
     const viajes = await query.getMany();

@@ -29,21 +29,17 @@ export class ViajsController {
     @Query('camionId') camionId?: string,
     @Query('choferId') choferId?: string,
     @Query('clienteId') clienteId?: string,
-    @Query('fechaInicio') fechaInicio?: string,
-    @Query('fechaFin') fechaFin?: string,
-    @Query('fechaPagoDesde') fechaPagoDesde?: string,
-    @Query('fechaPagoHasta') fechaPagoHasta?: string,
+    @Query('fechaDesde') fechaDesde?: string,
+    @Query('fechaHasta') fechaHasta?: string,
   ) {
     const filters = {
       ...(estado && { estado }),
       ...(camionId && { camionId: parseInt(camionId) }),
       ...(choferId && { choferId: parseInt(choferId) }),
       ...(clienteId && { clienteId: parseInt(clienteId) }),
-      ...(fechaInicio && { fechaInicio: new Date(fechaInicio) }),
-      ...(fechaFin && { fechaFin: new Date(fechaFin) }),
-      // fechaPago es DATE: se filtra con 'YYYY-MM-DD' para no correr el día por zona horaria
-      ...(toDateOnly(fechaPagoDesde) && { fechaPagoDesde: toDateOnly(fechaPagoDesde)! }),
-      ...(toDateOnly(fechaPagoHasta) && { fechaPagoHasta: toDateOnly(fechaPagoHasta)! }),
+      // Rango por fecha de inicio del viaje, en días 'YYYY-MM-DD' (inclusive)
+      ...(toDateOnly(fechaDesde) && { fechaDesde: toDateOnly(fechaDesde)! }),
+      ...(toDateOnly(fechaHasta) && { fechaHasta: toDateOnly(fechaHasta)! }),
     };
 
     return this.viajsService.findAll(filters);

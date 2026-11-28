@@ -12,7 +12,7 @@ import HeroSection from '../components/HeroSection';
 import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
 import heroRoutesViolet from '../assets/hero-routes-violet.svg';
-import { parseDatePreservingDay } from '../utils/dateUtils';
+import { getLocalInputValueDaysAgo, getTodayLocalInputValue, parseDatePreservingDay } from '../utils/dateUtils';
 import '../styles/Viajes.css';
 
 // Los anchos se asignan por clase (col-*) y no por posición, para que agregar
@@ -60,16 +60,19 @@ const Viajes: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filtros
-  const [filtros, setFiltros] = useState({
+  // Filtros. Por defecto, viajes de los últimos 30 días; si se llega filtrado por cliente
+  // (desde la página de clientes) se muestran todos sus viajes.
+  const DIAS_POR_DEFECTO = 30;
+  const [filtros, setFiltros] = useState(() => ({
     estado: '',
     camionId: '',
     choferId: '',
     // Permite llegar filtrado desde la página de clientes: /viajes?clienteId=3
     clienteId: searchParams.get('clienteId') ?? '',
-    fechaPagoDesde: '',
-    fechaPagoHasta: '',
-  });
+    // Rango por fecha de inicio del viaje
+    fechaDesde: searchParams.get('clienteId') ? '' : getLocalInputValueDaysAgo(DIAS_POR_DEFECTO),
+    fechaHasta: searchParams.get('clienteId') ? '' : getTodayLocalInputValue(),
+  }));
 
   useEffect(() => {
     loadViajes();
@@ -116,8 +119,8 @@ const Viajes: React.FC = () => {
         ...(filtros.camionId && { camionId: parseInt(filtros.camionId) }),
         ...(filtros.choferId && { choferId: parseInt(filtros.choferId) }),
         ...(filtros.clienteId && { clienteId: parseInt(filtros.clienteId) }),
-        ...(filtros.fechaPagoDesde && { fechaPagoDesde: filtros.fechaPagoDesde }),
-        ...(filtros.fechaPagoHasta && { fechaPagoHasta: filtros.fechaPagoHasta }),
+        ...(filtros.fechaDesde && { fechaDesde: filtros.fechaDesde }),
+        ...(filtros.fechaHasta && { fechaHasta: filtros.fechaHasta }),
       };
 
       const data = await viajsService.getAll(filters);
@@ -387,28 +390,34 @@ const Viajes: React.FC = () => {
         </div>
 
         <div className="filter-group">
-          <label>Pago Desde</label>
+          <label htmlFor="filtro-fecha-desde">Viaje Desde</label>
           <input
+            id="filtro-fecha-desde"
             type="date"
-            value={filtros.fechaPagoDesde}
-            onChange={(e) => handleFiltroChange('fechaPagoDesde', e.target.value)}
+            value={filtros.fechaDesde}
+            max={filtros.fechaHasta || undefined}
+            onChange={(e) => handleFiltroChange('fechaDesde', e.target.value)}
             className="filter-input"
+            title="Fecha de inicio del viaje"
           />
         </div>
 
         <div className="filter-group">
-          <label>Pago Hasta</label>
+          <label htmlFor="filtro-fecha-hasta">Viaje Hasta</label>
           <input
+            id="filtro-fecha-hasta"
             type="date"
-            value={filtros.fechaPagoHasta}
-            onChange={(e) => handleFiltroChange('fechaPagoHasta', e.target.value)}
+            value={filtros.fechaHasta}
+            min={filtros.fechaDesde || undefined}
+            onChange={(e) => handleFiltroChange('fechaHasta', e.target.value)}
             className="filter-input"
+            title="Fecha de inicio del viaje"
           />
         </div>
 
         <button
           className="btn-secondary"
-          onClick={() => setFiltros({ estado: '', camionId: '', choferId: '', clienteId: '', fechaPagoDesde: '', fechaPagoHasta: '' })}
+          onClick={() => setFiltros({ estado: '', camionId: '', choferId: '', clienteId: '', fechaDesde: '', fechaHasta: '' })}
         >
           Limpiar Filtros
         </button>

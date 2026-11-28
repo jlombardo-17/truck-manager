@@ -61,6 +61,12 @@ export const getDaysUntil = (value?: string | Date | null): number | null => {
   return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 };
 
+/** Fecha local ('YYYY-MM-DD') de hace `dias` días; con 0 es hoy. */
+export const getLocalInputValueDaysAgo = (dias: number): string => {
+  const now = new Date();
+  return toDateInputValue(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dias));
+};
+
 export const getTodayLocalInputValue = (): string => {
   const now = new Date();
   const year = now.getFullYear();
