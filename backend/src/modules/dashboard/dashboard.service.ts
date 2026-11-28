@@ -6,7 +6,13 @@ import { Camion } from '../camiones/camion.entity';
 import { Chofer } from '../choferes/chofer.entity';
 import { ChoferDocumento } from '../choferes/chofer-documento.entity';
 import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
-import { addDaysDateOnly, diffDaysDateOnly, parseDateOnly, todayDateOnly } from '../../common/utils/date-only';
+import {
+  addDaysDateOnly,
+  diffDaysDateOnly,
+  parseDateOnly,
+  rangoFechaViaje,
+  todayDateOnly,
+} from '../../common/utils/date-only';
 import { ReportesService } from '../reportes/reportes.service';
 import { TIPOS_GASTO_OPERATIVO } from '../viajes/viaje-comision.entity';
 
@@ -237,6 +243,12 @@ export class DashboardService {
     }
   }
 
+  /** Límites [desde, hasta] para filtrar viajes.fechaInicio (día UTC) a partir del rango local. */
+  private rangoViajes(desde: Date, hasta: Date): [Date, Date] {
+    const rango = rangoFechaViaje(desde, hasta);
+    return [rango.desde, rango.hasta];
+  }
+
   private getDateRange(fechaInicio?: string, fechaFin?: string): { start: Date; end: Date } {
     const ahora = new Date();
     let startDate: Date;
@@ -297,7 +309,7 @@ export class DashboardService {
                 AND ${fechaInicioColumn} >= ?
                 AND ${fechaInicioColumn} <= ?
             `,
-            ['completado', primerDia, ultimoDia],
+            ['completado', ...this.rangoViajes(primerDia, ultimoDia)],
           );
 
           return Array.isArray(rows) ? rows : [];
@@ -447,7 +459,7 @@ export class DashboardService {
           AND ${fechaInicioColumn} >= ?
           AND ${fechaInicioColumn} <= ?
       `,
-      ['completado', primerDia, ultimoDia],
+      ['completado', ...this.rangoViajes(primerDia, ultimoDia)],
     );
 
     const camionIds = [
@@ -550,7 +562,7 @@ export class DashboardService {
           AND v.${fechaInicioColumn} <= ?
         GROUP BY v.${viajeIdColumn}, v.${choferIdColumn}, v.${valorViajeColumn}
       `,
-      ['completado', primerDia, ultimoDia],
+      ['completado', ...this.rangoViajes(primerDia, ultimoDia)],
     );
 
     const choferIds = [

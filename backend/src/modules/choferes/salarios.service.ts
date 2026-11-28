@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ChoferSalario, EstadoSalario } from './chofer-salario.entity';
 import { ChoferSalarioPago, TipoPagoSalario } from './chofer-salario-pago.entity';
 import { Chofer } from './chofer.entity';
 import { Viaje } from '../viajes/viaje.entity';
-import { esComisionChofer } from '../viajes/viaje-comision.entity';
+import { choferQueCobraComision } from '../viajes/viaje-comision.entity';
 import { ChoferViatico } from '../jornadas/chofer-viatico.entity';
 import { TipoViatico } from '../jornadas/tipo-viatico.enum';
-import { toDateOnly, todayDateOnly } from '../../common/utils/date-only';
+import { rangoFechaViaje, toDateOnly, todayDateOnly } from '../../common/utils/date-only';
 import {
   CreateSalarioDto,
   UpdateSalarioDto,
@@ -162,8 +162,8 @@ export class SalariosService {
   }
 
   /**
-   * Obtener viajes del chofer en un período con sus comisiones tipo "Chofer"
-   * (las mismas que se reflejan en sus jornadas y suman al salario)
+   * Obtener los viajes de un período con las comisiones que cobra el chofer: tipo "Chofer" de los
+   * viajes que maneja y tipo "Operario" asignadas a él (las mismas que van a sus jornadas y salario)
    */
   async getViajesConComisionesPorPeriodo(
     choferId: number,
@@ -171,23 +171,31 @@ export class SalariosService {
     anio: number,
   ): Promise<{ viajes: any[]; totalComisiones: number }> {
     // Calcular rango de fechas del mes
-    const fechaInicio = new Date(anio, mes - 1, 1);
-    const fechaFin = new Date(anio, mes, 0, 23, 59, 59);
+    const { desde: fechaInicio, hasta: fechaFin } = rangoFechaViaje(
+      new Date(anio, mes - 1, 1),
+      new Date(anio, mes, 0),
+    );
 
-    const viajes = await this.viajeRepository.find({
-      where: {
-        chofer: { id: choferId } as Chofer,
-        fechaInicio: Between(fechaInicio, fechaFin),
-      },
-      relations: ['comisiones'],
-      order: { fechaInicio: 'ASC' },
-    });
+    const viajes = await this.viajeRepository
+      .createQueryBuilder('viaje')
+      .leftJoinAndSelect('viaje.comisiones', 'comision')
+      .where('viaje.fechaInicio BETWEEN :fechaInicio AND :fechaFin', { fechaInicio, fechaFin })
+      .andWhere(
+        `(viaje.chofer_id = :choferId OR EXISTS (
+          SELECT 1 FROM viajes_comisiones op
+          WHERE op.viaje_id = viaje.id AND op.chofer_id = :choferId AND LOWER(TRIM(op.tipo)) = 'operario'
+        ))`,
+        { choferId },
+      )
+      .orderBy('viaje.fechaInicio', 'ASC')
+      .getMany();
 
     let totalComisiones = 0;
 
     const viajesConTotales = viajes.filter((viaje) => viaje.estado !== 'cancelado').map((viaje) => {
       const comisionesChofer = (viaje.comisiones || []).filter(
-        (comision) => esComisionChofer(comision) && comision.estado !== 'cancelado',
+        (comision) =>
+          choferQueCobraComision(comision, viaje.choferId) === Number(choferId) && comision.estado !== 'cancelado',
       );
 
       const totalComisionViaje = comisionesChofer.reduce(

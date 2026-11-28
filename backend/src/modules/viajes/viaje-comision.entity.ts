@@ -10,7 +10,26 @@ export const TIPO_COMISION_CHOFER = 'chofer';
 export const esComisionChofer = (comision: { tipo?: string | null }): boolean =>
   String(comision.tipo ?? '').trim().toLowerCase() === TIPO_COMISION_CHOFER;
 
-export const esGastoOperativo = (comision: { tipo?: string | null }): boolean =>
+/** Comisión de operario: se asigna a un chofer elegido (choferId), que la cobra en sus jornadas y salario. */
+export const TIPO_COMISION_OPERARIO = 'operario';
+
+export const esComisionOperario = (comision: { tipo?: string | null }): boolean =>
+  String(comision.tipo ?? '').trim().toLowerCase() === TIPO_COMISION_OPERARIO;
+
+/**
+ * Chofer que cobra la comisión en sus jornadas: el del viaje para tipo "Chofer",
+ * el asignado para tipo "Operario". null si la comisión no va a ningún chofer.
+ */
+export const choferQueCobraComision = (
+  comision: { tipo?: string | null; choferId?: number | null },
+  choferDelViajeId?: number | null,
+): number | null => {
+  if (esComisionChofer(comision)) return choferDelViajeId ? Number(choferDelViajeId) : null;
+  if (esComisionOperario(comision)) return comision.choferId ? Number(comision.choferId) : null;
+  return null;
+};
+
+export const esGastoOperativo =(comision: { tipo?: string | null }): boolean =>
   TIPOS_GASTO_OPERATIVO.includes(String(comision.tipo ?? '').trim().toLowerCase());
 
 @Entity({ name: 'viajes_comisiones' })
@@ -57,6 +76,10 @@ export class ViajComision {
   // Beneficiario (usuario, nombre del contratista, etc)
   @Column({ nullable: true })
   beneficiario: string;
+
+  // Chofer asignado (solo comisiones tipo "Operario"); beneficiario guarda su nombre para mostrar
+  @Column({ name: 'chofer_id', type: 'int', nullable: true })
+  choferId: number | null;
 
   // Estado: pendiente, pagado, cancelado
   @Column({ default: 'pendiente' })

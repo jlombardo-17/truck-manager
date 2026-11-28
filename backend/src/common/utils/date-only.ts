@@ -50,6 +50,40 @@ export function parseDateOnly(fecha: string): Date {
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
 
+/*
+ * Fechas de viaje (viajes.fechaInicio / fechaFin, columnas DATETIME).
+ *
+ * Se cargan desde un input de fecha y se guardan con `new Date('YYYY-MM-DD')`, o sea
+ * medianoche UTC del día, en cualquier servidor (el driver preserva el instante; en un
+ * MySQL en UTC-3 el valor crudo queda como 21:00 del día anterior). Por eso el día del
+ * viaje es SIEMPRE la fecha UTC: leerlo en hora local o de Montevideo lo corre un día.
+ */
+
+/** Día ('YYYY-MM-DD') de una fecha de viaje. */
+export function fechaViajeDateOnly(value: string | Date | null | undefined): string | null {
+  if (value == null || value === '') return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
+/** Fecha de viaje como medianoche LOCAL de su día (para agrupar con getFullYear/getMonth/getDate). */
+export function fechaViajeComoLocal(value: string | Date | null | undefined): Date {
+  const fecha = fechaViajeDateOnly(value);
+  return fecha ? parseDateOnly(fecha) : new Date(NaN);
+}
+
+/**
+ * Convierte un rango de días calendario expresado en Dates locales (p. ej. del 1 al 30 a
+ * las 23:59 locales) a los límites para filtrar fechas de viaje: medianoche UTC del primer
+ * día hasta el último instante UTC del último día.
+ */
+export function rangoFechaViaje(desde: Date, hasta: Date): { desde: Date; hasta: Date } {
+  return {
+    desde: new Date(Date.UTC(desde.getFullYear(), desde.getMonth(), desde.getDate())),
+    hasta: new Date(Date.UTC(hasta.getFullYear(), hasta.getMonth(), hasta.getDate(), 23, 59, 59, 999)),
+  };
+}
+
 /** Fecha de hoy ('YYYY-MM-DD') en la zona horaria del negocio. */
 export function todayDateOnly(): string {
   return toDateOnly(new Date()) as string;

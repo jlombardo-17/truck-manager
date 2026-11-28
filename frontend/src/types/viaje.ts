@@ -66,6 +66,8 @@ export interface ViajComision {
   moneda?: 'UYU' | 'USD';
   montoTotal?: number;
   beneficiario?: string;
+  /** Chofer que cobra la comisión (solo tipo "Operario") */
+  choferId?: number | null;
   estado?: string;
   notas?: string;
   createdAt?: string;

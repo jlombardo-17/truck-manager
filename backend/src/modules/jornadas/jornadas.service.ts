@@ -10,8 +10,8 @@ import { Viaje } from '../viajes/viaje.entity';
 import { SalariosService } from '../choferes/salarios.service';
 import { EstadoSalario } from '../choferes/chofer-salario.entity';
 import { BulkJornadaDto, UpsertJornadaDto } from './dto/jornada.dto';
-import { esComisionChofer } from '../viajes/viaje-comision.entity';
-import { toDateOnly } from '../../common/utils/date-only';
+import { choferQueCobraComision, esComisionOperario } from '../viajes/viaje-comision.entity';
+import { fechaViajeDateOnly, toDateOnly } from '../../common/utils/date-only';
 
 const MAX_DIAS_RANGO = 62;
 const MAX_DIAS_REPORTE = 366;
@@ -130,7 +130,7 @@ export class JornadasService {
    * '2026-09-23 21:00' para el día 24 en UY), por eso el día real es el de UTC.
    */
   private fechaViaje(date: Date): string {
-    return new Date(date).toISOString().slice(0, 10);
+    return fechaViajeDateOnly(date) as string;
   }
 
   private periodoDe(fecha: string): { mes: number; anio: number } {
@@ -508,7 +508,8 @@ export class JornadasService {
   // ---------- comisiones de viaje → jornadas ----------
 
   /**
-   * Refleja en las jornadas del chofer las comisiones tipo "Chofer" de un viaje, como líneas
+   * Refleja en las jornadas las comisiones de un viaje que cobra un chofer — tipo "Chofer" (el
+   * chofer del viaje) y tipo "Operario" (el chofer asignado) —, como líneas
    * "Viaje/comisión" en la fecha de inicio del viaje, y recalcula los salarios afectados.
    * Reemplaza las líneas que el viaje haya generado antes (cambio de monto, chofer o fecha).
    * Con `eliminar` (o si el viaje no existe / está cancelado) solo borra las líneas previas.
@@ -533,46 +534,48 @@ export class JornadasService {
         await manager.delete(ChoferViatico, { viajeId });
       }
 
-      const fecha = toDateOnly(viaje?.fechaInicio);
-      const choferId = viaje?.choferId;
-      if (!viaje || !choferId || !fecha || viaje.estado === 'cancelado') {
+      const fecha = fechaViajeDateOnly(viaje?.fechaInicio);
+      if (!viaje || !fecha || viaje.estado === 'cancelado') {
         return;
       }
 
-      const comisiones = (viaje.comisiones || []).filter(
-        (c) => esComisionChofer(c) && c.estado !== 'cancelado' && Number(c.montoTotal) > 0,
-      );
-      if (!comisiones.length) {
-        return;
+      // Agrupar por el chofer que cobra cada comisión (puede haber más de uno por viaje)
+      const porChofer = new Map<number, typeof viaje.comisiones>();
+      for (const c of viaje.comisiones || []) {
+        const choferId = choferQueCobraComision(c, viaje.choferId);
+        if (!choferId || c.estado === 'cancelado' || !(Number(c.montoTotal) > 0)) continue;
+        porChofer.set(choferId, [...(porChofer.get(choferId) || []), c]);
       }
 
-      // Si el chofer no tenía jornada ese día se crea como trabajada y asociada al viaje
-      let jornada = await manager.findOne(ChoferJornada, { where: { choferId, fecha } });
-      if (!jornada) {
-        jornada = await manager.save(
-          ChoferJornada,
-          manager.create(ChoferJornada, { choferId, fecha, categoria: CategoriaJornada.TRABAJADO, viajeId: viaje.id }),
+      for (const [choferId, comisiones] of porChofer) {
+        // Si el chofer no tenía jornada ese día se crea como trabajada y asociada al viaje
+        let jornada = await manager.findOne(ChoferJornada, { where: { choferId, fecha } });
+        if (!jornada) {
+          jornada = await manager.save(
+            ChoferJornada,
+            manager.create(ChoferJornada, { choferId, fecha, categoria: CategoriaJornada.TRABAJADO, viajeId: viaje.id }),
+          );
+        } else if (!jornada.viajeId) {
+          jornada.viajeId = viaje.id;
+          jornada = await manager.save(ChoferJornada, jornada);
+        }
+
+        await manager.save(
+          ChoferViatico,
+          comisiones.map((c) =>
+            manager.create(ChoferViatico, {
+              jornadaId: jornada.id,
+              viajeId: viaje.id,
+              tipo: TipoViatico.VIAJE_COMISION,
+              concepto: (c.concepto || (esComisionOperario(c) ? 'Comisión operario' : 'Comisión viaje')).trim(),
+              cantidad: 1,
+              monto: Number(c.montoTotal),
+              observaciones: `Viaje ${viaje.numeroViaje}`,
+            }),
+          ),
         );
-      } else if (!jornada.viajeId) {
-        jornada.viajeId = viaje.id;
-        jornada = await manager.save(ChoferJornada, jornada);
+        agregarPeriodo(choferId, fecha);
       }
-
-      await manager.save(
-        ChoferViatico,
-        comisiones.map((c) =>
-          manager.create(ChoferViatico, {
-            jornadaId: jornada.id,
-            viajeId: viaje.id,
-            tipo: TipoViatico.VIAJE_COMISION,
-            concepto: (c.concepto || 'Comisión viaje').trim(),
-            cantidad: 1,
-            monto: Number(c.montoTotal),
-            observaciones: `Viaje ${viaje.numeroViaje}`,
-          }),
-        ),
-      );
-      agregarPeriodo(choferId, fecha);
     });
 
     return this.recalcularSalarios([...periodos.values()]);
@@ -583,7 +586,8 @@ export class JornadasService {
     const filas: Array<{ viajeId: number | string }> = await this.dataSource.query(
       `SELECT viaje_id AS viajeId FROM chofer_viatico WHERE viaje_id IS NOT NULL
        UNION
-       SELECT viaje_id AS viajeId FROM viajes_comisiones WHERE LOWER(TRIM(tipo)) = 'chofer'`,
+       SELECT viaje_id AS viajeId FROM viajes_comisiones
+        WHERE LOWER(TRIM(tipo)) = 'chofer' OR (LOWER(TRIM(tipo)) = 'operario' AND chofer_id IS NOT NULL)`,
     );
     const ids = [...new Set(filas.map((r) => Number(r.viajeId)).filter((id) => id > 0))];
 

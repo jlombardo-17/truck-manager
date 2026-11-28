@@ -6,10 +6,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Viaje } from './viaje.entity';
 import { ViajRuta } from './viaje-ruta.entity';
-import { ViajComision, esGastoOperativo } from './viaje-comision.entity';
+import { ViajComision, esComisionOperario, esGastoOperativo } from './viaje-comision.entity';
 import { CreateViajDTO } from './dto/create-viaje.dto';
 import { UpdateViajDTO } from './dto/update-viaje.dto';
 import { CamionesService } from '../camiones/camiones.service';
@@ -96,6 +96,7 @@ export class ViajsService {
       if (createViajDTO.clienteId) {
         await this.assertClienteExists(createViajDTO.clienteId);
       }
+      const comisionesCreate = await this.resolverChoferesOperario(createViajDTO.comisiones);
 
       const requestedCurrency = this.normalizeCurrency(createViajDTO.moneda);
       const needsRate =
@@ -153,16 +154,16 @@ export class ViajsService {
         await this.viajRutaRepository.save(rutas);
       }
 
-      if (createViajDTO.comisiones && createViajDTO.comisiones.length > 0) {
+      if (comisionesCreate && comisionesCreate.length > 0) {
         await this.guardarComisiones(
           savedViaje.id,
           savedViaje.valorViajeUyu,
-          createViajDTO.comisiones,
+          comisionesCreate,
           usdUyuRate,
         );
       }
 
-      // Comisiones tipo "Chofer" → jornadas y salario del chofer
+      // Comisiones tipo "Chofer" y "Operario" → jornadas y salario del chofer que las cobra
       await this.jornadasService.sincronizarComisionesViaje(savedViaje.id);
 
       return this.findOneWithRelations(savedViaje.id);
@@ -362,6 +363,7 @@ export class ViajsService {
       if (clienteId) {
         await this.assertClienteExists(clienteId);
       }
+      const comisionesUpdate = await this.resolverChoferesOperario(comisiones);
 
       Object.assign(viaje, {
         ...viajeChanges,
@@ -409,7 +411,7 @@ export class ViajsService {
         const baseMontoParaComisiones = Number(
           (hasAmountChange || hasCurrencyChange ? nextValorViajeUyu : viaje.valorViajeUyu) || viaje.valorViaje,
         );
-        await this.guardarComisiones(id, baseMontoParaComisiones, comisiones, usdUyuRate);
+        await this.guardarComisiones(id, baseMontoParaComisiones, comisionesUpdate, usdUyuRate);
       }
 
       // Puede haber cambiado el chofer, la fecha, el estado o las comisiones
@@ -503,6 +505,39 @@ export class ViajsService {
     };
   }
 
+  /**
+   * Comisiones tipo "Operario": exige un chofer existente y usa su nombre como beneficiario.
+   * Al resto de los tipos se les limpia el choferId (su beneficiario es texto libre).
+   */
+  private async resolverChoferesOperario<T extends { tipo?: string; choferId?: number | null; beneficiario?: string }>(
+    comisiones?: T[],
+  ): Promise<T[] | undefined> {
+    if (!comisiones) return comisiones;
+
+    const ids = [
+      ...new Set(
+        comisiones.filter((c) => esComisionOperario(c) && c.choferId).map((c) => Number(c.choferId)),
+      ),
+    ];
+    const choferes = ids.length
+      ? await this.viajRepository.manager.getRepository(Chofer).findBy({ id: In(ids) })
+      : [];
+    const porId = new Map(choferes.map((c) => [c.id, c]));
+
+    return comisiones.map((c) => {
+      if (!esComisionOperario(c)) return { ...c, choferId: null };
+      if (!c.choferId) {
+        throw new BadRequestException('Las comisiones de tipo Operario deben tener un chofer asignado');
+      }
+      const chofer = porId.get(Number(c.choferId));
+      if (!chofer) {
+        throw new BadRequestException(`Chofer ${c.choferId} no encontrado para la comisión de Operario`);
+      }
+      const nombre = `${chofer.nombre} ${chofer.apellido}`.replace(/\s+/g, ' ').trim();
+      return { ...c, choferId: chofer.id, beneficiario: nombre };
+    });
+  }
+
   private async guardarComisiones(
     viajeId: number,
     valorViajeUyu: number,
@@ -525,12 +560,13 @@ export class ViajsService {
             moneda,
             montoTotal,
             beneficiario,
+            chofer_id,
             estado,
             notas,
             created_at,
             updated_at
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         `,
         [
           viajeId,
@@ -543,6 +579,7 @@ export class ViajsService {
           comision.moneda,
           comision.montoTotal,
           comision.beneficiario ?? null,
+          comision.choferId ?? null,
           comision.estado,
           comision.notas ?? null,
         ],

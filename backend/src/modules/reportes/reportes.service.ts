@@ -9,7 +9,13 @@ import { Camion } from '../camiones/camion.entity';
 import { Servicio } from '../camiones/servicio.entity';
 import { GastoFijo } from '../camiones/gasto-fijo.entity';
 import { ChoferSalarioPago } from '../choferes/chofer-salario-pago.entity';
-import { parseDateOnly, toDateOnly } from '../../common/utils/date-only';
+import {
+  fechaViajeComoLocal,
+  fechaViajeDateOnly,
+  parseDateOnly,
+  rangoFechaViaje,
+  toDateOnly,
+} from '../../common/utils/date-only';
 import { getUsdUyuRateInfo } from '../../common/utils/usd-uyu-rate';
 
 type Granularidad = 'diaria' | 'semanal' | 'mensual';
@@ -167,7 +173,7 @@ export class ReportesService {
     const viajesChoferIds = new Set<number>();
 
     for (const viaje of viajes) {
-      const key = this.toBucketKey(viaje.fechaInicio, 'mensual');
+      const key = this.toBucketKey(fechaViajeComoLocal(viaje.fechaInicio), 'mensual');
       if (!flujoPorMes.has(key)) {
         continue;
       }
@@ -376,7 +382,7 @@ export class ReportesService {
     const choferesById = new Map<number, Chofer>();
 
     for (const viaje of viajes) {
-      const key = this.toBucketKey(viaje.fechaInicio, granularidad);
+      const key = this.toBucketKey(fechaViajeComoLocal(viaje.fechaInicio), granularidad);
       const bucket = this.ensureBucket(buckets, key);
 
       bucket.ingresos += this.getIngresoViajeUyu(viaje);
@@ -467,13 +473,13 @@ export class ReportesService {
       chofer ? `${chofer.nombre || ''} ${chofer.apellido || ''}`.trim() : null;
 
     const viajes = (await this.getViajes(parsedFilters)).filter(
-      (viaje) => this.toBucketKey(viaje.fechaInicio, granularidad) === periodo,
+      (viaje) => this.toBucketKey(fechaViajeComoLocal(viaje.fechaInicio), granularidad) === periodo,
     );
     const choferesById = new Map<number, Chofer>();
 
     for (const viaje of viajes) {
       const base = {
-        fecha: viaje.fechaInicio ? toDateOnly(viaje.fechaInicio) : null,
+        fecha: fechaViajeDateOnly(viaje.fechaInicio),
         patente: viaje.camion?.patente || null,
         chofer: nombreChofer(viaje.chofer),
       };
@@ -784,13 +790,13 @@ export class ReportesService {
     const viajes = await this.viajeRepository
       .createQueryBuilder('viaje')
       .where('viaje.camion_id = :camionId', { camionId: filters.camionId })
-      .andWhere('viaje.fechaInicio BETWEEN :desde AND :hasta', { desde, hasta })
+      .andWhere('viaje.fechaInicio BETWEEN :desde AND :hasta', rangoFechaViaje(desde, hasta))
       .orderBy('viaje.fechaInicio', 'ASC')
       .getMany();
 
     const buckets = new Map<string, OperacionBucket>();
     for (const viaje of viajes) {
-      const key = this.toOperacionBucketKey(viaje.fechaInicio, filters.granularidad);
+      const key = this.toOperacionBucketKey(fechaViajeComoLocal(viaje.fechaInicio), filters.granularidad);
       if (!buckets.has(key)) {
         buckets.set(key, { kms: 0, toneladas: 0 });
       }
@@ -831,10 +837,13 @@ export class ReportesService {
       .leftJoinAndSelect('viaje.chofer', 'chofer')
       .leftJoinAndSelect('viaje.camion', 'camion')
       .leftJoinAndSelect('viaje.comisiones', 'comisiones')
-      .where(`${dateField} BETWEEN :desde AND :hasta`, {
-        desde: filters.desde,
-        hasta: filters.hasta,
-      })
+      // fechaPago es DATE (se compara por día local); fechaInicio es fecha de viaje (día UTC)
+      .where(
+        `${dateField} BETWEEN :desde AND :hasta`,
+        filters.usarFechaPago
+          ? { desde: filters.desde, hasta: filters.hasta }
+          : rangoFechaViaje(filters.desde, filters.hasta),
+      )
       .orderBy(dateField, 'ASC');
 
     if (filters.camionIds && filters.camionIds.length > 0) {
@@ -1278,7 +1287,7 @@ export class ReportesService {
     const query = this.viajeRepository
       .createQueryBuilder('viaje')
       .leftJoinAndSelect('viaje.chofer', 'chofer')
-      .where('viaje.fechaInicio BETWEEN :desde AND :hasta', { desde, hasta })
+      .where('viaje.fechaInicio BETWEEN :desde AND :hasta', rangoFechaViaje(desde, hasta))
       .orderBy('viaje.fechaInicio', 'ASC');
 
     if (filters.choferIds && filters.choferIds.length > 0) {

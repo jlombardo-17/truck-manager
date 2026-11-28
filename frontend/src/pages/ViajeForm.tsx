@@ -275,6 +275,11 @@ const ViajeForm: React.FC = () => {
     : '';
   const gananciaNetaFinal = gananciaAntesDeComisiones - totalComisiones;
 
+  // Choferes elegibles como operario: activos, más los ya asignados en comisiones de este viaje
+  const choferesOperario = choferes
+    .filter((ch) => ch.estado === EstadoChofer.ACTIVO || comisiones.some((c) => Number(c.choferId) === ch.id))
+    .map((ch) => ({ id: ch.id, nombre: `${ch.nombre} ${ch.apellido}`.replace(/\s+/g, ' ').trim() }));
+
   const getAmountStyles = (amount: number) => ({
     backgroundColor: amount >= 0 ? '#D5F4E6' : '#FADBD8',
     color: amount >= 0 ? '#27AE60' : '#E74C3C',
@@ -467,6 +472,11 @@ const ViajeForm: React.FC = () => {
     // Validaciones básicas
     if (!formData.numeroViaje || !formData.camionId || !formData.choferId) {
       setError('Por favor completa los campos obligatorios');
+      return;
+    }
+
+    if (comisiones.some((c) => (c.tipo || '').trim().toLowerCase() === 'operario' && !c.choferId)) {
+      setError('Las comisiones de tipo Operario necesitan un chofer asignado');
       return;
     }
 
@@ -1181,6 +1191,8 @@ const ViajeForm: React.FC = () => {
             usdUyuRate={usdUyuRate}
             commissionTypes={['Chofer', 'Contratista', 'Flete', 'Operario', 'Cliente', 'Acarreador', 'Peaje', 'Otro']}
             choferNombre={choferSeleccionadoNombre}
+            choferId={formData.choferId ? Number(formData.choferId) : undefined}
+            choferes={choferesOperario}
           />
         </section>
 

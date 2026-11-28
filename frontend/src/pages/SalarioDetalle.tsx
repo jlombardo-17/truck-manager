@@ -171,7 +171,7 @@ const SalarioDetalle: React.FC = () => {
 
       const viajesData = viajes.map((viaje) => [
         viaje.numeroViaje,
-        new Date(viaje.fechaInicio).toLocaleDateString('es-CL'),
+        formatDateForDisplay(viaje.fechaInicio, 'es-CL'),
         `${viaje.origen} → ${viaje.destino}`,
         formatCurrency(viaje.valorViaje),
         formatCurrency(viaje.totalComision),
@@ -479,7 +479,7 @@ const SalarioDetalle: React.FC = () => {
                 <div className="viaje-header">
                   <span className="viaje-numero">{viaje.numeroViaje}</span>
                   <span className="viaje-fecha">
-                    {new Date(viaje.fechaInicio).toLocaleDateString('es-CL')}
+                    {formatDateForDisplay(viaje.fechaInicio, 'es-CL')}
                   </span>
                 </div>
                 <div className="viaje-ruta">

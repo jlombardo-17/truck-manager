@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested, IsIn, Min } from 'class-validator';
+import { IsString, IsNumber, IsDateString, IsOptional, IsArray, ValidateNested, IsIn, IsInt, Min } from 'class-validator';
 import { IsDateOnly } from '../../../common/utils/date-only';
 import { Type, Exclude } from 'class-transformer';
 
@@ -65,6 +65,11 @@ class ViajComisionDTO {
   @IsString()
   @IsOptional()
   beneficiario?: string;
+
+  // Chofer que cobra la comisión (solo tipo "Operario")
+  @IsInt()
+  @IsOptional()
+  choferId?: number;
 
   @IsString()
   @IsOptional()
