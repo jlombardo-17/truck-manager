@@ -13,6 +13,7 @@ import StatsGrid from '../components/StatsGrid';
 import BackButton from '../components/BackButton';
 import heroRoutesViolet from '../assets/hero-routes-violet.svg';
 import { getLocalInputValueDaysAgo, getTodayLocalInputValue, parseDatePreservingDay } from '../utils/dateUtils';
+import { sumComisiones, sumGastosOperativosComisiones } from '../utils/comisiones';
 import '../styles/Viajes.css';
 
 // Los anchos se asignan por clase (col-*) y no por posición, para que agregar
@@ -26,6 +27,7 @@ const VIAJES_COLUMNS: { key: string; label: string }[] = [
   { key: 'destino', label: 'Destino' },
   { key: 'doc', label: 'Doc.' },
   { key: 'valor', label: 'Valor' },
+  { key: 'ganancia', label: 'Ganancia Neta' },
   { key: 'inicio', label: 'Inicio' },
   { key: 'fin', label: 'Fin' },
   { key: 'pago', label: 'Pago' },
@@ -246,6 +248,21 @@ const Viajes: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(equivalent);
   };
+
+  // Mismo cálculo que "Ganancia Neta Final" del formulario del viaje, en UYU:
+  // valor - (combustible + otros gastos + peajes) - comisiones
+  const getGananciaNetaUyu = (viaje: Viaje): number => {
+    const comisiones = viaje.comisiones || [];
+    const valorUyu = Number(viaje.valorViajeUyu || viaje.valorViaje || 0);
+    const gastosOperativos =
+      Number(viaje.costoCombustible || 0) +
+      Number(viaje.otrosGastos || 0) +
+      sumGastosOperativosComisiones(comisiones);
+    return valorUyu - gastosOperativos - sumComisiones(comisiones);
+  };
+
+  const formatUyu = (monto: number) =>
+    new Intl.NumberFormat('es-UY', { style: 'currency', currency: 'UYU', maximumFractionDigits: 0 }).format(monto);
 
   const formatViajeDate = (value?: string) => {
     if (!value) return '-';
@@ -515,6 +532,17 @@ const Viajes: React.FC = () => {
                       </div>
                     )}
                   </td>
+                  {(() => {
+                    const ganancia = getGananciaNetaUyu(viaje);
+                    return (
+                      <td
+                        className={`ganancia-cell ${ganancia < 0 ? 'ganancia-negativa' : ''}`}
+                        title="Valor del viaje menos gastos operativos (combustible, otros gastos, peajes) y comisiones, en UYU"
+                      >
+                        {formatUyu(ganancia)}
+                      </td>
+                    );
+                  })()}
                   <td>{formatViajeDate(viaje.fechaInicio)}</td>
                   <td>{formatViajeDate(viaje.fechaFin)}</td>
                   <td>{viaje.fechaPago ? formatViajeDate(viaje.fechaPago) : 'Pendiente'}</td>

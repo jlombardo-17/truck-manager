@@ -135,7 +135,7 @@
   width: 100%;
   /* Suma de los anchos de columna: por debajo de esto la tabla scrollea en
      horizontal en lugar de comprimir/ocultar columnas */
-  min-width: 1695px;
+  min-width: 1694px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -175,18 +175,21 @@
 }
 
 /* Anchos por columna (table-layout: fixed toma los del encabezado) */
-.viajes-table .col-numero { width: 165px; }
+.viajes-table .col-numero { width: 157px; }
 .viajes-table .col-camion { width: 95px; }
-.viajes-table .col-chofer { width: 155px; }
-.viajes-table .col-cliente { width: 130px; }
-.viajes-table .col-origen { width: 140px; }
-.viajes-table .col-destino { width: 130px; }
-.viajes-table .col-doc { width: 115px; text-align: center; }
+.viajes-table .col-chofer { width: 135px; }
+.viajes-table .col-cliente { width: 115px; }
+.viajes-table .col-origen { width: 120px; }
+.viajes-table .col-destino { width: 115px; }
+.viajes-table .col-doc { width: 120px; text-align: center; }
 .viajes-table .col-valor { width: 100px; }
+.viajes-table .col-ganancia { width: 110px; }
+/* Encabezado en dos líneas ("Ganancia / Neta") para no ensanchar la columna */
+.viajes-table thead th.col-ganancia { white-space: normal; line-height: 1.2; }
 .viajes-table .col-inicio,
 .viajes-table .col-fin,
-.viajes-table .col-pago { width: 100px; }
-.viajes-table .col-km { width: 90px; }
+.viajes-table .col-pago { width: 90px; }
+.viajes-table .col-km { width: 82px; }
 .viajes-table .col-estado { width: 125px; text-align: center; }
 .viajes-table .col-acciones { width: 150px; text-align: center; }
 
@@ -241,6 +244,15 @@
 .valor-cell {
   color: #2e7d32;
   font-weight: bold;
+}
+
+.ganancia-cell {
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.ganancia-cell.ganancia-negativa {
+  color: #c62828;
 }
 
 .km-cell {
